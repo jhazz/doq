@@ -45,9 +45,9 @@ function main()
     $products->dataObject->dumpData();
 
     $template=doq\Template::create();
-    #$template->setTemplatePath($GLOBALS['doq']['env']['#templatesPath']);
-    $template->setTemplatePath($GLOBALS['config']['rootPath'].'/frontend/templates');
-    $template->setCachePath($GLOBALS['config']['rootPath'].'/templates');
+    $template->setTemplatePath($GLOBALS['doq']['env']['#templatesPath']);
+    $template->setCachePath($GLOBALS['doq']['env']['#cachesPath']);
+
     if ($template->readTemplate('page1')) {
         print '<meta http-equiv="content-type" content="text/html; charset=utf-8" /><pre>';
         $page1=doq\Render::create();

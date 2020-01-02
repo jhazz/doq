@@ -1,15 +1,14 @@
 <?php
-  $root=dirname(__FILE__, 2);
+  $ROOT_PATH=dirname(__FILE__, 2);
 
   return [
-    '#rootPath'=>$root,
-    '#libPath'=>$root.'/lib',
-    '#commonPath'=>$root.'/common',
-    '#langBasePath'=>$root.'/lang',
-    '#caches'=>$root.'/runtime/cache',
+    '#rootPath'=>$ROOT_PATH,
+    '#libPath'=>$ROOT_PATH.'/lib',
+    '#commonPath'=>$ROOT_PATH.'/common',
+    '#langBasePath'=>$ROOT_PATH.'/lang',
+    '#cachesPath'=>$ROOT_PATH.'/runtime/caches',
     '#sourceLang'=>'en',
-    '#templatesPath'=>$root.'/frontend/templates',
-    '#parsedTemplatesCachePath'=>'cache/templates',
+    '#templatesPath'=>$ROOT_PATH.'/frontend/templates',
     '@modules'=>[
       'auth'    =>['actions'=>['default'=>'auth_status.php']],
       'products'=>['actions'=>['default'=>'products_list.php']]
