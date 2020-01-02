@@ -36,8 +36,9 @@ function main()
         $GLOBALS['doq']['env']['@dataConnections'],
         'Products_View_12345'
     );
+
   
-    $viewProducts->prepare($schemaFileTime, true);
+    $viewProducts->prepare($schemaFileTime, true); # Второй параметр означает форсированную перестройку кэша плана данных вне зависимости от даты самого кэша
     doq\data\Scripter::dumpPlan($viewProducts->plan);
 
     $params=[];

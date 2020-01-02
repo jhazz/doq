@@ -1,7 +1,7 @@
 <?php  
 # Dataset schemas
 #  $GLOBALS['doq']['schema'] = 
-  return [
+   return [
     '@datasources'=>[
       'main'=>[
         '#dataConnection'=>'MYSQL0',

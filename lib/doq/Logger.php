@@ -4,17 +4,7 @@ namespace doq;
 set_error_handler (
   function($errno, $errstr, $errfile, $errline)
   {
-    switch($errno)
-    {
-      case E_NOTICE:
-        Logger::info($errstr,$errfile,$errline);
-      break;
-      case E_PARSE:
-        print "PARSE";
-      break;
-      default:
-        Logger::error($errno,$errstr,$errfile,$errline);
-    }
+    Logger::addPHPError($errno,$errstr,$errfile,$errline);
     return true;
   }, E_ALL | E_STRICT);
 
@@ -24,7 +14,7 @@ register_shutdown_function(
     $error = @error_get_last();
     if(isset($error['type']))
     {
-      Logger::error($error['type'],$error['message'],$error['file'],$error['line']);
+      Logger::addPHPError($error['type'],$error['message'],$error['file'],$error['line']);
     }
     Logger::dump();
   });
@@ -74,6 +64,13 @@ class Logger {
     if(self::$doCollectError)
     {
       array_push(self::$logArray, array(E_USER_ERROR,$data,$file,$line));
+    }
+  }
+  public static function addPHPError($phpErrorType,$data,$file = false,$line = false)
+  {
+    if(self::$doCollectError)
+    {
+      array_push(self::$logArray, [$phpErrorType,$data,$file,$line]);
     }
   }
   public static function dump($to = false)

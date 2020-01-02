@@ -60,6 +60,7 @@ class SerialFileCacher
                 $this->cacheFolder=getcwd();
             }
         }
+        trigger_error("Uses cachefolder : ".$this->cacheFolder,E_USER_NOTICE);
     }
     public function get($mustHaveTime, $objectId)
     {

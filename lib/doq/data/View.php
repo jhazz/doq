@@ -49,13 +49,19 @@ class View {
 
   public function prepare($configMtime,$forceRebuild=false) {
     if ((!$this->isCacheable)||($forceRebuild)) {
-      $this->makePlan();
+      trigger_error("FORCED CACHE REBUILD",E_USER_NOTICE);
+      if ($this->makePlan()){
+          trigger_error("... AND LETS SAVE THE REBUILT DATAPLAN! ",E_USER_NOTICE);
+          $this->cacher->put($configMtime,$this->viewId,$this->plan);
+      }
     } else {
       list($ok,$data)=$this->cacher->get($configMtime,$this->viewId);
       if($ok) {
+         trigger_error("REUSED DATAPLAN FROM CACHE",E_USER_NOTICE);
         $this->plan=&$data;
       } else {
         if ($this->makePlan()) {
+          trigger_error("SAVE THE DATAPLAN!",E_USER_NOTICE);
           $this->cacher->put($configMtime,$this->viewId,$this->plan);
         }
       }
@@ -182,6 +188,7 @@ class View {
   }
 
   public function makePlan() {
+    trigger_error("ИДЕТ ПОЛНАЯ ПЕРЕСТРОЙКА ПЛАНА",E_USER_NOTICE);
     $this->plan=[];
     $this->lastPlanId=1;
     $viewColumns=NULL;
