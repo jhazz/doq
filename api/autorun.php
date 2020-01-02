@@ -1,11 +1,14 @@
 <?php
-$GLOBALS['config']=array_merge (
-    require('config.php'),
-    require_once(dirname(__FILE__,2).'/common/config.php')
-);
-require_once($GLOBALS['config']['libPath'].'/classloader.php');
+$GLOBALS['doq']=[
+    'env'=>array_merge (
+        require_once(dirname(__FILE__,2).'/common/env.php'),
+        require_once('env.php'))
+    ];
+$GLOBALS['doq']['schema']=require_once($GLOBALS['doq']['env']['#commonPath'].'/schema.php');
+$GLOBALS['doq']['views']=require_once($GLOBALS['doq']['env']['#commonPath'].'/views.php');
+require_once($GLOBALS['doq']['env']['#libPath'].'/classloader.php');
 \doq\Logger::init();
-\doq\I18n::init($GLOBALS['config']);
+\doq\I18n::init($GLOBALS['doq']['env']);
 \doq\I18n::target('ru-RU');
 
 ?>

@@ -9,7 +9,7 @@ class View {
   static public $defaultCacher;
   public $viewId;
   public $cfgView;
-  public $cfgModel;
+  public $cfgSchema;
   public $dataset;
   public $viewColumns;
   public $linkedDatasources;
@@ -17,13 +17,13 @@ class View {
   public $cacher;
   public $cfgConnections;
 
-  public static function create(&$cfgModel,&$cfgView,&$cfgConnections,$viewId=false){
-    $r=new View($cfgModel,$cfgView,$cfgConnections,$viewId);
+  public static function create(&$cfgSchema,&$cfgView,&$cfgConnections,$viewId=false){
+    $r=new View($cfgSchema,$cfgView,$cfgConnections,$viewId);
     return[true,&$r];
   }
 
-  public function __construct(&$cfgModel,&$cfgView,&$cfgConnections,$viewId=false) {
-    $this->cfgModel=&$cfgModel;
+  public function __construct(&$cfgSchema,&$cfgView,&$cfgConnections,$viewId=false) {
+    $this->cfgSchema=&$cfgSchema;
     $this->cfgView=&$cfgView;
     $this->cfgConnections=&$cfgConnections;
     $this->viewId=$viewId;
@@ -200,9 +200,9 @@ class View {
 
     $datasetRef=$datasourceName.':'.$schemaName.'/'.$datasetName;
 
-    $cfgModelDataset=&$this->cfgModel['@datasources'][$datasourceName]['@schemas'][$schemaName]['@datasets'][$datasetName];
-    if(!$cfgModelDataset) {
-      trigger_error(\doq\t('Cannot find model config %s',$datasetRef),E_USER_ERROR);
+    $cfgSchemaDataset=&$this->cfgSchema['@datasources'][$datasourceName]['@schemas'][$schemaName]['@datasets'][$datasetName];
+    if(!$cfgSchemaDataset) {
+      trigger_error(\doq\t('Cannot find model schema  %s',$datasetRef),E_USER_ERROR);
       return false;
     }
     if($isOtherDatasource) {
@@ -218,11 +218,11 @@ class View {
     }
     $dataset=['#schema'=>$schemaName,'#datasetName'=>$datasetName,'@fields'=>[]];
 
-    if(isset($cfgModelDataset['@keyFields'])) {
+    if(isset($cfgSchemaDataset['@keyFields'])) {
       trigger_error('Unsupported multiple field primary keys',E_USER_ERROR);
       return false;
-    } elseif (isset($cfgModelDataset['#keyField'])) {
-      $dataset['#keyField']=$cfgModelDataset['#keyField'];
+    } elseif (isset($cfgSchemaDataset['#keyField'])) {
+      $dataset['#keyField']=$cfgSchemaDataset['#keyField'];
     }
 
 
@@ -232,7 +232,7 @@ class View {
       $plan['#planId']=$this->lastPlanId;
       $this->lastPlanId++;
       $plan['#dataSource']=$datasourceName;
-      $cfgDatasource=&$this->cfgModel['@datasources'][$datasourceName];
+      $cfgDatasource=&$this->cfgSchema['@datasources'][$datasourceName];
       $dataConnectionName=$cfgDatasource['#dataConnection'];
       $plan['#dataConnection']=$dataConnectionName;
       $plan['#dataProvider']=$providerName=$this->cfgConnections[$dataConnectionName]['#provider'];
@@ -263,8 +263,8 @@ class View {
         if($keyField && ($keyField===$originField)) {
           $foundKeyColumn=&$newColumn;
         }
-        if(isset($cfgModelDataset['@fields'][$originField])){
-          $modelFieldDef=&$cfgModelDataset['@fields'][$originField];
+        if(isset($cfgSchemaDataset['@fields'][$originField])){
+          $modelFieldDef=&$cfgSchemaDataset['@fields'][$originField];
           $newColumn['#originField']=$originField;
           if (isset($modelFieldDef['#type'])) {
             $type=$newColumn['#type']=$modelFieldDef['#type'];

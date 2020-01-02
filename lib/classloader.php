@@ -1,6 +1,6 @@
 <?php
 spl_autoload_register(function ($className) {
-    $moduleSource=$GLOBALS['config']['libPath'].'/'.str_replace('\\', '/', $className).'.php';
+    $moduleSource=$GLOBALS['doq']['env']['#libPath'].'/'.str_replace('\\', '/', $className).'.php';
     if(file_exists($moduleSource)){
         require_once $moduleSource;
     } else {

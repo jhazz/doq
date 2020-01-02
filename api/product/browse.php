@@ -1,10 +1,11 @@
 <?php
 require_once '../autorun.php';
 
-function main() {
-    $schemaFile=$GLOBALS['config']['commonPath'].'/schema.php';
+function main()
+{
+    $schemaFile=$GLOBALS['doq']['env']['#commonPath'].'/schema.php';
     $schemaFileTime=filemtime($schemaFile);
-    print "Время схемы: ".$schemaFileTime;
+    print "Схема в файле {$schemaFile} была обновлена в ".$schemaFileTime;
     /*
     doq\Session::init();
     print("USER ID IS ".doq\Session::$userId);
@@ -15,22 +16,31 @@ function main() {
     #throw new Exception('Some Error Message');
     */
     print '<meta charset="utf-8">';
-    require_once $schemaFile;
+    # require_once $schemaFile;
 
     $viewPlanCacher=doq\Cacher::create($GLOBALS['doq']['env']['@caches']['mysql1_dataplans']);
     doq\data\View::$defaultCacher=$viewPlanCacher;
     doq\data\Connection::init($GLOBALS['doq']['env']['@dataConnections']);
   
-    if($viewPlanCacher===false) {
-      return;
+    if ($viewPlanCacher===false) {
+        return;
     }
-    list($ok,$viewProducts)=doq\data\View::create($GLOBALS['doq']['model'],$GLOBALS['doq']['views']['Products'],$GLOBALS['doq']['env']['@dataConnections'],'Products');
+
+    /** @var doq\data\View $viewProducts View to PRODUCTS*/
+    $viewProducts=null;
+
+    list($ok, $viewProducts)=doq\data\View::create(
+        $GLOBALS['doq']['schema'],
+        $GLOBALS['doq']['views']['Products'],
+        $GLOBALS['doq']['env']['@dataConnections'],
+        'Products_View_12345'
+    );
   
-    $viewProducts->prepare($schemaFileTime,true);
+    $viewProducts->prepare($schemaFileTime, true);
     doq\data\Scripter::dumpPlan($viewProducts->plan);
 
     $params=[];
-    list($ok,$products)=$viewProducts->read($params,'products');
+    list($ok, $products)=$viewProducts->read($params, 'products');
   
     $products->dataObject->dumpData();
 
@@ -38,17 +48,15 @@ function main() {
     #$template->setTemplatePath($GLOBALS['doq']['env']['#templatesPath']);
     $template->setTemplatePath($GLOBALS['config']['rootPath'].'/frontend/templates');
     $template->setCachePath($GLOBALS['config']['rootPath'].'/templates');
-    if ($template->readTemplate('page1')){
-      print '<meta http-equiv="content-type" content="text/html; charset=utf-8" /><pre>';
-      $page1=doq\Render::create();
-      $page1->build($products,$template);
-      foreach ($page1->out as $i=>&$s) {
-        print "$s\n";  
-      }
+    if ($template->readTemplate('page1')) {
+        print '<meta http-equiv="content-type" content="text/html; charset=utf-8" /><pre>';
+        $page1=doq\Render::create();
+        $page1->build($products, $template);
+        foreach ($page1->out as $i=>&$s) {
+            print "$s\n";
+        }
     }
+}
   
-  }
-  
-  main();
-
+main();
 ?>
