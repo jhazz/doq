@@ -60,6 +60,13 @@ class Template {
       $this->templateSplitted=preg_split('/\{\%(.*?)\%\}/', $this->templateText,-1,PREG_SPLIT_DELIM_CAPTURE);
       $this->rootBlock=array('tag'=>'root');
       $this->parse(0,$this->rootBlock);
+      if(!is_dir($this->cachePath)){
+          if(!mkdir($this->cachePath, 0777, true)){
+            trigger_error (\doq\t('Bad runtime cache path [%s]',$this->cachePath),E_USER_ERROR);
+          }
+
+      }
+
       file_put_contents($filenameParsed, serialize($this->rootBlock));
       touch($filenameParsed,$timeSource);
     } else {

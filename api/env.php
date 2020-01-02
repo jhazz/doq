@@ -2,6 +2,6 @@
 return [
     '#side'=>'api',
     '#sourceLang'=>'en',
-    '#templatesPath'=>$root.'/frontend/templates',
+    '#templatesPath'=>$ROOT_PATH.'/frontend/templates',
     ];
 ?>

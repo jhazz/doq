@@ -46,7 +46,7 @@ function main()
 
     $template=doq\Template::create();
     $template->setTemplatePath($GLOBALS['doq']['env']['#templatesPath']);
-    $template->setCachePath($GLOBALS['doq']['env']['#cachesPath']);
+    $template->setCachePath($GLOBALS['doq']['env']['#cachesPath'].'/templates');
 
     if ($template->readTemplate('page1')) {
         print '<meta http-equiv="content-type" content="text/html; charset=utf-8" /><pre>';
