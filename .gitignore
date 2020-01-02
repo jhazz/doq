@@ -1,4 +1,4 @@
 .vscode/
-cache/
+runtime/
 *.tlp
 *.code-workspace
