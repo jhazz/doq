@@ -18,6 +18,7 @@ function main()
     print '<meta charset="utf-8">';
     # require_once $schemaFile;
 
+    
     $viewPlanCacher=doq\Cacher::create($GLOBALS['doq']['env']['@caches']['mysql1_dataplans']);
     doq\data\View::$defaultCacher=$viewPlanCacher;
     doq\data\Connection::init($GLOBALS['doq']['env']['@dataConnections']);

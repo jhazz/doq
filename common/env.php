@@ -14,7 +14,7 @@
       'products'=>['actions'=>['default'=>'products_list.php']]
       ],
     '@caches'=>[
-      'mysql1_dataplans'=>['#type'=>'serialfile','#cacheFolderPath'=>'cache/dataplans','#filePrefix'=>'vp_','#fileSuffix'=>'.plan.txt','#forceCreateFolder'=>1]
+      'mysql1_dataplans'=>['#type'=>'serialfile','#targetFolder'=>'dataplans','#filePrefix'=>'vp_','#fileSuffix'=>'.plan.txt','#forceCreateFolder'=>1]
       ],
     '@session'=>[
       '#formNoncesSalt'=>'gJUYGo87fsghgO*sdfsGftu',

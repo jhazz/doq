@@ -24,25 +24,19 @@ class SerialFileCacher {
   public $fileSuffix;
   
   function __construct(&$cacheParams) {
-    $s=$cacheParams['#cacheFolderPath'];
+    $s=$cacheParams['#targetFolder'];
     if(!$s) {
-      trigger_error(\doq\t('Undefined parameter #cacheFolderPath in cache config'),E_USER_ERROR);
-      $s=getcwd();
-    } else {
-      if($s[0]=='/') {
-        $s=pathinfo($s,PATHINFO_DIRNAME);
-      } else {
-        $s=getcwd().'/'.$s;
-      }
+      trigger_error(\doq\t('Undefined parameter #targetFolder in cache config! Use "dataplans"'),E_USER_ERROR);
+      $s='dataplans';
     }
     
-    $this->cacheFolder=$s;
+    $this->cacheFolder=$GLOBALS['doq']['env']['#cachesPath'].'/'.$s;
     $this->filePrefix=(isset($cacheParams['#filePrefix'])?$cacheParams['#filePrefix']:'');
     $this->fileSuffix=(isset($cacheParams['#fileSuffix'])?$cacheParams['#fileSuffix']:'.txt');
     
     $tryUseAny=false; # try to use any folder for cache
     
-    if(!file_exists($this->cacheFolder)) {
+    if(!is_dir($this->cacheFolder)) {
       if (isset($cacheParams['#forceCreateFolder'])) {
         if (mkdir($this->cacheFolder,0660,true)===false) {
           trigger_error(\doq\t('Unable to create cache folder [%s]. Use local or temporary instead'),E_USER_WARNING);
