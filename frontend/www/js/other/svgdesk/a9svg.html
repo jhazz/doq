@@ -1,0 +1,850 @@
+<!DOCTYPE HTML5>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<script src="svgsymbols.js"></script>
+<body onload="init();" style="margin:0px;padding:0px;width:100%; height:100%">
+<div id='MainDesk' style="position:fixed; left:0px;top:0px; width:100%; height:100%; background-color:#a0a0a0" ></div>
+<script src="mobileconsole.js"></script>
+</body>
+
+
+<script>
+/* global svgSymbols*/
+var gfx={
+  lastId:1,
+  activeDocument:undefined,
+  focusedDesk:undefined,
+  desks:{},
+  portals:{}, // document/portal/door
+  select:{
+    state:'ready', // undermousedown-an gobject pushed; panmousedown-desk pushed; pan-desk pushed and shifted
+    potentialObj:undefined,
+    potentialDeskId:0,
+    activeDesk:undefined,
+    startScreenX:0,
+    startScreenY:0
+  },
+  documents:{
+    'BlankDocument':{
+      properties:{
+        title:'Main document',
+        lodScales:[100,75,50,25,15],
+        bounds:{left:0,top:0,right:500,bottom:500}, // √раница документа
+      },
+      gobjs:{},
+      symbols:{
+        'textrect':{
+          _:[
+            {on:[{property:'desk.lod',min:0,max:1}],
+              _:[
+                { tag:'rect',attr:{
+                  width:'me.width', height:'me.height',
+                  fill:'me.fillColor',rx:'me.round',ry:'me.round'}
+                },
+                {tag:'text', attr:{'text-anchor':'"middle"',y:20},text:'me.text'}
+              ]
+            },
+            {on:[{property:'desk.lod',min:1}],
+               _:[
+                {tag:'rect',attr:{width:'me.width', height:'me.height',fill:'"green"',rx:'me.round',ry:'me.round'}},
+                {tag:'text', attr:{'text-anchor':'"middle"',y:20},text:'me.text'}
+              ]
+            }
+          ]
+        },
+        'desktop_pc':{
+          _:[
+          {useSvgSymbol:'desktop_pc'},
+          {tag:'text', attr:{'text-anchor':'"middle"', x:0, y:110},text:'me.text'}
+          ]
+        },
+        'server_pc':{
+          _:[
+          {useSvgSymbol:'server_pc'},
+          {tag:'text', attr:{'text-anchor':'"middle"', x:0, y:110},text:'me.text'}
+          ]
+        }
+
+      }
+    }
+  },
+
+  on:function (target,eventName, callback) {
+    if (!!target.addEventListener) {
+      target.addEventListener(eventName, callback, true);
+    } else {
+      target.attachEvent('on' + eventName, callback);
+    }
+  },
+
+  mouseWheel:function (e) {
+    e.preventDefault();
+    if (e.ctrlKey) {
+      e.preventDefault();
+    }
+    var deltaY=e.deltaY;
+    if(e.deltaMode==1) {
+      deltaY*=10;
+    }
+    var target=gfx.getObjFromEvent(e,'GContainer');
+    if (!target) {
+      return;
+    }
+    console.info('Zooming desk '+target[1]);
+    var desk=gfx.desks[target[1]];
+    if(deltaY>0) {
+      gfx.setCanvasScale(desk.canvas.scale+25);
+    } else {
+      gfx.setCanvasScale(desk.canvas.scale-25);
+    }
+  },
+
+
+  selectGobject:function (gobj) {
+    console.info('Select gobject:'+gobj.id);
+    return;
+  },
+
+  unselectAllGobjects:function() {
+    console.info('Unselect all');
+    return;
+  },
+
+  rectClone:function(rect) {
+    return {left:rect.left, top:rect.top, width:rect.width, height:rect.height, right:rect.left+rect.width, bottom:rect.top+rect.height};
+  },
+
+  // https://dxr.mozilla.org/mozilla-beta/source/toolkit/modules/Geometry.jsm
+  rectCreate:function(left,top,width,height) {
+    return {left:left, top:top, width:width, height:height, right:left+width, bottom:top+height};
+  },
+
+  rectSet:function(rect,left,top,width,height){
+    rect.left=left;
+    rect.top=top;
+    rect.width=width;
+    rect.height=height;
+    rect.right=left+width;
+    rect.bottom=top+height;
+  },
+
+  rectAlignToGrid:function(rect,gridSize,outMargin){
+    rect.left=Math.floor((rect.left-outMargin)/gridSize)*gridSize;
+    rect.top=Math.floor((rect.top-outMargin)/gridSize)*gridSize;
+    rect.right =Math.ceil((rect.right +outMargin)/gridSize)*gridSize;
+    rect.bottom=Math.ceil((rect.bottom+outMargin)/gridSize)*gridSize;
+  },
+
+  rectUpBounds:function(rect) {
+    rect.right =rect.left+rect.width;
+    rect.bottom=rect.top+rect.height;
+    return rect;
+  },
+
+  rectUpSize:function(rect) {
+    rect.width =rect.right -rect.left;
+    rect.height=rect.bottom-rect.top;
+    return rect;
+  },
+
+  rectCreateHull: function(rect1,rect2) {
+    return gfx.rectUpSize({
+      left:     Math.min(rect1.left, rect2.left),
+      right: Math.max(rect1.right, rect1.right),
+      top:     Math.min(rect1.top, rect2.top),
+      bottom:Math.max(rect1.bottom, rect2.bottom)});
+  },
+
+  rectIsContains:function(out,inn){
+    return inn.left>= out.left && inn.right <= out.right
+        && inn.top >= out.top  && inn.bottom<= out.bottom;
+  },
+
+  rectIntersectSq:function(rect1,rect2) {
+    // http://jsfiddle.net/cza78w6s/
+    return Math.max(0, Math.min(rect1.right,rect2.right) - Math.max(rect1.left,rect2.left))
+         * Math.max(0, Math.min(rect1.bottom,rect2.bottom) - Math.max(rect1.top,rect2.top));
+  },
+
+  setHolderPosition:function(left,top) {
+    var holder=gfx.select.activeDesk.holder,
+      screenShiftX=gfx.select.activeDesk.viewBounds.left,
+      screenShiftY=gfx.select.activeDesk.viewBounds.top;
+
+    holder.left=left, holder.top=top;
+    holder.DOM.style.transform='translate3d('+(holder.left+screenShiftX)+'px, '+(holder.top+screenShiftY)+'px, 0)';
+  },
+
+  setCanvasScale:function(newScale,focusX,focusY) {
+    if (newScale<10) newScale=10;
+    if (newScale>300) newScale=300;
+    if(focusX!==undefined) {
+
+    }
+    console.info('Set new canvas scale '+newScale);
+    //gfx.svgCanvas
+  },
+
+  getObjFromEvent:function(e,className) {
+    var ok,i,foundClass,idElements,id,gobjId,deskId,gobj,o=e.srcElement||e.target;
+    if (!o) return;
+
+    for (ok=false,i=0;i<10;i++) {
+      id=o.id;
+      if(id) {
+        idElements=id.split(':');
+        if (idElements.length>1) {
+          if (((className!==undefined)&&(className==idElements[0]))||(className==undefined)) {
+            ok=true;
+            break;
+          }
+        }
+      }
+      o=o.parentElement;
+    }
+    if(!ok) return undefined;
+
+    foundClass=idElements[0];
+    deskId=idElements[1];
+    if(idElements.length>2) {
+      gobjId=idElements[2];
+    }
+    switch(foundClass) {
+      case 'GObj':
+        var desk=gfx.desks[deskId];
+        gobj=desk.document.gobjs[gobjId];
+        break;
+      case 'GHolder':case 'GCanvas': case 'GDesk':
+        gobj=gfx.desks[deskId];
+    }
+    return [foundClass,deskId,gobj,id,o];
+  },
+
+  mouseDown:function (e) {
+    var target=gfx.getObjFromEvent(e);
+    if(target[0]=='GObj') {
+      var gobj=target[2], gobjId=target[3];
+      if (gfx.select.state=='ready') {
+        gfx.select.state='undermousedown';
+        gfx.select.potentialObj=gobj;
+        gfx.select.potentialDeskId=target[1];
+        gfx.select.startScreenX=e.screenX;
+        gfx.select.startScreenY=e.screenY;
+        e.preventDefault();
+        console.info('mousedown on gObject '+gobjId+' at x,y');
+        return false;
+      }
+    } else if ((target[0]=='GHolder') || (target[0]=='GCanvas')|| (target[0]=='GContainer')) {
+      e.preventDefault();
+      gfx.select.state='panmousedown';
+      gfx.select.potentialDeskId=target[1];
+      gfx.select.startScreenX=e.screenX;
+      gfx.select.startScreenY=e.screenY;
+      console.info('mousedown on Canvas at x,y');
+    }
+  },
+
+  mouseMove:function (e) {
+    var dx,dy,deskId,c,x,y;
+    if ((gfx.select.state=='undermousedown')||(gfx.select.state=='panmousedown')) {
+      dx=e.screenX-gfx.select.startScreenX;
+      dy=gfx.select.startScreenY-e.screenY;
+      if (dx*dx+dy*dy>100) {
+        gfx.select.state='pan';
+        deskId=gfx.select.potentialDeskId;
+        if(deskId) {
+          gfx.select.activeDesk=gfx.desks[deskId];
+          var c=gfx.select.activeDesk.holder;
+          c.startPanX=c.left;
+          c.startPanY=c.top;
+        }
+        else {console.error('You ve not keep potentialDeskId on mouseDown');}
+      }
+    }
+    if (gfx.select.state=='pan') {
+      c=gfx.select.activeDesk.holder;
+      gfx.setHolderPosition(c.startPanX-(gfx.select.startScreenX-e.screenX),
+        c.startPanY-(gfx.select.startScreenY-e.screenY));
+    }
+  },
+
+  mouseUp:function (e) {
+    if (gfx.select.state=='panmousedown') {
+      gfx.unselectAllGobjects();
+    }
+    if (gfx.select.state=='undermousedown') {
+      if (!!gfx.select.potentialObj) {
+        gfx.selectGobject(gfx.select.potentialObj);
+      }
+    }
+    if(gfx.select.state=='pan') {
+      gfx.select.activeDesk.checkHolderOutbound();
+    }
+    gfx.select.state='ready';
+  },
+
+  mouseOut:function(e){
+    if (gfx.select.state=='pan') {
+      var id,toElement=e.toElement || e.relatedTarget;
+      if (toElement.nodeName && toElement.nodeName=='HTML') {
+        gfx.select.state='ready';
+      }
+    }
+  },
+
+
+  doShowDocument:function (documentId,deskId) {
+    var doc=gfx.documents[documentId],desk;
+    if (!doc) return false;
+    desk=gfx.desks[deskId];
+    if (!desk) return false;
+    if (desk.showDocument(documentId)) {
+      gfx.activeDocument=doc;
+      return true;
+    }
+    return false;
+  },
+
+  doCreateGobject:function(symbolId,params,documentId){
+    var doc=(documentId!==undefined)?gfx.documents[documentId]:gfx.activeDocument;
+    if(!doc) {
+      console.error('Cannot create gobjects in undefined document');
+      return undefined;
+    }
+    var symbol=doc.symbols[symbolId];
+    if ((!doc)||(!symbol)) return false;
+    var gobj=new gfx.Gobject(symbol,params,doc);
+    return gobj;
+  }
+};
+
+
+
+
+gfx.Desk=function(parentDOMId){
+  var me=this,parentDOM=document.getElementById(parentDOMId);
+  if(!parentDOM){
+    me.error='Container DOM element for desk [#'+parentDOMId+'] not found';
+    console.error(me.error);
+    return;
+  }
+  me.id=gfx.lastId++;
+  me.parentDOMId=parentDOMId;
+  //me.parentDOM=parentDOM;
+  me.container={DOM:document.createElement('div')};
+  me.holder={left:0,top:0,width:800,height:600,startPanX:0,startPanY:0,DOM:undefined};
+  me.canvas={left:0,top:0,width:800,height:600,vboxOriginX:0,vboxOriginY:0,scale:100,DOM:undefined};
+  me.viewBounds={left:100,top:100,width:400,height:300},
+  me.viewOutBounds={left:50,top:50,width:450,height:350},
+  me.properties={
+    defaultScale:100,
+    lod:0,
+    viewBoundsMargin:0,
+    viewOutBoundsDistance:50,
+    viewOutStep:50,
+    portalGridSize:256,
+    viewToPortalMargin:128
+  };
+  me.currentPortal=undefined;
+  me.document=undefined;
+  var c=me.container.DOM;
+  c.id='GContainer:'+me.id;
+  c.style.width='100%';
+  c.style.height='100%';
+  c.style.backgroundColor='#404060';
+  parentDOM.appendChild(c);
+};
+
+gfx.Desk.prototype.showDocument=function(documentId,params) {
+  var me=this, doc=gfx.documents[documentId];
+  me.document=doc;
+  me.documentId=documentId;
+  if (typeof params =='object') for(var i in params) me.properties[i]=params;
+  var h=me.holder.DOM=document.createElement('div');
+  h.id='GHolder:'+me.id;
+  h.style.transform='translate3d(0,0,0)';
+  h.style.width='800px';
+  h.style.height='600px';
+  h.style.border='solid 1px #20f020';
+  h.style.backgroundColor='#ffffff';
+  me.container.DOM.appendChild(h);
+
+  var sc=me.canvas.DOM=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  sc.id='GCanvas:'+me.id;
+  var c=me.canvas,k=c.scale/100;
+  sc.setAttribute('width',c.width+'px');
+  sc.setAttribute('height',c.height+'px');
+  sc.setAttribute('viewBox',c.left+' '+c.top+' '+c.width/k+' '+c.height/k);
+  sc.setAttribute('version','1.1');
+  h.appendChild(sc);
+
+  gfx.on(me.container.DOM,'mousewheel',gfx.mouseWheel);
+  gfx.on(me.container.DOM,'mousedown',gfx.mouseDown);
+  gfx.on(me.container.DOM,'mousemove',gfx.mouseMove);
+  gfx.on(me.container.DOM,'mouseup',gfx.mouseUp);
+  gfx.on(me.container.DOM,'mouseout',gfx.mouseOut);
+  gfx.on(window,'resize',function(){
+    me.updateBounds();
+  });
+  me.state='ready';
+  return true;
+};
+
+
+// This function should be called seldom!
+gfx.Desk.prototype.updateHolder=function() {
+  var d,holder=this.holder, canvas=this.canvas,
+      screenShiftX=this.viewBounds.left,
+      screenShiftY=this.viewBounds.top,
+      k=canvas.scale/100,
+      deltaVBoxX=0, deltaVBoxY=0, deltaVBoxWidth=0, deltaVBoxHeiht=0,
+      deltaHolderX=0, deltaHolderY=0, deltaHolderWidth=0, deltaHolderHeight=0,
+      isViewBoxMoved=false, isHolderMoved=false, isHolderSized=false,
+      newHolderArea=gfx.rectCreate(holder.left+screenShiftX, holder.top+screenShiftY,holder.width,holder.height),
+      newViewBox=gfx.rectCreate(canvas.vboxOriginX, canvas.vboxOriginY, canvas.width/k, canvas.height/k),
+      viewOutArea=gfx.rectClone(this.viewOutBounds);
+
+  if(newHolderArea.left>viewOutArea.left) {
+    d=viewOutArea.left-this.properties.viewOutStep-newHolderArea.left;
+    newHolderArea.left+=d;
+    newViewBox.left+=d/k;
+    isHolderSized=isHolderMoved=isViewBoxMoved=true;
+  }
+
+  if(newHolderArea.top>viewOutArea.top) {
+    d=viewOutArea.top-this.properties.viewOutStep-newHolderArea.top;
+    newHolderArea.top+=d;
+    newViewBox.top+=d/k;
+    isHolderSized=isHolderMoved=isViewBoxMoved=true;
+  }
+
+  if(newHolderArea.right<viewOutArea.right) {
+    d=viewOutArea.right+this.properties.viewOutStep-newHolderArea.right;
+    newHolderArea.right+=d;
+    newViewBox.right+=d/k;
+    isHolderSized=isHolderMoved=isViewBoxMoved=true;
+  }
+
+  if(newHolderArea.bottom<viewOutArea.bottom) {
+    d=viewOutArea.bottom+this.properties.viewOutStep-newHolderArea.bottom;
+    newHolderArea.bottom+=d;
+    newViewBox.bottom+=d/k;
+    isHolderSized=isHolderMoved=isViewBoxMoved=true;
+  }
+
+  if(isHolderMoved) {
+    holder.DOM.style.transform='translate3d('+(newHolderArea.left)+'px, '
+      +(newHolderArea.top)+'px, 0)';
+    holder.left=newHolderArea.left-screenShiftX;
+    holder.top=newHolderArea.top-screenShiftY;
+  }
+
+  if (isHolderSized) {
+    canvas.width =holder.width =newHolderArea.right-newHolderArea.left;
+    canvas.height=holder.height=newHolderArea.bottom-newHolderArea.top;
+
+    canvas.DOM.style.width=canvas.width+'px';
+    holder.DOM.style.width=holder.width+'px';
+    canvas.DOM.style.height=canvas.height+'px';
+    holder.DOM.style.height=holder.height+'px';
+  }
+
+  if (isViewBoxMoved) {
+    canvas.vboxOriginX=newViewBox.left;
+    canvas.vboxOriginY=newViewBox.top;
+    gfx.rectUpSize(newViewBox);
+    canvas.DOM.setAttribute('viewBox',
+      newViewBox.left+' '+newViewBox.top+' '+newViewBox.width+' '+newViewBox.height);
+    gfx.rectAlignToGrid(newViewBox, this.properties.portalGridSize*k,
+      this.properties.viewToPortalMargin*k);
+    this.revealPortalDoor(newViewBox);
+  }
+};
+
+// It call up after each panning
+gfx.Desk.prototype.checkHolderOutbound=function() {
+  this.updateHolder();
+};
+
+gfx.Desk.prototype.revealPortalDoor=function(doorRect) {
+  var portalSet,prevRect,portal,needLoad=false,hull,doorId,doc=this.document,
+      documentId=this.documentId, newHullRect;
+  if(!gfx.portals[documentId]) {
+    portalSet=gfx.portals[documentId]={};
+    doorId='door'+(gfx.lastId++);
+    portal=portalSet[this.id]={ //
+      hull:gfx.rectClone(doorRect),
+      currentDoorId: doorId,
+      doorsQueue:[doorId],
+      doors:{}
+    };
+    portal.doors[doorId]=doorRect;
+    this.loadPortalAsync(portal,newHullRect,hull);
+  } else {
+    portalSet=gfx.portals[documentId];
+    portal=portalSet[this.id];
+    prevRect=portal.doors[portal.currentDoorId];
+    if(!gfx.rectIsContains(prevRect,doorRect)) {
+      // ≈сли дверь сместилась относительно текущей двери - запоминаем ее в любом случае
+      doorId='door'+(gfx.lastId++);
+      portal.doors[doorId]=doorRect;
+      portal.doorsQueue.push(doorId);
+      portal.currentDoorId=doorId;
+      if(!gfx.rectIsContains(portal.hull,doorRect)) {
+        // Ќова€ дверь вне портала - расшир€ем портал
+        newHullRect=gfx.rectCreateHull(portal.hull,doorRect);
+        //portal.hull=newHullRect; //не мен€ем. ¬от когда загрузитс€ - тогда помен€ем
+        this.loadPortalAsync(portal,newHullRect,gfx.rectClone(portal.hull));
+      }
+    }
+  }
+};
+
+gfx.Desk.prototype.loadPortalAsync=function(portal,newHull,oldHull) {
+  if (this.debugMode) {
+    if (!this.debugObjs.portalViewer) {
+      this.debugObjs.portalViewer={};
+    }
+  }
+}
+
+gfx.Desk.prototype.setDebugMode=function(debugMode) {
+  if(this.debugMode) {
+    if (debugMode) return;
+    this.debugMode=false;
+    this.properties.viewBoundsMargin=0;
+
+    this.debugObjs.viewBounds.remove(); // todo: not tested
+    this.debugObjs.viewOutBounds.remove(); // todo: not tested
+    this.updateBounds();
+    this.updateHolder();
+
+  } else {
+    if (!debugMode) return;
+    this.debugMode=true;
+    this.debugObjs={};
+    this.properties.viewBoundsMargin=200;
+    this.debugObjs.viewBounds=new gfx.DebugBox(this.container.DOM,0,255,255,10);
+    this.debugObjs.viewOutBounds=new gfx.DebugBox(this.container.DOM,255,25,0,10);
+    this.updateBounds();
+    this.updateHolder();
+  }
+};
+
+
+gfx.Desk.prototype.refreshDebugPortals=function() {
+  if((!this.debugMode)||(!this.debugObjs.portalsViewer)) return;
+
+  console.log('Refresh Debug portal!');
+
+};
+
+gfx.Desk.prototype.arrangeDebugPortals=function() {
+  if(this.debugMode) {
+    if(!this.debugObjs.portalsViewer) {
+      this.createDebugPortals(200,200,20,3);
+    }
+  }
+  var pv=this.debugObjs.portalsViewer,pvc,pvh;
+  pvh=pv.holder;
+  pvh.left=pv.margin;
+  pvh.top=this.container.DOM.clientHeight-pv.margin-pv.holder.height;
+
+  pvh.DOM.style.transform='translate3d('+pvh.left+'px, '+pvh.top+'px,0)';
+
+  pvc=pv.canvas;
+  pvc.width =pv.holder.width -pv.borderSize*2;
+  pvc.height=pv.holder.height-pv.borderSize*2;
+  pvc.DOM.setAttribute('width' ,pvc.width +'px');
+  pvc.DOM.setAttribute('height',pvc.height+'px');
+  pvc.DOM.setAttribute('viewBox','-500 -500 2000 2000');
+};
+
+gfx.Desk.prototype.createDebugPortals=function(width,height,margin,borderSize) {
+  var pv,pvh,me=this,pv;
+  if (!me.debugObjs) me.debugObjs={};
+  if(me.debugObjs.portalsViewer) {
+    return false; // уже есть
+  }
+
+  pv=me.debugObjs.portalsViewer={borderSize:borderSize, margin:margin};
+  pvh=pv.holder={DOM:document.createElement('div'),left:0,top:0,width:width,height:height};
+  pvh.DOM.style='position:absolute; left:0px; top:0px; width:'+pvh.width+'px; height:'+pvh.height
+    +'px; background-color:#202020; border:'+pv.borderSize+'px solid #a0a0a0; z-Index:11';
+  me.container.DOM.appendChild(pv.holder.DOM);
+  pv.canvas={DOM:document.createElementNS('http://www.w3.org/2000/svg','svg')};
+  pvh.DOM.appendChild(pv.canvas.DOM);
+};
+
+
+
+gfx.DebugCanvasRect=function(parentDOM,r,g,b,x,y,width,height) {
+  var dr=document.createElementNS("http://www.w3.org/2000/svg", 'rect');
+  dr.setAttribute('x',x);
+  dr.setAttribute('y',y);
+  dr.setAttribute('width',width);
+  dr.setAttribute('width',height);
+  dr.setAttribute('rx',10);
+  dr.setAttribute('ry',10);
+  //dr.setAttribute('style','stroke: rgba('+r+','+g+','+b+',0); stroke-width: 3');
+  dr.setAttribute('style','stroke: red; fill:green; stroke-width:3');
+  this.DOMRect=parentDOM.appendChild(dr);
+};
+
+
+gfx.DebugBox=function(parentDOM,r,g,b,zIndex) {
+  var box=this;
+  box.parentDOM=parentDOM;
+  box.line1=document.createElement('div');
+  var a=box.line1.style;
+  a.height='5px'; a.zIndex=zIndex; a.position='absolute'; a.top=a.left='0px';
+  a.background='linear-gradient(to bottom, rgba('+r+','+g+','+b+',0) 0%, rgba('+r+','+g+','+b+',0.5) 100%)'
+  parentDOM.appendChild(box.line1);
+
+  box.line2=document.createElement('div');
+  a=box.line2.style;
+  a.width='5px'; a.zIndex=zIndex; a.position='absolute'; a.top=a.left='0px';
+  a.background='linear-gradient(to left, rgba('+r+','+g+','+b+',0) 0%, rgba('+r+','+g+','+b+',0.5) 100%)'
+  parentDOM.appendChild(box.line2);
+
+
+  box.line3=document.createElement('div');
+  a=box.line3.style;
+  a.height='5px'; a.zIndex=zIndex; a.position='absolute'; a.top=a.left='0px';
+  a.background='linear-gradient(to top, rgba('+r+','+g+','+b+',0) 0%, rgba('+r+','+g+','+b+',0.5) 100%)'
+  parentDOM.appendChild(box.line3);
+
+  box.line4=document.createElement('div');
+  a=box.line4.style;
+  a.width='5px'; a.zIndex=zIndex; a.position='absolute'; a.top=a.left='0px';
+  a.background='linear-gradient(to right, rgba('+r+','+g+','+b+',0) 0%, rgba('+r+','+g+','+b+',0.5) 100%)'
+  parentDOM.appendChild(box.line4);
+};
+
+gfx.DebugBox.prototype.remove=function(){
+  var me=this,d=me.parentDOM;
+  d.removeChild(me.line1);
+  d.removeChild(me.line2);
+  d.removeChild(me.line3);
+  d.removeChild(me.line4);
+  me.line1=me.line2=me.line3=me.line4=undefined;
+};
+
+gfx.DebugBox.prototype.setSize=function(newPosLeft,newPosTop,newWidth,newHeight) {
+  var me=this,move2=false,move3=false,l1=me.line1.style,l2=me.line2.style, l3=me.line3.style,l4=me.line4.style;
+  if ((newPosLeft!=me.left)||(newPosTop!=me.top)) {
+    move2=move3=true;
+    l1.transform='translate3d('+newPosLeft+'px, '+(newPosTop-5)+'px, 0)';
+    l4.transform='translate3d('+(newPosLeft-5)+'px, '+newPosTop+'px, 0)';
+  }
+
+  if(newWidth!=me.width) {
+    l3.width=l1.width=newWidth+'px';
+    move2=true;
+  }
+
+  if(newHeight!=me.height) {
+    l4.height=l2.height=newHeight+'px';
+    move3=true;
+  }
+
+  if(move2) {
+    l2.transform='translate3d('+(newPosLeft+newWidth)+'px, '+(newPosTop)+'px, 0)';
+  }
+  if(move3) {
+    l3.transform='translate3d('+newPosLeft+'px, '+(newPosTop+newHeight)+'px, 0)';
+  }
+  gfx.rectSet(me,newPosLeft,newPosTop,newWidth,newHeight);
+};
+
+gfx.Desk.prototype.updateBounds=function(){
+  var h=this.container.DOM, vm=this.properties.viewBoundsMargin,
+      vd=this.properties.viewOutBoundsDistance;
+
+  this.viewBounds=gfx.rectCreate(vm,vm,h.clientWidth-vm*2,h.clientHeight-vm*2);
+  this.viewOutBounds=gfx.rectCreate(vm-vd,vm-vd,this.viewBounds.width+vd*2,this.viewBounds.height+vd*2);
+
+  if (this.debugMode) {
+    this.debugObjs.viewBounds.setSize(this.viewBounds.left,this.viewBounds.top,
+      this.viewBounds.width,this.viewBounds.height);
+    this.debugObjs.viewOutBounds.setSize(this.viewOutBounds.left,this.viewOutBounds.top,
+      this.viewOutBounds.width,this.viewOutBounds.height);
+    this.arrangeDebugPortals();
+  }
+};
+
+
+gfx.Gobject=function (symbol,params,doc){
+  var me=this;
+  me.params={};
+  me.document=doc;
+  me.svgDOMObjects={}; // desk.id:sgvDomObject
+  me.id=gfx.lastId++;
+  doc.gobjs[me.id]=me;
+  me.symbol=symbol;
+  if(!!params){
+    for (var a in params){
+      me.params[a]=params[a];
+    }
+  }
+};
+
+gfx.Gobject.prototype.render=function(desk) {
+  function _build(gobj,symbol,p){
+    var ci,el,a,v,tag=symbol.tag;
+    var me=gobj.params;
+    if (!!tag) {
+      el=document.createElementNS("http://www.w3.org/2000/svg", tag);
+      el.setAttribute('id','GObj:'+desk.id+':'+gobj.id);
+      if (symbol.attr!==undefined){
+        for (a in symbol.attr) {
+          v=symbol.attr[a];
+          v=eval(v);
+          el.setAttribute(a,v);
+        }
+      }
+      if (!!symbol.text) {
+        var spanStr=eval(symbol.text);
+        var s,i,spans=spanStr.split('\n'),x=0,y=0;
+        if(symbol.attr.x) x=symbol.attr.x;
+        if(symbol.attr.y) y=symbol.attr.y;
+        for (i in spans) {
+          s=spans[i];
+          var elSpan=document.createElementNS("http://www.w3.org/2000/svg", 'tspan');
+          elSpan.innerHTML=s;
+          elSpan.setAttribute('font-family','Arial');
+          elSpan.setAttribute('text-anchor','middle');
+          elSpan.setAttribute('x',me.width/2);
+          elSpan.setAttribute('y',y);
+          y+=20;
+          el.appendChild(elSpan);
+        }
+        //el.innerHTML=t.innerText;
+      }
+      if (!!symbol._){
+       for (a in symbol._) {
+         v=symbol._[a];
+         _build(gobj,v,el);
+       }
+      }
+      p.appendChild(el);
+    } else {
+
+      if(!!symbol.on) {
+        var condition,hasFalse=false,property,propertyName,conditions=symbol.on;
+        for (ci in conditions) {
+          condition=conditions[ci];
+          propertyName=condition.property;
+          var pparts=propertyName.split('.',2);
+          if(pparts[0]=='desk') property=desk.properties[pparts[1]];
+          if(pparts[0]=='me') property=gobj.properties[pparts[1]];
+          if(property===undefined) {
+            hasFalse=true;
+            break;
+          } else {
+            if(condition.min!==undefined) {
+              hasFalse=(property<condition.min);
+              if (hasFalse) break;
+            }
+            if(condition.max!==undefined) {
+              hasFalse=(property>condition.min);
+              if (hasFalse) break;
+            }
+          }
+        }
+        if (!hasFalse) {
+          if (!!symbol._){
+            for (a in symbol._) {
+              v=symbol._[a];
+              _build(gobj,v,p);
+            }
+          }
+        }
+      }
+
+      if(!!symbol.useSvgSymbol) {
+        console.info('Put svg symbol '+symbol.useSvgSymbol);
+        var symbolText=svgSymbols[symbol.useSvgSymbol];
+        el=document.createElementNS("http://www.w3.org/2000/svg",'g');
+        el.innerHTML=symbolText;
+        el.setAttribute('x',me.x);
+        el.setAttribute('y',me.y);
+        p.appendChild(el);
+      }
+
+      if (!!symbol._){
+        for (a in symbol._) {
+          v=symbol._[a];
+          _build(gobj,v,p);
+        }
+      }
+    }
+  }
+
+  /*var symbol=document.createElementNS("http://www.w3.org/2000/svg", 'symbol');
+  _build(this,this.template,symbol);
+  this.id = 'symbol_'+(gfx.lastId++);
+  symbol.setAttribute('id', this.id);
+  svgDefs.appendChild(symbol);
+  this.svgSymbol=symbol;
+
+
+  var instance=document.createElementNS("http://www.w3.org/2000/svg", 'use');
+  instance.setAttribute('id', 'i_'+this.id);
+  instance.setAttributeNS('http://www.w3.org/1999/xlink','href', '#'+this.id);
+  instance.setAttribute('x',this.params.x);
+  instance.setAttribute('y',this.params.y);
+  svgCanvas.appendChild(instance);
+  this.svgInstance=instance;
+  */
+
+
+  var t,i,svgObject=document.createElementNS("http://www.w3.org/2000/svg", 'g');
+  if(!!this.symbol.triggers) {
+    for (i in this.symbol.triggers) {
+      t=this.symbol.triggers[i];
+      if (eval(t.condition)) {
+        this.params[t.param]=t.value;
+      }
+    }
+  }
+  _build(this,this.symbol,svgObject);
+  //svgObject.setAttribute('id',desk.id+'/'+this.id);
+  var ts='translate('+this.params.x+','+this.params.y+')';
+  if (this.params.rotate) {
+    ts+=' rotate ('+this.params.rotate+',0,0)';
+  }
+  svgObject.setAttribute('transform',ts);
+  if(!!this.svgDOMObjects[desk.id]) {
+    this.svgDOMObjects[desk.id].remove();
+  }
+  desk.canvas.DOM.appendChild(svgObject);
+  this.svgDOMObjects[desk.id]=svgObject;
+
+};
+
+
+function init() {
+  console.info("hello");
+  var adesk=new gfx.Desk('MainDesk');
+  gfx.desks[adesk.id]=adesk;
+  gfx.doShowDocument('BlankDocument',adesk.id);
+
+
+  var t=gfx.doCreateGobject('textrect',{x:100,y:0,width:150,height:60,rotate:40,fillColor:'red',round:7,text:'Button1\nGood'});
+  t.render(adesk);
+
+  t=gfx.doCreateGobject('desktop_pc',{x:0,y:100,width:100,height:100,text:'192.168.101.293'});
+  t.render(adesk);
+
+  t=gfx.doCreateGobject('desktop_pc',{x:200,y:-340,width:100,height:100,text:'192.168.101.11'});
+  t.render(adesk);
+
+  t=gfx.doCreateGobject('server_pc',{x:2260,y:-40,width:100,height:100,text:'192.168.101.1'});
+  t.render(adesk);
+
+  adesk.setDebugMode(true);
+
+  if (console.toggle) console.toggle();
+}
+
+</script>

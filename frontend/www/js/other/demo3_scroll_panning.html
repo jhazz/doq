@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+var mbui={},sbox1, sbox2
+
+mbui.init=function(){
+  sbox1=document.getElementById("sbox1")
+  sbox2=document.getElementById("sbox2")
+
+  mbui.logTarget=sbox2
+  mbui.Scroller={}
+  mbui.Scroller.make=function (p,parameters){
+    var me=p._=function(cmd,params ){
+      var me=this._, sh,sy,rowNo,rowEnd,maxRow,minRow,vy1,vy2,
+          el,y1,y2,b,i,foundminy,foundmaxy,row1,row2,row3,row4
+      switch(cmd){
+      case 'update':
+        if(!me.valid.tlPane){
+          if(!me.tlPane.el){
+            me.tlPane.el= el= document.createElement('div')
+            el.style.position="absolute"
+            el.className="tlpane"
+            el.style.transform="translate3d(px,0px,0px)"           
+            this.appendChild(el)
+          } else el=me.tlPane.el
+          el.style.width=me.fixLeftSize+'px'
+          el.style.height=me.fixTopSize+'px'
+          if(me.headerVisible && me.fixedVisible)
+            el.style.display= 'block' 
+          else
+            el.style.display = 'none'
+          me.valid.tlPane=1
+        }
+        if(!me.valid.lPane){
+          if(!me.lPane.el){
+            me.lPane.el= el= document.createElement('div')
+            el.style.position="absolute"
+            el.className="lpane"
+            el.style.transform="translate3d(0px,"+ me.fixTopSize +"px,0px)"
+            this.appendChild(el)
+          } else  el=me.lPane.el
+          el.style.width=me.fixLeftSize+'px'
+          el.style.height=(this.clientHeight-me.fixTopSize-6)+'px'
+          if(me.fixedVisible)
+            el.style.display= 'block' 
+          else
+            el.style.display = 'none'
+          me.valid.lPane=1
+        }
+        
+        if(!me.valid.tPane){
+          if(!me.tPane.el){
+            me.tPane.el= el= document.createElement('div')
+            el.style.position="absolute"
+            el.className="tpane"
+            this.appendChild(el)
+          } else  el=me.tPane.el
+          el.style.transform="translate3d("+ me.fixLeftSize +"px,0px,0px)"
+          el.style.width=(this.clientWidth-me.fixLeftSize)+'px'
+          el.style.height=(me.fixTopSize-2)+'px'
+          if(me.headerVisible )
+            el.style.display= 'block' 
+          else
+            el.style.display = 'none'
+          me.valid.tPane=1
+        }
+        
+        
+        
+        
+        foundmaxy= foundminy =undefined
+        for(i in me.pboxes){
+          pbox=me.pboxes[i]
+          rowNo=pbox.rowNo
+          pbox.y1=y1=rowNo*me.pboxHeight
+          y2=y1+me.pboxHeight
+          vy1=y1-me.scrollY
+          vy2=y2-me.scrollY
+          
+          if((vy2<(me.vport.y1-me.vport.offZone)) || (vy1>=(me.vport.y2+me.vport.offZone))){
+            pbox.el.parentNode.removeChild(pbox.el)
+            delete me.pboxes[i]
+            mbui.log("page removed no="+pbox.rowNo)
+            continue
+          }
+          if((foundminy==undefined)||(y1<foundminy))
+            foundminy=y1
+          if((foundmaxy==undefined)||(y2>foundmaxy))
+            foundmaxy=y2
+          pbox.el.style.transform="translate3d("
+            +pbox.x1+"px,"+vy1+"px,0px)"
+          } // for(i)
+        
+        if(foundminy==undefined) {
+          mbui.log("Full paint!")
+          row1=(me.vport.y1+me.scrollY)/me.pboxHeight
+          row2=(me.vport.y2+me.scrollY)/me.pboxHeight
+          row1=Math.floor(row1)
+          row2=Math.ceil(row2)
+          row3=undefined
+        } else {
+          row1=(me.vport.y1 + me.scrollY)/me.pboxHeight
+          row2=(foundminy)/me.pboxHeight
+          row3=(foundmaxy)/me.pboxHeight
+          row4=(me.vport.y2+me.scrollY)/me.pboxHeight
+          mbui.log('Draw around [miny='+foundminy+',maxy='+foundmaxy+']')
+          mbui.log('(row1='+row1+' row2='+ row2+' row3='+row3+' row4='+row4+') scrollY='+ me.scrollY )
+          row1=Math.floor(row1); 
+          row2=Math.floor(row2); 
+          row3=Math.floor(row3); 
+          row4=Math.ceil(row4)
+          mbui.log(' ((row1='+row1+' row2='+ row2+' row3='+row3+' row4='+row4+'))')
+          mbui.log('floored row2='+Math.floor(row2))
+        }
+        mbui.log('Have to draw from '+row1+' less to '+row2)
+        do{
+          if(row1>=row2){
+            if((row3!==undefined)) {
+              row1=row3,row2=row4
+              row3=undefined
+              mbui.log('Have to push bottom from '+row1+' till <'+row2)
+              continue
+            } else break
+          }
+          y1=row1*me.pboxHeight
+          y2=y1+me.pboxHeight
+          mbui.log('..add '+row1)
+          me.call(this,'putp',{
+            rowNo:row1,
+            x1:Math.floor(Math.random()*50), x2:50,
+            y1:y1, y2:y2, text:'#'+row1
+          })
+          row1++
+        } while (true)
+        break 
+      case 'touchstart':
+        params.startScrollY=me.scrollY
+        break;
+      case 'touchmove':
+        me.scrollY= params.startScrollY-
+         (params.moveToSY-params.startSY)
+        me.call(this,'update')
+        break;
+      case 'putp':
+        pbox=me.pboxes['#'+params.rowNo]={
+          rowNo:params.rowNo,
+          x1:params.x1,
+          y1:params.y1,
+          x2:params.x2,
+          y2:params.y2,
+          borderSize:2
+          }
+        el=pbox.el=document.createElement('div')
+        el.style.position="absolute"
+        el.className="fb"
+        el.style.transform="translate3d("+pbox.x1+"px,"
+          +(pbox.y1-me.scrollY)+"px,0px)"
+        el.style.width='60px'//pbox.x2-pbox.x1+'px'
+        el.style.height=(pbox.y2-pbox.y1-pbox.borderSize)+'px'
+        el.style.top=pbox.el.style.left="0px"
+        el.innerHTML=params.text
+        this.appendChild(el)
+        break
+      case 'showDebugViewport':
+        el=me.debugDebugViewportEl
+        if(!el){
+          el=me.debugDebugViewportEl=document.createElement('div')
+          el.style.position="absolute"
+          el.style.border="solid 1px green"
+          this.appendChild(el)
+        } 
+        el.style.transform="translate3d("+me.vport.x1+"px,"+me.vport.y1+"px,0px)"
+        el.style.width= me.vport.x2-me.vport.x1+'px'
+        el.style.height=me.vport.y2-me.vport.y1+'px'
+        
+      }
+    }
+    me.vport={x1:0, y1:50, x2:200, y2:240, offZone:20}
+    me.pboxes={}
+    me.valid={tlPane:0, lPane:0, tPane:0, mPane:0}
+    me.fixLeftSize=50
+    me.fixTopSize=30
+	me.headerVisible=1
+	me.fixedVisible=1
+    me.tlPane={visible:true}
+    me.lPane={visible:true}
+    me.tPane={visible:true}
+    me.mPane={}
+    me.cellBorderSize=2
+    me.rowHeight=20
+    me.rowPerPage = Math.floor((256-me.cellBorderSize)/me.rowHeight)
+    me.pboxHeight = me.cellBorderSize + me.rowHeight * me.rowPerPage
+    me.scrollY=0
+    me.call(p,'showDebugViewport')
+    me.call(p,'update')
+    
+    //window.setInterval(function(){
+    //  p._.scrollY++
+     // p._('update')
+    //},10) 
+    
+  }
+
+  document.body.addEventListener ('touchstart',function(e){
+    var i,t=e.srcElement,te,dragInfo
+    if(!('_' in t)) {
+      if ('parentElement' in t)
+        t=t.parentElement
+        if(!('_' in t)) return
+    }
+    
+    e.preventDefault();
+    if(!('drags' in t._)) t._.drags={}
+    t._.mode='ts' // touch scroll
+    for(i=0;i<e.changedTouches.length;i++){
+      te=e.changedTouches[i]
+      dragInfo=t._.drags[te.identifier]={
+        id:te.identifier, 
+        startSX:te.screenX, 
+        startSY:te.pageY, 
+        el:e.srcElement}
+      t._('touchstart',dragInfo)
+      //mbui.log(mbui.dump(dragInfo))
+    }
+  },{passive:false})
+
+  document.body.addEventListener ('touchmove',function(e){
+    var i,t=e.srcElement,te,dragInfo
+    if(!('_' in t)) {
+      if ('parentElement' in t)
+        t=t.parentElement
+        if(!('_' in t)) return
+    }
+    
+    //e.preventDefault();
+    if(!('drags' in t._)) return
+    
+    if (t._.mode=='ts'){ // touch scroll
+      for(i=0;i<e.changedTouches.length;i++){
+        te=e.changedTouches[i]
+        dragInfo=t._.drags[te.identifier]
+        dragInfo.moveToSX=te.screenX
+        dragInfo.moveToSY=te.pageY
+        t._.call(t,'touchmove',dragInfo)
+        //mbui.log(mbui.dump(dragInfo))
+      }
+    }
+  },{passive:false})
+
+  mbui.dump=function(a,onlyown){
+    var k,r=''
+    if(!!onlyown){
+      for(k in a) if (a.hasOwnProperty(k)) r+=k+':'+a[k]+',\n'
+    }else{
+      for(k in a) r+=k+'='+a[k]+';\n'
+    }
+    return r
+  }
+  
+  mbui.log=function(s){
+    //return
+    var e=document.createElement('div')
+    mbui.logTarget.appendChild(e)
+    e.className='mbui_logitem'
+    e.innerHTML=s
+    //mbui.logTarget.scrollTop=mbui.logTarget.scrollHeight
+  }
+  
+  mbui.Scroller.make(sbox1)
+  
+}
+</script>
+<style>
+body,html{ padding:0;margin:0;width:100%; height: 500px}
+.fb{border:solid 2px blue} 
+.tlpane {background:#40ff40;bor der:solid 1px green} 
+.lpane {border:solid 2px cyan}
+.tpane {border:solid 2px orange;}
+.mpane { border:solid 2px blue; }
+.mbui_logitem{font-size:9px; font-family:sans-serif; padding:2px; background-color:#e0e0f0; white-space: nowrap;}
+</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body noscroll onerror="alert(event.message)" onload="mbui.init()" STYLE=" padding:0;margin:0; height: 100%">
+<div id ="sbox1" style ="position:fixed;width:100%;height:300px;border:solid 2px; overflow:hidden;transform:translate3d(0,0,0)"></div>
+<div id ="sbox2" style ="position:fixed;top:300px;width:100%;height:190px;border:solid 2px; overflow:scroll"></div>
+
+</div>
+</body>
+</html> 
+
+
+
+
+
