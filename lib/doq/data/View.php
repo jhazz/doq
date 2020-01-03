@@ -15,17 +15,15 @@ class View {
   public $linkedDatasources;
   public $subDatasets;
   public $cacher;
-  public $cfgConnections;
 
-  public static function create(&$cfgSchema,&$cfgView,&$cfgConnections,$viewId=false){
-    $r=new View($cfgSchema,$cfgView,$cfgConnections,$viewId);
+  public static function create(&$cfgSchema,&$cfgView,$viewId=false){
+    $r=new View($cfgSchema,$cfgView,$viewId);
     return[true,&$r];
   }
 
-  public function __construct(&$cfgSchema,&$cfgView,&$cfgConnections,$viewId=false) {
+  public function __construct(&$cfgSchema,&$cfgView,$viewId=false) {
     $this->cfgSchema=&$cfgSchema;
     $this->cfgView=&$cfgView;
-    $this->cfgConnections=&$cfgConnections;
     $this->viewId=$viewId;
     $this->isCacheable=false;
     if(isset(self::$defaultCacher)) {
@@ -242,7 +240,9 @@ class View {
       $cfgDatasource=&$this->cfgSchema['@datasources'][$datasourceName];
       $dataConnectionName=$cfgDatasource['#dataConnection'];
       $plan['#dataConnection']=$dataConnectionName;
-      $plan['#dataProvider']=$providerName=$this->cfgConnections[$dataConnectionName]['#provider'];
+	  list($ok,$connection) = \doq\data\Connections::getConnection($dataConnectionName); 
+	  $providerName=$connection->provider;
+	  $plan['#dataProvider']=$providerName;
     } else {
       $parentViewColumn['@dataset']=&$dataset;
     }

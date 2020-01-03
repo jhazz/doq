@@ -27,11 +27,15 @@ set_exception_handler(function($exception){
             $s='';
             $ss.='&nbsp;&nbsp;';
             if(isset($stackItem['args'])){
-                foreach ($stackItem as $name=>&$value) {
+                foreach ($stackItem['args'] as $name=>&$value) {
                     if ($s!='') {
-                        $s.='';
+                        $s.=',';
                     }
-                    $s.=$name.'='.$value;
+					if (is_scalar($value)) {
+						$s.=$name.'='.$value;
+					} else {
+						$s.=$name.'='.gettype($value);
+					}
                 }
             }
             Logger::info('STACK:'.$ss.$stackItem['function'].'('.$s.')',$stackItem['file'],$stackItem['line']);

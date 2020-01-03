@@ -18,10 +18,10 @@ function main()
     print '<meta charset="utf-8">';
     # require_once $schemaFile;
 
-    
+    /** @var doq\Cacher $viewPlanCacher Кэш плана создаваемого вида */
     $viewPlanCacher=doq\Cacher::create($GLOBALS['doq']['env']['@caches']['mysql1_dataplans']);
     doq\data\View::$defaultCacher=$viewPlanCacher;
-    doq\data\Connection::init($GLOBALS['doq']['env']['@dataConnections']);
+    doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
   
     if ($viewPlanCacher===false) {
         return;
@@ -33,10 +33,8 @@ function main()
     list($ok, $viewProducts)=doq\data\View::create(
         $GLOBALS['doq']['schema'],
         $GLOBALS['doq']['views']['Products'],
-        $GLOBALS['doq']['env']['@dataConnections'],
         'Products_View_12345'
     );
-
   
     $viewProducts->prepare($schemaFileTime, true); # Второй параметр означает форсированную перестройку кэша плана данных вне зависимости от даты самого кэша
     doq\data\Scripter::dumpPlan($viewProducts->plan);

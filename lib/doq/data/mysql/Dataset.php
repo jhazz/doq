@@ -19,7 +19,7 @@ class Dataset extends \doq\data\Dataset{
   }
 
   public function connect(){
-    list($ok,$this->connection)=\doq\data\Connection::getDataConnection($this->planEntry['#dataConnection']);
+    list($ok,$this->connection)=\doq\data\Connections::getConnection($this->planEntry['#dataConnection']);
     return $ok;
   }
 

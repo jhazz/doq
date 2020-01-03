@@ -5,9 +5,10 @@ abstract class Scripter {
   abstract public function buildSelectScript($planEntry);
 
   public static function create($providerName) {
+	  print_r ($providerName);
     switch ($providerName) {
       case 'mysql':
-        return mysql\Scripter::create();
+        return \doq\data\mysql\Scripter::create();
       default:
         return new Scripter();
     }
