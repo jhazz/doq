@@ -10,7 +10,7 @@ class ScopeStack {
     $scopeStack=new ScopeStack();
     $scope=$dataNode->dataObject->makeScope($dataNode,$indexName,$indexKey);
     $scopeStack->pushScope($scope);
-    return $scopeStack;
+    return [true,&$scopeStack];
   }
 
   private function pushDataNode(DataNode $dataNode, $newPath) {

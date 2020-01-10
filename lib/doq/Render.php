@@ -8,7 +8,7 @@ class Render {
   public $jsIncludes;
 
   public static function create(){
-    return new Render();
+    return [true, new Render()];
   }
 
   public function Render() {
@@ -20,12 +20,12 @@ class Render {
     $this->fragments=array();
   }
 
-  public function build($dataNode,&$template) {
-    $scopeStack=\doq\data\ScopeStack::create($dataNode);
+  public function build(&$dataNode,&$template) {
+    list($ok,$scopeStack)=\doq\data\ScopeStack::create($dataNode);
     return $this->fromTemplate($scopeStack,$template,$template->rootBlock);
   }
 
-  public function fromTemplate($scopeStack,&$template,&$block) {
+  public function fromTemplate(&$scopeStack,&$template,&$block) {
     if(!isset($block['@'])) {
       return false;
     }

@@ -44,25 +44,18 @@ class I18n
      * @param string|null $langBasePath Full path to lang directory contains language countries directories
      * @return readyness
      */
-    public static function init($config=null, $langBasePath=null)
+    public static function init(&$env)
     {
+        self::$sourceLang='en';
         self::$selectedCategory=false;
-        if(($config!=null)&&(isset($config['sourceLang']))){
-            $sourceLang=$config['sourceLang'];
-        } else {
-            $sourceLang='en';
+        if (isset($env['#sourceLang'])){
+            self::$sourceLang=$env['#sourceLang'];
         }
-
-        if ($langBasePath==null) {
-            if (($config!=null)&&(isset($config['langBasePath']))) {
-                $langBasePath=$config['langBasePath'];
-            }
-        }
-
+        $langBasePath=$env['#langBasePath'];
         if(!is_dir($langBasePath)){
             return false;
         }
-        self::$sourceLang=$sourceLang;
+
         self::$langBasePath=$langBasePath;
         self::$registry=[];
         self::$targets=[];
@@ -152,7 +145,7 @@ class I18n
             }
             array_pop($tagParts);
         }
-        return ['success'=>false,'error'=>'Lang package '.$fileName.' not found'];
+        return ['success'=>false,'error'=>'Lang package for '.$targetLangTag.', category "'.$category.'" not found'];
     }
 
 

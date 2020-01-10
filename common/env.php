@@ -5,22 +5,38 @@ return [
 	'#rootPath'=>$ROOT_PATH,
 	'#libPath'=>$ROOT_PATH.'/lib',
 	'#commonPath'=>$ROOT_PATH.'/common',
-	'#langBasePath'=>$ROOT_PATH.'/lang',
-	'#cachesPath'=>$ROOT_PATH.'/runtime/caches',
-	'#sourceLang'=>'en',
-	'#templatesPath'=>$ROOT_PATH.'/frontend/templates',
+    '#cachesPath'=>$ROOT_PATH.'/runtime/caches',
+    '#templatesPath'=>$ROOT_PATH.'/frontend/templates',
+    '@lang'=>[
+        '#sourceLang'=>'en',
+        '#langBasePath'=>$ROOT_PATH.'/lang'
+    ],
+    '@log'=>[
+#        '#targetType'=>'html_end',
+        '#targetType'=>'file',
+        '#logMode'=>255,
+        '#logsPath'=>$ROOT_PATH.'/runtime/logs'
+    ],
 	'@modules'=>[
 		'auth'    =>['actions'=>['default'=>'auth_status.php']],
 		'products'=>['actions'=>['default'=>'products_list.php']]
 	],
 	'@caches'=>[
-		'mysql1_dataplans'=>[
+		'dataplans'=>[
 			'#type'=>'serialfile',
 			'#targetFolder'=>'dataplans',
 			'#filePrefix'=>'vp_',
 			'#fileSuffix'=>'.plan.txt',
 			'#forceCreateFolder'=>1
-		]
+        ],
+		'templates'=>[
+			'#type'=>'serialfile',
+			'#targetFolder'=>'templates',
+			'#filePrefix'=>'t_',
+			'#fileSuffix'=>'.tmpls.txt',
+			'#forceCreateFolder'=>1
+        ],
+
 	],
 	'@session'=>[
 		'#formNoncesSalt'=>'gJUYGo87fsghgO*sdfsGftu',
@@ -31,13 +47,14 @@ return [
 		'MYSQL0'=>[
 			'@environments'=>[
 				'DEVELOPMENT'=>[
-					'#provider'=>'mysql',
+                    '#provider'=>'mysql',
+                    '#debugLevel'=>'1',
 					'@params'=>[
 						'host'=>'127.0.0.1',
 						'port'=>'3306',
-						'dbase'=>'doqdemo',
+						'dbase'=>'test',
 						'login'=>'root',
-						'password'=>'123'
+						'password'=>''
 					]
 				],
 				'*'=>[
