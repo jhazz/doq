@@ -155,9 +155,13 @@ abstract class Logger
                 print_r($data);
                 return;
             }
-            self::$loggerInstance->pushDataPlan(self::LE_DEBUG_DATAPLAN, ['planName'=>$planName,'dataplan'=>&$data,'file'=>$file,'line'=>$line]);
+            self::$loggerInstance->pushDataPlan(self::LE_DEBUG_DATAPLAN, [
+                'planName'=>$planName,'dataplan'=>&$data,'file'=>$file,'line'=>$line]);
         }
 
+    }
+    public static function debugDataQuery($id, $queryString,  $file = null, $line = null){
+        self::$loggerInstance->pushDataQuery(self::LE_DEBUG_DATAQUERY,['id'=>$id, 'queryString'=>$queryString,'file'=>$file,'line'=>$line]);
     }
 
     public static function addPHPError($phpErrorType, $data, $file = null, $line = null)
@@ -202,7 +206,7 @@ abstract class Logger
                 if (\is_numeric($v)) {
                     array_push($result, $v);
                 } elseif (\is_string($v)) {
-                    array_push($result, '"'.$v.'"');
+                    array_push($result, '"'.\addslashes($v).'"');
                 } elseif (\is_bool($v)){
                     array_push($result,$v?'true':'false');
                 }
@@ -357,7 +361,12 @@ class HTMLEndLogger extends Logger {
             $this->logArray[$logSection]=[];
         }
         array_push($this->logArray[$logSection], ['data'=>'Dumps dataplan to dataplans log','time'=>date('Y-m-d H:i:s'),'type'=>'dataplan']);
-        array_push($this->dataLogArray, $data);
+        // TODO проверить - можно ли добавить в массив &$data вместо копии
+        array_push($this->dataLogArray, ['dataplan', $data]);
+    }
+
+    public function pushDataQuery($entryType, &$data){
+        array_push($this->dataLogArray, ['queryString',$data]);
     }
 
     public function onHTTPEnd()
@@ -374,25 +383,26 @@ class HTMLEndLogger extends Logger {
                 \extract($record, EXTR_OVERWRITE);
             
                 switch ($type) {
-                case self::LE_ERROR:
-                    $typeName ='Doq Error';
-                    $bgColor="#f8e0e0";
-                    $fw=""; break;
-                case self::LE_INFO:  $typeName ='Info'; $bgColor="#f8f8f0"; $fw=""; break;
-                case self::LE_WARNING: $typeName = 'Warning'; $bgColor="#80f880"; $fw= ""; break;
-                case self::LE_DEBUG_INFO:
-                    $typeName = 'Debug';
-                    if ($category) {
-                        $typeName.="[${category}]";
-                    }
-                    $bgColor="#aaaaaa";
-                    $fw= ""; break;
-                case 0: $typeName = ''; $bgColor="#bbbbbb"; $fw= ""; break;
-            default:
-                $typeName = 'Error '.$type;
-                $bgColor="#ffb0b0";
-                $fw="font-weight:bold;";
-            }
+                    case self::LE_ERROR:
+                        $typeName ='Doq Error';
+                        $bgColor="#f8e0e0";
+                        $fw=""; break;
+                    case self::LE_INFO:  $typeName ='Info'; $bgColor="#f8f8f0"; $fw=""; break;
+                    case self::LE_WARNING: $typeName = 'Warning'; $bgColor="#80f880"; $fw= ""; break;
+                    case self::LE_DEBUG_INFO:
+                        $typeName = 'Debug';
+                        if ($category) {
+                            $typeName.="[${category}]";
+                        }
+                        $bgColor="#aaaaaa";
+                        $fw= ""; 
+                    break;
+
+                    default:
+                        $typeName = 'Error '.$type;
+                        $bgColor="#ffb0b0";
+                        $fw="font-weight:bold;";
+                }
 
                 $text='';
                 if (!is_scalar($data)) {
@@ -414,7 +424,20 @@ class HTMLEndLogger extends Logger {
         
         /** @var $data ['planName'=>$planName,'dataplan'=>&$dataPlan,'file'=>$file,'line'=>$line] */
         foreach ($this->dataLogArray as $i=>&$data) {
-            $this->dumpPlan($data['dataplan']);
+            $type=$data[0];
+            switch($type){
+                case 'dataplan':
+                    print "<h4>".$data[1]['planName'].'</h4>';
+                    $this->dumpPlan($data[1]['dataplan']);
+
+                break;
+                case 'queryString':
+                    print "<h4>";
+                    print $data[1]['queryString'];
+                    print "</h4>";
+                break;
+            }
+           
         }
     }
 
@@ -495,9 +518,21 @@ class FileLogger extends Logger
         $data['type']=$entryType;
         $data['time']=date('Y-m-d H:i:s');
         
-        fputs ($this->dataLogFileHandle, self::jsonSerialize($data['dataplan']));
+        fputs ($this->dataLogFileHandle, self::jsonSerialize($data));
 
     }
+    public function pushDataQuery($entryType,$data){
+        if (!$this->dataLogFileHandle) {
+            return;
+        }
+        $data['type']=$entryType;
+        $data['time']=date('Y-m-d H:i:s');
+        
+        fputs ($this->dataLogFileHandle, "\n\n\nDataquery:\n");
+        fputs ($this->dataLogFileHandle, self::jsonSerialize($data));
+
+    }
+
 
     public function onHTTPEnd()
     {

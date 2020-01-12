@@ -2,7 +2,7 @@
 namespace doq\data;
 
 /**
-* View - is a data loading plan that creates Datasets when do read data by a parameters
+* View - is a data loading plan that creates Datasets that will read data according to parameters
 *
 */
 class View
@@ -39,11 +39,19 @@ class View
         }
     }
 
+    /**
+     * Sets default cache provider to store evaluated dataplans
+     * @param \doq\Cache $cache refers to a cache provider
+     */
     public static function setDefaultCache(&$cache)
     {
         self::$defaultCache=&$cache;
     }
 
+    /**
+     * Sets cache provider to store evaluated dataplans only to this view
+     * @param \doq\Cache $cache refers to a cache provider
+     */
     public function setCacher(&$cache)
     {
         if ($this->viewId===false) {
@@ -55,6 +63,11 @@ class View
         return true;
     }
 
+    /**
+     * Prepares dataplan for view. Create from view configuration or reuse from cache
+     * @param int $configMtime timestamp of external configuration file
+     * @param boolean $forceRebuild force to recreate cache and set configMtime timestamp to it
+     */
     public function prepare($configMtime, $forceRebuild=false)
     {
         if ((!$this->isCacheable)||($forceRebuild)) {
@@ -86,10 +99,13 @@ class View
         }
     }
 
+    /**
+     * @param
+     */
     public static function getFieldByColumnId($findColumnId, &$entry)
     {
         foreach ($entry['@dataset']['@fields'] as $i=>&$field) {
-            if (isset($field['#columnId']) && $field['#columnId']==$findColumnId) {
+            if (isset($field['#columnId']) && ($field['#columnId']==$findColumnId)) {
                 return [true,&$field];
             }
             if (isset($field['@dataset'])) {
@@ -104,11 +120,15 @@ class View
 
 
     /**
-    * Executes whole data reading plan
+    * Executes dataplan that reading data from a database
     * @param array $params
+    * @param $datasetId
     */
     public function read(&$params, $datasetId)
     {
+        /** @var  \doq\data\DataNode is a tree-like node that holds reference to a DataObject
+         *        and links to parentNode and to childNodes[]
+         */
         $dataNode=new \doq\data\DataNode(\doq\data\DataNode::NT_DATASET, $datasetId);
         $ok=$this->readPlanEntry($this->plan, $dataNode, $params, $datasetId);
         return [$ok,$dataNode];
@@ -118,10 +138,11 @@ class View
     /**
     *
     */
-
     private function readPlanEntry(&$planEntry, $dataNode, &$params, $datasetId)
     {
         $providerName=$planEntry['#dataProvider'];
+        /** @var \doq\data\Dataset $dataset */
+
         list($ok, $dataset)=\doq\data\Dataset::create($providerName, $planEntry, $datasetId);
         if (!$ok) {
             return false;
@@ -153,8 +174,6 @@ class View
                     $masterColumnNo=$dataset->planEntry['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
                     #$dataset-> self::getColumnByFieldNo($masterFieldNo);
 
-
-
                     list($ok, $parentValueSet)=$dataset->uniqueValuesOfTupleSetField($masterColumnNo);
 
                     if (!$ok) {
@@ -164,12 +183,12 @@ class View
                     #$newParams['@keyValuesIn']=&$parentValueSet;
                     # ОТСУТСТВУЕТ detailToMasterField!!!
                     $newParams['@filter']=[
-            [
-            '#columnId'=>$subPlanEntry['#detailToMasterColumnId'],
-            '#operand'=>'IN',
-            '@values'=>&$parentValueSet
-            ]
-          ];
+                        [
+                            '#columnId'=>$subPlanEntry['#detailToMasterColumnId'],
+                            '#operand'=>'IN',
+                            '@values'=>&$parentValueSet
+                        ]
+                    ];
                 /*
                 $newParams['@createIndex']=[
                   'type'=>'single',
@@ -206,6 +225,9 @@ class View
         return true;
     }
 
+    /**
+     * Forms dataplan based on view configuration, dataplan
+     */
     public function makePlan()
     {
         $this->plan=[];
@@ -472,7 +494,10 @@ class View
         return true;
     }
 
-    # Routine that collects field names from planEntry dataset
+    /** Routine that collects field names from planEntry dataset
+     * 
+     * @param $planEntry
+     * */
     public static function collectFieldList(&$planEntry, &$fieldList)
     {
         $fields=&$planEntry['@dataset']['@fields'];

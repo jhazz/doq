@@ -25,12 +25,10 @@ function main()
 
     list($ok, $viewProducts)=doq\data\View::create($GLOBALS['doq']['schema'],$GLOBALS['doq']['views']['Products'],'Products1');
     $viewProducts->prepare($schemaFileTime, true);
-    #doq\data\Scripter::dumpPlan($viewProducts->plan);
     doq\Logger::dataPlan($viewProducts->plan, 'View products');
 
-    doq\Logger::error('Просто проблема');
     $params=[];
-    list($ok, $products)=$viewProducts->read($params, 'products');
+    list($ok, $products)=$viewProducts->read($params, 'view_products');
     #$products->dataObject->dumpData();
    
     /** @var \doq\TemplateParser Template parser */

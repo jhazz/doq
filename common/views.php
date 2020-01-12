@@ -66,7 +66,10 @@ return [
       ]
     ],
 
-    '@orderBy'=>['SKU'],
+    '@orderBy'=>[
+        'SKU'
+    ],
+
     '@searchForms'=>[
       'default'=>[
         'params'=>[
@@ -77,6 +80,3 @@ return [
     ]
   ]
 ];
-
-
-?>
