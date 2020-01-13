@@ -77,7 +77,7 @@ class Scripter {
                $schemaName,$datasetName);
           if(isset($field['#refType']) && $field['#refType']=='join') {
             if($isROtherDatasource) {
-              trigger_error(\doq\t('Strange join to the other Datasource %s:%s/%s. Cancel join',$RdatasourceName,$RschemaName,$RdatasetName),E_USER_ERROR);
+              trigger_error(\doq\tr('doq','Strange join to the other Datasource %s:%s/%s. Joining cancelled',$RdatasourceName,$RschemaName,$RdatasetName),E_USER_ERROR);
               return false;
             }
             $this->columnList[]=[$tableAlias,$originField];

@@ -73,7 +73,7 @@ abstract class Logger
         '64'=>'Debugging data plans log section','128'=>'Debugging data query log section'];
     public static $logMode;
 
-    abstract public function pushData($entryType,$data);
+    abstract public function pushMessageToLog($entryType,$data);
 
     public static function init(&$env=null)
     {
@@ -119,7 +119,7 @@ abstract class Logger
                 print_r($data);
                 return;
             }
-            self::$loggerInstance->pushData(self::LE_INFO, ['data'=>&$data,'file'=>$file,'line'=>$line]);
+            self::$loggerInstance->pushMessageToLog(self::LE_INFO, ['data'=>&$data,'file'=>$file,'line'=>$line]);
         }
     }
 
@@ -131,7 +131,7 @@ abstract class Logger
                 print_r($data);
                 return;
             }
-            self::$loggerInstance->pushData(self::LE_ERROR, ['data'=>&$data,'file'=>$file,'line'=>$line]);
+            self::$loggerInstance->pushMessageToLog(self::LE_ERROR, ['data'=>&$data,'file'=>$file,'line'=>$line]);
         }
     }
 
@@ -143,7 +143,7 @@ abstract class Logger
                 print_r($data);
                 return;
             }
-            self::$loggerInstance->pushData(self::LE_DEBUG_INFO, ['category'=>$category,'data'=>&$data,'file'=>$file,'line'=>$line]);
+            self::$loggerInstance->pushMessageToLog(self::LE_DEBUG_INFO, ['category'=>$category,'data'=>&$data,'file'=>$file,'line'=>$line]);
         }
     }
 
@@ -164,6 +164,10 @@ abstract class Logger
         self::$loggerInstance->pushDataQuery(self::LE_DEBUG_DATAQUERY,['id'=>$id, 'queryString'=>$queryString,'file'=>$file,'line'=>$line]);
     }
 
+    public static function debugDatasetIndexes($id, $indexDump,  $file = null, $line = null){
+        self::$loggerInstance->pushDataQuery(self::LE_DEBUG_DATAQUERY,['id'=>$id, 'indexDump'=>$indexDump,'file'=>$file,'line'=>$line]);
+    }
+
     public static function addPHPError($phpErrorType, $data, $file = null, $line = null)
     {
         if (self::$logMode & self::LE_ERROR) {
@@ -172,7 +176,7 @@ abstract class Logger
                 print_r($data);
                 return;
             }
-            self::$loggerInstance->pushData(self::LE_ERROR, ['phpErrorType'=>$phpErrorType,'data'=>&$data,'file'=>$file,'line'=>$line]);
+            self::$loggerInstance->pushMessageToLog(self::LE_ERROR, ['phpErrorType'=>$phpErrorType,'data'=>&$data,'file'=>$file,'line'=>$line]);
         }
     }
 
@@ -192,10 +196,10 @@ abstract class Logger
                 array_push($result, '{');
                 $first=true;
                 foreach ($v as $k=>&$d) {
-                    if(!$first) {
-                        array_push($result, ',');
-                    }
                     if (!is_null($d)) {
+                        if(!$first) {
+                            array_push($result, ',');
+                        }
                         array_push($result, '"'.\addslashes($k).'":');
                         self::_jsonSerializeWalker($result, $d);
                         $first=false;
@@ -339,7 +343,7 @@ class HTMLEndLogger extends Logger {
         $this->dataLogArray=[];
     }
 
-    public function pushData($entryType,$data)
+    public function pushMessageToLog($entryType,$data)
     {
         $logSection=$entryType.'';
         if(!isset($this->logArray[$logSection])){
@@ -462,6 +466,7 @@ class FileLogger extends Logger
     private $logFileHandle;
     private $dataLogFileHandle;
     private $targetEnvLogFileHandle;
+    private $MessagesWasPushed;
 
     public static function create(&$env){
         if(!isset($env['#logsPath'])){
@@ -490,26 +495,35 @@ class FileLogger extends Logger
             $this->targetEnvLogFile=$d.'/env.json';
 
             $this->logFileHandle=fopen($this->targetLogFile, 'w');
-            fputs($this->logFileHandle, "[\n");
+            $this->MessagesWasPushed=false;
             $this->dataLogFileHandle=fopen($this->targetDataLogFile, 'w');
             $this->targetEnvLogFileHandle=fopen($this->targetEnvLogFile, 'w');
         }
     }
 
-    public function pushData($entryType,$data)
+    public function pushMessageToLog($entryType,$data)
     {
-        if($entryType & (self::LE_INFO | self::LE_ERROR | self::LE_WARNING)){
+        if(!$this->MessagesWasPushed){
+            fputs($this->logFileHandle,"[\n");
+            $this->MessagesWasPushed=true;
+        } else {
+            fputs($this->logFileHandle,",\n\n");
+        }
+        if($entryType & (self::LE_INFO | self::LE_ERROR | self::LE_WARNING | self::LE_DEBUG_INFO)){
             if (!$this->logFileHandle) {
                 return;
             }
             $data['type']=$entryType;
+            $data['typeName']=self::$entryTypeNames[$entryType];
             $data['time']=date('Y-m-d H:i:s');
             fputs($this->logFileHandle, self::jsonSerialize($data));
-            fputs($this->logFileHandle, ",\n\n");
         }
     }
 
-    # self::$loggerInstance->pushDataPlan(self::LE_DEBUG_DATAPLAN, ['planName'=>$planName,'dataplan'=>&$data,'file'=>$file,'line'=>$line]);
+    /**
+     * @param int $entryType 
+     * @param array['planName'=>$planName,'dataplan'=>&$data,'file'=>$file,'line'=>$line]
+     */
     public function pushDataPlan($entryType,$data)
     {
         if (!$this->dataLogFileHandle) {
@@ -527,20 +541,26 @@ class FileLogger extends Logger
         }
         $data['type']=$entryType;
         $data['time']=date('Y-m-d H:i:s');
-        
-        fputs ($this->dataLogFileHandle, "\n\n\nDataquery:\n");
-        fputs ($this->dataLogFileHandle, self::jsonSerialize($data));
+        if (isset($data['queryString'])) {
+            fputs($this->dataLogFileHandle, "\n\n\nDataquery:\n");
+            fputs($this->dataLogFileHandle, self::jsonSerialize($data));
+        }
+        if (isset($data['indexDump'])){
+            fputs($this->dataLogFileHandle, "\n\n\nIndexes:\n");
+            fputs($this->dataLogFileHandle, self::jsonSerialize($data));
+        }
 
     }
 
 
     public function onHTTPEnd()
     {
-        fputs($this->logFileHandle, ']');
+        if ($this->MessagesWasPushed) {
+            fputs($this->logFileHandle, "\n]");
+        }
         \fclose($this->logFileHandle);
         \fclose($this->dataLogFileHandle);
         \fclose($this->targetEnvLogFileHandle);
-        
     }
 
 

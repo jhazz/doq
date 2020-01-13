@@ -14,6 +14,12 @@ return [
     # SerialFileCache
     'Undefined parameter #targetFolder in cache config'=>'Отсутствует параметр #targetFolder в конфигурации кэша',
     'Unable to create cache folder "%s". Use local or temporary instead'=>'Не могу создать папку для кэша в "%s". Будут использоваться папки для временных файлов',
-    'Cache folder "%s" not found'=>'Папка для кэша "%s" не найдена'
+    'Cache folder "%s" not found'=>'Папка для кэша "%s" не найдена',
+
+    # Scripter
+    'Strange join to the other Datasource %s:%s/%s. Joining cancelled'=>'Неизвестный join к строннему источнику данных %s:%s/%s. Отмена связывания данных',
+
+    # mysql\Dataset
+    'Unique value %s are repeating in the index %s'=>'Уникальное значение %s повторяется в индексе %s'
 ];
 ?>
