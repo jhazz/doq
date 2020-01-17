@@ -41,7 +41,9 @@ set_exception_handler(
                     }
                 }
             }
-            $r[]=$ss.$stackItem['function'].'('.$s.') in '.$stackItem['file'].'@'.$stackItem['line'].'<br>';
+            $file=isset($stackItem['file'])?' in '.$stackItem['file']:'';
+            $line=isset($stackItem['line'])?'@'.$stackItem['line']:'';
+            $r[]=$ss.$stackItem['function'].'('.$s.')'.$file.$line.'<br>';
         }
         Logger::error(\implode('', $r), $exception->getFile(), $exception->getLine());
     }

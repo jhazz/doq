@@ -65,8 +65,8 @@ class ScopeStack
                             'doq',
                             'Dataset "%s" in the local scope has no node with name "%s"',
                             $scope->datanode->dataset->id,
-                            $pathElementName,
-                        ), E_USER_ERROR);
+                            $pathElementName), 
+                            E_USER_ERROR);
                         return [false,'Undefined name '.$pathElementName];
                     }
                     $childNode=$scope->datanode->childNodes[$pathElementName];
