@@ -9,20 +9,20 @@ class Dataset extends \doq\data\Dataset
     public $resultIndexes;
     public static $useFetchAll;
 
-    public function __construct(&$planEntry, $id)
+    public function __construct(&$query, $id)
     {
-        $this->planEntry=&$planEntry;
+        $this->query=&$query;
         $this->id=$id;
     }
 
-    public function makeScope(\doq\data\DataNode $dataNode, $indexName='', $indexKey=null, $datasetScope=null, $path='')
+    public function makeScope(\doq\data\Datanode $datanode, $indexName='', $indexKey=null, $datasetScope=null, $path='')
     {
-        return new Scope($dataNode, $indexName, $indexKey, $datasetScope, $path);
+        return new Scope($datanode, $indexName, $indexKey, $datasetScope, $path);
     }
 
     public function connect()
     {
-        $r=\doq\data\Connections::getConnection($this->planEntry['#dataConnection']);
+        $r=\doq\data\Connections::getConnection($this->query['#dataConnection']);
         if ($r[0]) {
             $this->connection=$r[1];
             return true;
@@ -33,23 +33,22 @@ class Dataset extends \doq\data\Dataset
 
     public function read(&$params)
     {
-        $s=$this->planEntry['#readScript'];
+        $s=$this->query['#readScript'];
         $where=[];
         if (isset($params['@filter'])) {
             foreach ($params['@filter'] as $i=>&$param) {
                 switch ($param['#operand']) {
-          case 'IN':
-            $columnId=$param['#columnId'];
-            #  ЭТОТ $fieldName=$this->planEntry['@dataset']['@fields'][$columnNo]['#scriptField'];
-            $res=\doq\data\View::getFieldByColumnId($columnId, $this->planEntry);
-            if (!$res[0]) {
-                trigger_error(\doq\t('Column [# %d] not found in %s', $columnId, 'dataset'), E_USER_ERROR);
-            }
-            $fieldDef=&$res[1];
-            $fieldName=$fieldDef['#scriptField'];
-            $where[]=$fieldName.' IN ('.implode($param['@values'], ',').')';
-            break;
-        }
+                case 'IN':
+                    $columnId=$param['#columnId'];
+                    $res=self::getFieldByColumnId($columnId, $this->query);
+                    if (!$res[0]) {
+                        trigger_error(\doq\t('Column with id=%d not found in %s', $columnId, 'dataset'), E_USER_ERROR);
+                    }
+                    $fieldDef=&$res[1];
+                    $scriptField=$fieldDef['#scriptField'];
+                    $where[]=$scriptField.' IN ('.implode($param['@values'], ',').')';
+                     break;
+                }
             }
         }
         if (count($where)) {
@@ -73,8 +72,8 @@ class Dataset extends \doq\data\Dataset
             }
             $this->mysqlresult->close();
             unset($this->mysqlresult);
-            if (isset($this->planEntry['@resultIndexes'])) {
-                foreach ($this->planEntry['@resultIndexes'] as $i=>&$resultIndexDef) {
+            if (isset($this->query['@resultIndexes'])) {
+                foreach ($this->query['@resultIndexes'] as $i=>&$resultIndexDef) {
                     $indexName=$resultIndexDef['#name'];
                     $indexByTupleFieldNo=$resultIndexDef['#byTupleFieldNo'];
                     $indexType=$resultIndexDef['#type'];
@@ -124,7 +123,7 @@ class Dataset extends \doq\data\Dataset
                     }
                 }
                 if(\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_DATAQUERY){
-                    \doq\Logger::debugDatasetIndexes('INDEX', $this->dumpIndexes());
+                    \doq\Logger::debugDatasetIndexes('Dataset['.$this->id.']', $this->indexesToHTML(), __FILE__, __LINE__);
                 }
             }
         } else {
@@ -149,35 +148,37 @@ class Dataset extends \doq\data\Dataset
     }
 
 
-    public function dumpData()
+    public function dataToHTML()
     {
+        $result=[];
         $fieldList=[];
-        \doq\data\View::collectFieldList($this->planEntry, $fieldList);
-        $s='';
+        self::collectFieldList($this->query, $fieldList);
+        $result[]='<table class="dpd" border=1><tr valign="top" bgcolor="#ffffa0">';
         foreach ($fieldList as $i=>$field) {
             if (!isset($field['#tupleFieldNo'])) {
                 continue;
             }
 
-            $s.='<td>#id:'.$field['#columnId']
+            $result[]='<td>#id:'.$field['#columnId']
             .'<br/>#tupleFieldNo:'.$field['#tupleFieldNo']
             .'<br/>#field:['.$field['#field'].']'
             .'<br>#originField:['.$field['#originField'].']'
             .'<br>#scriptField:['.$field['#scriptField'].']'
             .(isset($column['#label'])?'<br/>#label:'.$field['#label']:'').'</td>';
         }
-        print '<table class="dpd" border=1><tr valign="top" bgcolor="#ffffa0">'.$s.'</tr>';
+        $result[]='</tr>';
         foreach ($this->tuples as $tupleNo=>&$tuple) {
             $s='';
             foreach ($tuple as $j=>&$v) {
                 $s.='<td>'.$v.'</td>';
             }
-            print '<tr>'.$s.'</tr>';
+            $result[]= '<tr>'.$s.'</tr>';
         }
-        print '</table>';
+        $result[]='</table>';
+        return \implode('', $result);
     }
 
-    public function dumpIndexes()
+    public function indexesToHTML()
     {
         $result=[];
         foreach ($this->resultIndexes as $indexName=>&$index) {
@@ -224,6 +225,7 @@ class Dataset extends \doq\data\Dataset
         }
         return implode('', $result);
     }
+
 
 
 }

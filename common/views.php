@@ -57,12 +57,14 @@ return [
     'THE_PRODUCT_TYPE'=>[
       '#field'=>'PRODUCT_TYPE_ID1',
       '@linked'=>[
-#        '#ref'=>'memdata:dictionaries/PRODUCT_TYPES',
-        'TYPE_NAME'=>[
-          '#field'=>'NAME',
-          '#label'=>'Type of of product'
+        'PRODUCT_TYPE_ID'=>[
+          '#field'=>'PRODUCT_TYPE_ID',
+          '#label'=>'Prod Type ID'
         ],
-        'PRODUCT_TYPE_ID'=>['#label'=>'ProdTypeID'],
+        'TYPE_NAME'=>[
+            '#field'=>'NAME',
+            '#label'=>'Type of of product'
+        ]
       ]
     ],
 

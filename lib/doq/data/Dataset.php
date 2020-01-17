@@ -1,55 +1,82 @@
 <?php
 namespace doq\data;
 
-abstract class DataObject
+abstract class Dataset
 {
     public $id;
-    abstract protected function makeScope(DataNode $dataNode);
-}
+    public $query;
+    abstract protected function makeScope(Datanode $datanode);
+    abstract public function dataToHTML();
+    abstract public function indexesToHTML();
 
-abstract class Dataset extends DataObject
-{
-    public $planEntry;
-
-    public static function create($providerName, &$planEntry, $id)
+    public static function create($providerName, &$query, $id)
     {
         switch ($providerName) {
-      case 'mysql':
-        return [true,new mysql\Dataset($planEntry, $id)];
-      default:
-        return [false,'Unknown provider '.$providerName];
+        case 'mysql':
+            return [true,new mysql\Dataset($query, $id)];
+        default:
+            return [false,'Unknown provider '.$providerName];
+        }
     }
+
+    public function __construct(&$query, &$params, $id)
+    {
+        trigger_error('Abstract Dataset class should not used to create itself!', E_USER_ERROR);
     }
 
     /**
-     * @param array config from planEntry
-     * @param DataNode the datanode collects data items
+     * @param array config from query
+     * @param \doq\Datanode the datanode collects data items
      */
-    public function collectDataNodesRecursive(&$config, &$dataNode)
+    public function collectDatanodesRecursive(&$config, $datanode)
     {
         $fields=&$config['@dataset']['@fields'];
         foreach ($fields as $i=>&$field) {
             $fieldName=$field['#field'];
-            if (isset($dataNode->childNodes[$fieldName])) {
-                trigger_error(\doq\t('Field dublicate name %s is found in view config %s', $fieldName, $config['#schema'].'/'.$config['#dataset']), E_USER_ERROR);
+            if (isset($datanode->childNodes[$fieldName])) {
+                trigger_error(\doq\tr('doq','Dublicate field name "%s" is found in the view config "%s"', $fieldName, $config['#schema'].'/'.$config['#dataset']), E_USER_ERROR);
                 continue;
             }
             if (isset($field['@dataset'])) {
-                $node=new DataNode(DataNode::NT_SUBCOLUMNS, $fieldName, $dataNode);
-                $node->dataObject=$this;
-                # TODO: Некрасиво!
-                $node->parameters=&$field['@dataset'];
-                $this->collectDataNodesRecursive($field, $node);
+                $node=new Datanode(Datanode::NT_SUBCOLUMNS, $fieldName, $datanode);
+                $node->dataset=$this;
+                $node->fieldDefs=&$field['@dataset'];
+                $this->collectDatanodesRecursive($field, $node);
             } else {
-                $node=new DataNode(DataNode::NT_COLUMN, $fieldName, $dataNode);
-                $node->dataObject=$this;
-                $node->parameters=&$field;
+                $node=new Datanode(Datanode::NT_COLUMN, $fieldName, $datanode);
+                $node->dataset=$this;
+                $node->fieldDefs=&$field;
             }
         }
     }
 
-    public function __construct(&$planEntry, &$params, $id)
+    /** Routine that collects field names from query dataset
+     * 
+     * @param $query
+     * */
+    public static function collectFieldList(&$query, &$fieldList)
     {
-        trigger_error('Abstract Dataset class should not used to create itself!', E_USER_ERROR);
+        $fields=&$query['@dataset']['@fields'];
+        foreach ($fields as $i=>&$field) {
+            $fieldList[]=&$field;
+            if (isset($field['@dataset'])) {
+                self::collectFieldList($field, $fieldList);
+            }
+        }
     }
+
+    public static function getFieldByColumnId($findColumnId, &$query)
+    {
+        foreach ($query['@dataset']['@fields'] as $i=>&$field) {
+            if (isset($field['#columnId']) && ($field['#columnId']==$findColumnId)) {
+                return [true,&$field];
+            }
+            if (isset($field['@dataset'])) {
+                return self::getFieldByColumnId($findColumnId, $field);
+            }
+        }
+        return[false,'ColumnId '.$findColumnId.' not fount'];
+    }
+
+
 }

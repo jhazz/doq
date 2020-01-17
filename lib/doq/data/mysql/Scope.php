@@ -4,7 +4,7 @@ namespace doq\data\mysql;
 
 class Scope extends \doq\data\Scope {
   //inherited public $path;
-  //inherited public $dataNode;
+  //inherited public $datanode;
   /** @var array|null Текущий индекс */
   public $curIndex;
   /** @var array|null Текущий массив агрегата индекса, именно по нему производится обход через seek */
@@ -18,14 +18,14 @@ class Scope extends \doq\data\Scope {
   /** @var int длина выборки индекса по которому перемещаем указатель через seek*/
   public $curIndexLen;
 
-  public function __construct(\doq\data\DataNode $dataNode,$indexName='',$indexKey=NULL,$datasetScope=NULL,$path='') {
-    $this->dataNode=$dataNode;
+  public function __construct(\doq\data\Datanode $datanode,$indexName='',$indexKey=NULL,$datasetScope=NULL,$path='') {
+    $this->datanode=$datanode;
     $this->path=$path;
     $this->curType='';
     $this->curTupleNo=0;
     $this->curIndexLen=0;
     if($indexName!='') {
-      $this->curIndex=&$dataNode->dataObject->resultIndexes[$indexName];
+      $this->curIndex=&$datanode->dataset->resultIndexes[$indexName];
       $this->curIndexAggregate=NULL;
       switch($this->curIndex['#type']) {
         case 'unique':
@@ -61,12 +61,12 @@ class Scope extends \doq\data\Scope {
       }
     } else {
       $this->curIndex=NULL;
-      if($this->dataNode->type==\doq\data\DataNode::NT_COLUMN) {
+      if($this->datanode->type==\doq\data\Datanode::NT_COLUMN) {
         $this->curType=self::SW_ONE_FIELD;
         $this->curTuple=&$datasetScope->curTuple;
       } else {
         $this->curType=self::SW_ALL_RECORDS;
-        $this->curIndexLen=count($this->dataNode->dataObject->tuples);
+        $this->curIndexLen=count($this->datanode->dataset->tuples);
       }
     }
   }
@@ -129,7 +129,7 @@ class Scope extends \doq\data\Scope {
           $this->curTupleNo=$position;
         }
         if(isset($this->curTuple)) unset($this->curTuple);
-        $this->curTuple=&$this->dataNode->dataObject->tuples[$this->curTupleNo];
+        $this->curTuple=&$this->datanode->dataset->tuples[$this->curTupleNo];
         break;
     }
     return $EOT;
@@ -137,20 +137,20 @@ class Scope extends \doq\data\Scope {
 
   /** @return \doq\data\Scope */
   public function makeDetailScope($path,$masterFieldName) {
-    $masterDataNode=$this->dataNode;
-    $masterDataset=$masterDataNode->dataObject;
-    $detailDataNode=$masterDataNode->childNodes[$masterFieldName];
-    $masterFieldNo=$detailDataNode->dataObject->planEntry['#masterFieldNo'];
-    $masterTupleFieldNo=$masterDataset->planEntry['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
+    $masterDatanode=$this->datanode;
+    $masterDataset=$masterDatanode->dataset;
+    $detailDatanode=$masterDatanode->childNodes[$masterFieldName];
+    $masterFieldNo=$detailDatanode->dataset->query['#masterFieldNo'];
+    $masterTupleFieldNo=$masterDataset->query['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
     $masterValue=$this->curTuple[$masterTupleFieldNo];
-    $detailIndexName=$masterDataset->planEntry['@detailIndexByFieldNo'][$masterFieldNo];
-    return $detailDataNode->dataObject->makeScope($detailDataNode,$detailIndexName,$masterValue,$path.'/'.$masterFieldName);
+    $detailIndexName=$masterDataset->query['@detailIndexByFieldNo'][$masterFieldNo];
+    return $detailDatanode->dataset->makeScope($detailDatanode,$detailIndexName,$masterValue,$path.'/'.$masterFieldName);
   }
 
   public function asString() {
-    switch($this->dataNode->type) {
-      case \doq\data\DataNode::NT_COLUMN:
-        $fieldDef=&$this->dataNode->parameters;
+    switch($this->datanode->type) {
+      case \doq\data\Datanode::NT_COLUMN:
+        $fieldDef=&$this->datanode->fieldDefs;
         if(!isset($fieldDef['#tupleFieldNo'])) {
           trigger_error('Unknown #tupleFieldNo in dataset for path '.$this->path,E_USER_ERROR);
           return '{ERROR}';
@@ -168,8 +168,8 @@ class Scope extends \doq\data\Scope {
   }
 
   public function value() {
-    if($this->dataNode->type===\doq\data\DataNode::NT_COLUMN) {
-      return $this->curTuple[$this->dataNode->parameters['#tupleFieldNo']];
+    if($this->datanode->type===\doq\data\Datanode::NT_COLUMN) {
+      return $this->curTuple[$this->datanode->fieldDefs['#tupleFieldNo']];
     }
   }
 }

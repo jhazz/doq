@@ -12,8 +12,8 @@ return [
         '#langBasePath'=>$ROOT_PATH.'/lang'
     ],
     '@log'=>[
-#        '#targetType'=>'html_end',
-        '#targetType'=>'file',
+        '#targetType'=>'html_end',
+#        '#targetType'=>'file',
         '#logMode'=>255,
         '#logsPath'=>$ROOT_PATH.'/runtime/logs'
     ],
@@ -22,11 +22,11 @@ return [
 		'products'=>['actions'=>['default'=>'products_list.php']]
 	],
 	'@caches'=>[
-		'dataplans'=>[
+		'querys'=>[
 			'#type'=>'serialfile',
-			'#targetFolder'=>'dataplans',
+			'#targetFolder'=>'querys',
 			'#filePrefix'=>'vp_',
-			'#fileSuffix'=>'.plan.txt',
+			'#fileSuffix'=>'.query.txt',
 			'#forceCreateFolder'=>1
         ],
 		'templates'=>[

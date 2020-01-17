@@ -28,22 +28,22 @@ function main() {
   print '<meta charset="utf-8">';
 
 
-  $viewPlanCacher=doq\Cacher::create($GLOBALS['doq']['env']['@caches']['mysql1_dataplans']);
-  doq\data\View::$defaultCacher=$viewPlanCacher;
+  $viewQueryCacher=doq\Cacher::create($GLOBALS['doq']['env']['@caches']['mysql1_querys']);
+  doq\data\View::$defaultCacher=$viewQueryCacher;
   doq\data\Connection::init($GLOBALS['doq']['env']['@dataConnections']);
 
-  if($viewPlanCacher===false) {
+  if($viewQueryCacher===false) {
     return;
   }
   list($ok,$viewProducts)=doq\data\View::create($GLOBALS['doq']['model'],$GLOBALS['doq']['views']['Products'],$GLOBALS['doq']['env']['@dataConnections'],'Products');
 
   $viewProducts->prepare($configMTime,true);
-  doq\data\Scripter::dumpPlan($viewProducts->plan);
+  doq\data\Scripter::dumpQuery($viewProducts->query);
 
   $params=[];
   list($ok,$products)=$viewProducts->read($params,'products');
 
-  $products->dataObject->dumpData();
+  print $products->dataset->dumpData();
 
   $template=doq\Template::create();
   $template->setTemplatePath($GLOBALS['doq']['env']['#templatesPath']);

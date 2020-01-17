@@ -2,7 +2,7 @@
 namespace doq\data;
 
 /**
-* View - is a data loading plan that creates Datasets that will read data according to parameters
+* View - is a data loading query that creates Datasets that will read data according to parameters
 *
 */
 class View
@@ -14,7 +14,7 @@ class View
     public $dataset;
     public $viewColumns;
     public $linkedDatasources;
-    public $subDatasets;
+#    public $subDatasets;
     /** @var  \doq\Cache */
     public $cache;
 
@@ -40,7 +40,7 @@ class View
     }
 
     /**
-     * Sets default cache provider to store evaluated dataplans
+     * Sets default cache provider to store evaluated querys
      * @param \doq\Cache $cache refers to a cache provider
      */
     public static function setDefaultCache(&$cache)
@@ -49,7 +49,7 @@ class View
     }
 
     /**
-     * Sets cache provider to store evaluated dataplans only to this view
+     * Sets cache provider to store evaluated querys only to this view
      * @param \doq\Cache $cache refers to a cache provider
      */
     public function setCacher(&$cache)
@@ -64,7 +64,7 @@ class View
     }
 
     /**
-     * Prepares dataplan for view. Create from view configuration or reuse from cache
+     * Prepares query for view. Create from view configuration or reuse from cache
      * @param int $configMtime timestamp of external configuration file
      * @param boolean $forceRebuild force to recreate cache and set configMtime timestamp to it
      */
@@ -74,95 +74,75 @@ class View
             if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
                 \doq\Logger::debug('view', 'Rebuild cache for view "'.$this->viewId.'"', __FILE__, __LINE__);
             }
-            if ($this->makePlan()) {
+            if ($this->makeQuery()) {
                 if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                    \doq\Logger::debug('view', 'Overwrite rebuild dataplan for view "'.$this->viewId.'"', __FILE__, __LINE__);
+                    \doq\Logger::debug('view', 'Overwrite rebuild query for view "'.$this->viewId.'"', __FILE__, __LINE__);
                 }
 
-                $this->cache->put($configMtime, $this->viewId, $this->plan);
+                $this->cache->put($configMtime, $this->viewId, $this->query);
             }
         } else {
             list($ok, $data)=$this->cache->get($configMtime, $this->viewId);
             if ($ok) {
                 if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                    \doq\Logger::debug('view', 'Reuse dataplan from cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
+                    \doq\Logger::debug('view', 'Reuse query from cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
                 }
-                $this->plan=&$data;
+                $this->query=&$data;
             } else {
-                if ($this->makePlan()) {
+                if ($this->makeQuery()) {
                     if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                        \doq\Logger::debug('view', 'Store dataplan in cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
+                        \doq\Logger::debug('view', 'Store query in cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
                     }
-                    $this->cache->put($configMtime, $this->viewId, $this->plan);
+                    $this->cache->put($configMtime, $this->viewId, $this->query);
                 }
             }
         }
     }
 
     /**
-     * @param
-     */
-    public static function getFieldByColumnId($findColumnId, &$entry)
-    {
-        foreach ($entry['@dataset']['@fields'] as $i=>&$field) {
-            if (isset($field['#columnId']) && ($field['#columnId']==$findColumnId)) {
-                return [true,&$field];
-            }
-            if (isset($field['@dataset'])) {
-                $r=self::getFieldByColumnId($findColumnId, $field);
-                if ($r[0]) {
-                    return $r;
-                }
-            }
-        }
-        return[false];
-    }
-
-
-    /**
-    * Executes dataplan that reading data from a database
+    * Executes query that reading data from a database
     * @param array $params
     * @param $datasetId
     */
     public function read(&$params, $datasetId)
     {
-        /** @var  \doq\data\DataNode is a tree-like node that holds reference to a DataObject
+        /** @var  \doq\data\Datanode is a tree-like node that holds reference to a Dataset
          *        and links to parentNode and to childNodes[]
          */
-        $dataNode=new \doq\data\DataNode(\doq\data\DataNode::NT_DATASET, $datasetId);
-        $ok=$this->readPlanEntry($this->plan, $dataNode, $params, $datasetId);
-        return [$ok,$dataNode];
+        $datanode=new \doq\data\Datanode(\doq\data\Datanode::NT_DATASET, $datasetId);
+        $ok=$this->readQuery($this->query, $datanode, $params, $datasetId);
+        return [$ok,$datanode];
     }
 
 
     /**
     *
     */
-    private function readPlanEntry(&$planEntry, $dataNode, &$params, $datasetId)
+    private function readQuery(&$query, $datanode, &$params, $datasetId)
     {
-        $providerName=$planEntry['#dataProvider'];
+        $providerName=$query['#dataProvider'];
         /** @var \doq\data\Dataset $dataset */
 
-        list($ok, $dataset)=\doq\data\Dataset::create($providerName, $planEntry, $datasetId);
+        list($ok, $dataset)=\doq\data\Dataset::create($providerName, $query, $datasetId);
         if (!$ok) {
             return false;
         }
-        $dataNode->dataObject=$dataset;
+        $datanode->dataset=$dataset;
         if ($dataset->connect()) {
             $dataset->read($params);
         }
 
-        $dataset->collectDataNodesRecursive($planEntry, $dataNode);
+        $dataset->collectDatanodesRecursive($query, $datanode);
 
-        if (isset($planEntry['@subPlan'])) {
-            foreach ($planEntry['@subPlan'] as $i=>&$subPlanEntry) {
-                if (isset($subPlanEntry['#detailDatasetId'])) {
-                    $detailDatasetId=$subPlanEntry['#detailDatasetId'];
-                    if (!isset($planEntry['@dataset']['@fields'])) {
-                        trigger_error(\doq\t('В planEntry[@subPlan] отсутствуют колонки'), E_USER_ERROR);
+        if (isset($query['@subQuery'])) {
+            foreach ($query['@subQuery'] as $i=>&$subQuery) {
+                if (isset($subQuery['#detailDatasetId'])) {
+                    $detailDatasetId=$subQuery['#detailDatasetId'];
+                    if (!isset($query['@dataset']['@fields'])) {
+                        trigger_error(\doq\t('В query[@subQuery] отсутствуют колонки'), E_USER_ERROR);
                         return false;
                     }
-                    $masterFieldNo=$subPlanEntry['#masterFieldNo'];
+                    $masterFieldNo=$subQuery['#masterFieldNo'];
 
                     # для виртуального aggregation $masterFieldNo должен указывать всегда на колонку данных
                     # первичного ключа masterDataSet
@@ -171,7 +151,7 @@ class View
 
                     # ПРИДУМЫВАЙ КАК ПОЛУЧИТЬ ColumnNo
                     # FieldNo работает только в masterDataset,
-                    $masterColumnNo=$dataset->planEntry['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
+                    $masterColumnNo=$dataset->query['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
                     #$dataset-> self::getColumnByFieldNo($masterFieldNo);
 
                     list($ok, $parentValueSet)=$dataset->uniqueValuesOfTupleSetField($masterColumnNo);
@@ -181,10 +161,10 @@ class View
                     }
                     $newParams=[];
                     #$newParams['@keyValuesIn']=&$parentValueSet;
-                    # ОТСУТСТВУЕТ detailToMasterField!!!
+                    # ОТСУТСТВУЕТ detailToMasterField , так как он еще не известен
                     $newParams['@filter']=[
                         [
-                            '#columnId'=>$subPlanEntry['#detailToMasterColumnId'],
+                            '#columnId'=>$subQuery['#detailToMasterColumnId'], // detail index ColumnID
                             '#operand'=>'IN',
                             '@values'=>&$parentValueSet
                         ]
@@ -193,8 +173,8 @@ class View
                 $newParams['@createIndex']=[
                   'type'=>'single',
                   'indexId'=>$datasetId.'-'.$detailDatasetId,
-                  'masterColumnNo'=>$subPlanEntry['#masterColumnNo'],
-                  'childToMasterField'=>$subPlanEntry['#childToMasterField']  # ==PRODUCT_TYPES/PRODUCT_TYPE_ID
+                  'masterColumnNo'=>$subQuery['#masterColumnNo'],
+                  'childToMasterField'=>$subQuery['#childToMasterField']  # ==PRODUCT_TYPES/PRODUCT_TYPE_ID
                   ];
                   */
 
@@ -202,21 +182,21 @@ class View
           #$newParams['@createIndex']=[
           #  'type'=>'multiple',
           #  'indexId'=>$datasetId.'-'.$detailDatasetId,
-          #  'masterColumnNo'=>$subPlanEntry['#masterColumnNo'],  #==PRODUCT_ID
-          #  'childToMasterField'=>$subPlanEntry['#childToMasterField']  #==PRODUCT_PARAMETERS/PRODUCT_ID
+          #  'masterColumnNo'=>$subQuery['#masterColumnNo'],  #==PRODUCT_ID
+          #  'childToMasterField'=>$subQuery['#childToMasterField']  #==PRODUCT_PARAMETERS/PRODUCT_ID
           #  ];
           #$newParams['@filter']=[
           #$newParams['@filter']=[
-          #  ['field'=>$subPlanEntry['#childToMasterField'], 'operand'=>'IN', 'values'=>&$parentValueSet]
+          #  ['field'=>$subQuery['#childToMasterField'], 'operand'=>'IN', 'values'=>&$parentValueSet]
           #];
           #  ];
                 } else {
-                    trigger_error('Unknown plan linking', E_USER_ERROR);
+                    trigger_error('Unknown query linking', E_USER_ERROR);
                     return false;
                 }
 
-                $childNode=new \doq\data\DataNode(DataNode::NT_DATASET, $detailDatasetId, $dataNode);
-                $ok=$this->readPlanEntry($subPlanEntry, $childNode, $newParams, $detailDatasetId);
+                $childNode=new \doq\data\Datanode(Datanode::NT_DATASET, $detailDatasetId, $datanode);
+                $ok=$this->readQuery($subQuery, $childNode, $newParams, $detailDatasetId);
                 if (!$ok) {
                     return false;
                 }
@@ -226,19 +206,19 @@ class View
     }
 
     /**
-     * Forms dataplan based on view configuration, dataplan
+     * Forms query based on view configuration, query
      */
-    public function makePlan()
+    public function makeQuery()
     {
-        $this->plan=[];
-        $this->lastPlanId=1;
+        $this->query=[];
+        $this->lastQueryId=1;
         $viewColumns=null;
-        return $this->makePlanRecursive($this->cfgView, $this->plan, $viewColumns);
+        return $this->makeQueryRecursive($this->cfgView, $this->query, $viewColumns);
     }
 
-    private function makePlanRecursive(
+    private function makeQueryRecursive(
         &$cfgView,
-        &$plan,
+        &$query,
         &$parentViewColumn,
         $datasourceName='',
         $schemaName='',
@@ -247,7 +227,7 @@ class View
         $masterFieldNo=false,
         $detailDatasetId=false,
         $masterKind=false,
-        $isNewPlan=true,
+        $isNewQuery=true,
         $isOtherDatasource=false
     ) {
         $parentDatasetname=$datasetName;
@@ -264,15 +244,15 @@ class View
         }
 
         if ($isOtherDatasource) {
-            $subPlan=[];
-            if (!isset($plan['@subPlan'])) {
-                $plan['@subPlan']=[&$subPlan];
+            $subQuery=[];
+            if (!isset($query['@subQuery'])) {
+                $query['@subQuery']=[&$subQuery];
             } else {
-                $plan['@subPlan'][]=&$subPlan;
+                $query['@subQuery'][]=&$subQuery;
             }
-            $masterPlan=&$plan;
-            $plan=&$subPlan;
-            $isNewPlan=true;
+            $masterQuery=&$query;
+            $query=&$subQuery;
+            $isNewQuery=true;
         }
         $dataset=['#schema'=>$schemaName,'#datasetName'=>$datasetName,'@fields'=>[]];
 
@@ -284,18 +264,18 @@ class View
         }
 
 
-        if ($isNewPlan) {
-            $plan['#lastColumnId']=0;
-            $plan['#lasttupleFieldNo']=0;
-            $plan['#planId']=$this->lastPlanId;
-            $this->lastPlanId++;
-            $plan['#dataSource']=$datasourceName;
+        if ($isNewQuery) {
+            $query['#lastColumnId']=0;
+            $query['#lastTupleFieldNo']=0;
+            $query['#queryId']=$this->lastQueryId;
+            $this->lastQueryId++;
+            $query['#dataSource']=$datasourceName;
             $cfgDatasource=&$this->cfgSchema['@datasources'][$datasourceName];
             $dataConnectionName=$cfgDatasource['#dataConnection'];
-            $plan['#dataConnection']=$dataConnectionName;
+            $query['#dataConnection']=$dataConnectionName;
             list($ok, $connection) = \doq\data\Connections::getConnection($dataConnectionName);
             $providerName=$connection->provider;
-            $plan['#dataProvider']=$providerName;
+            $query['#dataProvider']=$providerName;
         } else {
             $parentViewColumn['@dataset']=&$dataset;
         }
@@ -313,8 +293,8 @@ class View
         foreach ($cfgView as $localFieldName=>&$viewFieldDef) {
             $fc=$localFieldName[0];
             if (($fc!='#')&&($fc!='@')) {
-                $newColumn=['#columnId'=>$plan['#lastColumnId'],'#field'=>$localFieldName,'#fieldNo'=>$fieldNo];
-                $plan['#lastColumnId']++;
+                $newColumn=['#columnId'=>$query['#lastColumnId'],'#field'=>$localFieldName,'#fieldNo'=>$fieldNo];
+                $query['#lastColumnId']++;
                 $fieldNo++;
 
                 unset($modelFieldDef);
@@ -338,8 +318,8 @@ class View
                     continue;
                 }
                 if ($type!=='virtual') {
-                    $newColumn['#tupleFieldNo']=$plan['#lasttupleFieldNo'];
-                    $plan['#lasttupleFieldNo']++;
+                    $newColumn['#tupleFieldNo']=$query['#lastTupleFieldNo'];
+                    $query['#lastTupleFieldNo']++;
                 }
 
 
@@ -389,9 +369,9 @@ class View
                         } else {
                             $newColumn['#refType']='join';
                         }
-                        $this->makePlanRecursive(
+                        $this->makeQueryRecursive(
                             $viewFieldDef['@linked'],
-                            $plan,
+                            $query,
                             $newColumn,
                             $RdatasourceName,
                             $RschemaName,
@@ -415,8 +395,8 @@ class View
         }
 
 
-        if ($isNewPlan) {
-            $plan['@dataset']=&$dataset;
+        if ($isNewQuery) {
+            $query['@dataset']=&$dataset;
             if ($masterKind=='lookup') {
                 if (!$foundKeyColumn) {
                     if ($keyField) {
@@ -427,25 +407,25 @@ class View
                     return false;
                 }
                 $newIdxName='idx_look_'.$parentRef.'--'.$dataset['#keyField'];
-                if (!isset($plan['@resultIndexes'])) {
-                    $plan['@resultIndexes']=[];
+                if (!isset($query['@resultIndexes'])) {
+                    $query['@resultIndexes']=[];
                 }
-                if (isset($plan['@resultIndexes'][$newIdxName])) {
+                if (isset($query['@resultIndexes'][$newIdxName])) {
                     for ($i=0;$i<10;$i++) {
                         $s=$newIdxName.'/'.$i;
-                        if (!isset($plan['@resultIndexes'][$s])) {
+                        if (!isset($query['@resultIndexes'][$s])) {
                             $newIdxName=$s;
                             break;
                         }
                     }
                 }
-                $plan['@resultIndexes'][$newIdxName]=[
+                $query['@resultIndexes'][$newIdxName]=[
                     '#type'=>'unique',
                     '#name'=>$newIdxName,
                     '#byTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo']
                 ];
                 $parentViewColumn['#uniqueIndex']=$newIdxName;
-                $plan['#detailToMasterColumnId']=$foundKeyColumn['#columnId'];
+                $query['#detailToMasterColumnId']=$foundKeyColumn['#columnId'];
             } elseif ($masterKind=='aggregation') {
                 # aggregation by the real multilookup field and by the virtual field as default
                 if (!$foundDetailColumnForMaster) {
@@ -453,13 +433,13 @@ class View
                     return false;
                 }
                 $newIdxName='idx_agg_'.$parentRef.'_2_'.$foundDetailColumnForMaster['#originField'];
-                if (!isset($plan['@resultIndexes'])) {
-                    $plan['@resultIndexes']=[];
+                if (!isset($query['@resultIndexes'])) {
+                    $query['@resultIndexes']=[];
                 }
-                if (isset($plan['@resultIndexes'][$newIdxName])) {
+                if (isset($query['@resultIndexes'][$newIdxName])) {
                     for ($i=0;$i<10;$i++) {
                         $s=$newIdxName.'/'.$i;
-                        if (!isset($plan['@resultIndexes'][$s])) {
+                        if (!isset($query['@resultIndexes'][$s])) {
                             $newIdxName=$s;
                             break;
                         }
@@ -468,44 +448,33 @@ class View
                 # Этот индекс, в отличие от лукапа, создает неуникальный индекс,
                 # в котором ключами являются ID родителей, а внутри них группируются
                 # ссылки на записи деток, которые в него входят
-                $plan['@resultIndexes'][$newIdxName]=[
+                $query['@resultIndexes'][$newIdxName]=[
                     '#type'=>'nonunique',
                     '#name'=>$newIdxName,
                     '#byTupleFieldNo'=>$foundDetailColumnForMaster['#tupleFieldNo']
                 ];
                 $parentViewColumn['#nonuniqueIndex']=$newIdxName;
-                $plan['#detailToMasterColumnId']=$foundDetailColumnForMaster['#columnId']; # вслепую
+                $query['#detailToMasterColumnId']=$foundDetailColumnForMaster['#columnId']; # вслепую
             }
             if ($masterFieldNo!==false) {
-                $plan['#masterFieldNo']=$masterFieldNo;
-                $plan['#detailDatasetId']=$detailDatasetId;
-                if (!isset($masterPlan['@detailIndexByFieldNo'])) {
-                    $masterPlan['@detailIndexByFieldNo']=[];
+                $query['#masterFieldNo']=$masterFieldNo;
+                $query['#detailDatasetId']=$detailDatasetId;
+                if (!isset($masterQuery['@detailIndexByFieldNo'])) {
+                    $masterQuery['@detailIndexByFieldNo']=[];
                 }
-                $masterPlan['@detailIndexByFieldNo'][$masterFieldNo]=$newIdxName;
+                $masterQuery['@detailIndexByFieldNo'][$masterFieldNo]=$newIdxName;
             }
 
             $scripter=\doq\data\Scripter::create($providerName);
-            $selectScript=$scripter->buildSelectScript($plan);
+            $selectScript=$scripter->buildSelectScript($query);
             if ($selectScript!==false) {
-                $plan['#readScript']=$selectScript;
+                $query['#readScript']=$selectScript;
             }
         }
         return true;
     }
 
-    /** Routine that collects field names from planEntry dataset
-     * 
-     * @param $planEntry
-     * */
-    public static function collectFieldList(&$planEntry, &$fieldList)
-    {
-        $fields=&$planEntry['@dataset']['@fields'];
-        foreach ($fields as $i=>&$field) {
-            $fieldList[]=&$field;
-            if (isset($field['@dataset'])) {
-                self::collectFieldList($field, $fieldList);
-            }
-        }
-    }
+
+
+
 }

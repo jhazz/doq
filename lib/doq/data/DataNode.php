@@ -2,14 +2,14 @@
 namespace doq\data;
 
 
-class DataNode{
+class Datanode{
   const NT_COLUMN='! Column';
   const NT_SUBCOLUMNS='! Subcolumns';
   const NT_DATASET='! Dataset';
 
   public $type;
   public $parameters;
-  public $dataObject;
+  public $dataset;
   public $childNodes;
 
   public function __construct($type,$nodeId,$parendNode=NULL) {

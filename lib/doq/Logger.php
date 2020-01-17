@@ -23,7 +23,7 @@ register_shutdown_function(
 
 set_exception_handler(
     function ($exception) {
-        Logger::error('Exception', $exception->getMessage(), $exception->getFile(), $exception->getLine());
+        $r=['<b>Exception: '.$exception->getMessage().'</b><br>'];
         $stack=$exception->getTrace();
         $ss='';
         foreach ($stack as $i=>&$stackItem) {
@@ -41,8 +41,9 @@ set_exception_handler(
                     }
                 }
             }
-            Logger::info('STACK:'.$ss.$stackItem['function'].'('.$s.')', $stackItem['file'], $stackItem['line']);
+            $r[]=$ss.$stackItem['function'].'('.$s.') in '.$stackItem['file'].'@'.$stackItem['line'].'<br>';
         }
+        Logger::error(\implode('', $r), $exception->getFile(), $exception->getLine());
     }
 );
   
@@ -51,13 +52,13 @@ abstract class Logger
 {
     /** @const Log entry types */
     const LE_NONE=0;
-    const LE_INFO=1;
+    const LE_ERROR=1;
     const LE_WARNING=2;
-    const LE_ERROR=4;
+    const LE_INFO=4;
     const LE_DEBUG_INFO=8;
     const LE_DEBUG_ENV=16;
     const LE_DEBUG_GLOBALS=32;
-    const LE_DEBUG_DATAPLAN=64;
+    const LE_DEBUG_QUERY=64;
     const LE_DEBUG_DATAQUERY=128;
     const LE_DEBUG_ALL=32767;
 
@@ -68,9 +69,13 @@ abstract class Logger
     #const LT_HTML_INLINE='html_inline';
 
     private static $loggerInstance;
-    public static $entryTypeNames=['1'=>'Information log section','2'=>'Warnings log section',
-        '4'=>'Errors log section','8'=>'Debug information',
-        '64'=>'Debugging data plans log section','128'=>'Debugging data query log section'];
+    public static $entryTypeNames=[
+        self::LE_ERROR=>'Errors log section',
+        self::LE_WARNING=>'Warnings log section',
+        self::LE_INFO=>'Information log section',
+        self::LE_DEBUG_INFO=>'Debug information',
+        self::LE_DEBUG_QUERY=>'Debugging data querys log section',
+        self::LE_DEBUG_DATAQUERY=>'Debugging data query log section'];
     public static $logMode;
 
     abstract public function pushMessageToLog($entryType,$data);
@@ -147,25 +152,36 @@ abstract class Logger
         }
     }
 
-    public static function dataPlan (&$data, $planName='', $file=null, $line=null)
+    public static function query (&$query, $id='', $file=null, $line=null)
     {
-        if (self::$logMode & self::LE_DEBUG_DATAPLAN) {
+        if (self::$logMode & self::LE_DEBUG_QUERY) {
             if (!is_object(self::$loggerInstance)) {
-                print "<hr>DataLog not initialized. Bad try to dump dataplan in (${file} @ ${line})<br>";
-                print_r($data);
+                print "<hr>DataLog not initialized. Bad try to dump query in (${file} @ ${line})<br>";
+                print_r($query);
                 return;
             }
-            self::$loggerInstance->pushDataPlan(self::LE_DEBUG_DATAPLAN, [
-                'planName'=>$planName,'dataplan'=>&$data,'file'=>$file,'line'=>$line]);
+
+            self::$loggerInstance->pushQuery([
+                'id'=>$id,
+                'query'=>&$query,
+                'file'=>$file,'line'=>$line]);
         }
 
     }
     public static function debugDataQuery($id, $queryString,  $file = null, $line = null){
-        self::$loggerInstance->pushDataQuery(self::LE_DEBUG_DATAQUERY,['id'=>$id, 'queryString'=>$queryString,'file'=>$file,'line'=>$line]);
+        self::$loggerInstance->pushToDataLog([
+            'type'=>'queryString',
+            'id'=>$id, 
+            'queryString'=>$queryString,
+            'file'=>$file,'line'=>$line]);
     }
 
     public static function debugDatasetIndexes($id, $indexDump,  $file = null, $line = null){
-        self::$loggerInstance->pushDataQuery(self::LE_DEBUG_DATAQUERY,['id'=>$id, 'indexDump'=>$indexDump,'file'=>$file,'line'=>$line]);
+        self::$loggerInstance->pushToDataLog([
+            'type'=>'indexDump',
+            'id'=>$id,
+            'indexDump'=>$indexDump,
+            'file'=>$file,'line'=>$line]);
     }
 
     public static function addPHPError($phpErrorType, $data, $file = null, $line = null)
@@ -231,35 +247,34 @@ abstract class Logger
         return \implode('', $result);
     }
 
-    public static function dumpPlanAsHTML(&$planEntry,&$result=null)
+    public static function dumpQueryAsHTML(&$query,&$result=null)
     {
         if ($result==null) {
             $result=[];
         }
         
-        
-        array_push($result, '<style>.dpd{font-family:arial,sans;font-size:11px;}</style>'
+        $result[]='<style>.dpd{font-family:arial,sans;font-size:11px;}</style>'
             .'<table class="dpd" border=1><tr><td bgcolor="#ffff80" colspan="5">'
-            .$planEntry['#dataConnection'].'(data provider='
-            .$planEntry['#dataProvider'].', datasource='.$planEntry['#dataSource'].')</td></tr>');
+            .$query['#dataConnection'].'(data provider='
+            .$query['#dataProvider'].', datasource='.$query['#dataSource'].')</td></tr>';
 
-        array_push($result, self::dumpPlanEntry($planEntry));
+        $result[]=self::dumpQuery($query);
 
-        array_push($result, '<tr><td colspan="2">Select script:</td><td colspan="5" bgcolor="#e0ffe0"><pre>'
-            .$planEntry['#readScript'].'</pre></td></tr>'
-            .'</table>');
+        $result[]='<tr><td colspan="2">Select script:</td><td colspan="5" bgcolor="#e0ffe0"><pre>'
+            .$query['#readScript'].'</pre></td></tr>'
+            .'</table>';
 
-        if (isset($planEntry['@subPlan'])) {
-            foreach ($planEntry['@subPlan'] as $i=>&$subEntry) {
-                array_push($result, '<br/><hr/>Next plan entry:');
-                self::dumpPlanAsHTML($subEntry,$result);
+        if (isset($query['@subQuery'])) {
+            foreach ($query['@subQuery'] as $i=>&$subEntry) {
+                array_push($result, '<br/><hr/>Next query entry:');
+                self::dumpQueryAsHTML($subEntry,$result);
             }
         }
 
 
     }
 
-    public static function dumpPlanEntry(&$entry)
+    public static function dumpQuery(&$entry)
     {
         $dataset=&$entry['@dataset'];
         $row1='';
@@ -268,7 +283,7 @@ abstract class Logger
         if (isset($entry['#refType'])) {
             $refType=$entry['#refType'];
             if ($refType=='linknext') {
-                return '<tr><td bgcolor="#ffffe0">Will be loaded by one of the next plan entry</td></tr>';
+                return '<tr><td bgcolor="#ffffe0">Will be loaded by one of the next query entry</td></tr>';
             }
         }
 
@@ -311,7 +326,7 @@ abstract class Logger
                     $row2.='<br/>'.(isset($field['#uniqueIndex'])?'#uniqueIndex:'.$field['#uniqueIndex']:'(Error! No #uniqueIndex!)');
                 }
                 if (isset($field['#refType'])) {
-                    $row2.='<table class="dpd" border=1>'.self::dumpPlanEntry($field).'</table>';
+                    $row2.='<table class="dpd" border=1>'.self::dumpQuery($field).'</table>';
                 }
                 # Если это агрегат, то ссылка может быть только удаленной
             } elseif ($kind=='aggregation') {
@@ -320,7 +335,7 @@ abstract class Logger
                     .'<b>'.(isset($field['#refDatasource'])?$field['#refDatasource']:'this').'</b>:'
                     .$field['#refSchema'].'/'.$field['#refDataset']
                     .'<br/>'.(isset($field['#nonuniqueIndex'])?'#nonuniqueIndex:'.$field['#nonuniqueIndex']:'(Error! No #nonuniqueIndex!)');
-                $row2.='<table class="dpd" border=1>'.self::dumpPlanEntry($field).'</table>';
+                $row2.='<table class="dpd" border=1>'.self::dumpQuery($field).'</table>';
             }
             if (isset($field['#error'])) {
                 $row2.='ERROR! '.$field['#error'].'</br>';
@@ -356,29 +371,35 @@ class HTMLEndLogger extends Logger {
 
     /**
      * @param mixed $entryType
-     * @param array $data ['planName'=>$planName,'dataplan'=>&$dataPlan,'file'=>$file,'line'=>$line]
+     * @param array $data ['queryName'=>$queryName,'query'=>&$query,'file'=>$file,'line'=>$line]
      */
-    public function pushDataPlan($entryType,$data)
+    public function pushQuery($data)
     {
-        $logSection=$entryType.'';
+        $logSection=self::LE_DEBUG_QUERY.'';
         if(!isset($this->logArray[$logSection])){
             $this->logArray[$logSection]=[];
         }
-        array_push($this->logArray[$logSection], ['data'=>'Dumps dataplan to dataplans log','time'=>date('Y-m-d H:i:s'),'type'=>'dataplan']);
-        // TODO проверить - можно ли добавить в массив &$data вместо копии
-        array_push($this->dataLogArray, ['dataplan', $data]);
+        $this->logArray[$logSection][]=[
+            'data'=>'Dumps data query '.$data['id'].' to the data log',
+            'time'=>date('Y-m-d H:i:s'),
+            'type'=>self::LE_DEBUG_QUERY];
+        $data['type']='query';
+        $this->dataLogArray[]=&$data;
     }
 
-    public function pushDataQuery($entryType, &$data){
-        array_push($this->dataLogArray, ['queryString',$data]);
+    public function pushToDataLog($data){
+
+        $this->dataLogArray[]=&$data;
     }
 
     public function onHTTPEnd()
     {
-        
-        $s = '';
+        print "<div id='debugPane' style='right:20px;position:fixed; bottom:20px; align:right'>
+        <button style='padding:8px;   box-shadow: 2px 6px 16px #2c2779; border-radius:8px; background:#3060ff; color:white;' onclick=\"document.getElementById('debugPaneSections').style.display='block'\">Show debug</button>
+        </div>
+        <div style='display:none;' id='debugPaneSections'>";
         foreach ($this->logArray as $section=>&$SectionArray) {
-            $s.='<h4>'.\doq\tr('log',self::$entryTypeNames[$section.'']).'</h4>';
+            print '<h4>'.\doq\tr('log',self::$entryTypeNames[$section.'']).'</h4><table>';
             foreach ($SectionArray as $i=>&$record) {
                 $data=null;
                 $file=null;
@@ -393,12 +414,14 @@ class HTMLEndLogger extends Logger {
                         $fw=""; break;
                     case self::LE_INFO:  $typeName ='Info'; $bgColor="#f8f8f0"; $fw=""; break;
                     case self::LE_WARNING: $typeName = 'Warning'; $bgColor="#80f880"; $fw= ""; break;
-                    case self::LE_DEBUG_INFO:
+                    case self::LE_DEBUG_INFO: 
+                    case self::LE_DEBUG_QUERY: 
+                    case self::LE_DEBUG_DATAQUERY:
                         $typeName = 'Debug';
                         if ($category) {
                             $typeName.="[${category}]";
                         }
-                        $bgColor="#aaaaaa";
+                        $bgColor="#dddddd";
                         $fw= ""; 
                     break;
 
@@ -414,46 +437,43 @@ class HTMLEndLogger extends Logger {
                 } else {
                     $text = $data;
                 }
+                print "<tr bgcolor='${bgColor}' valign='top'><td>${time}</td><td>${typeName}<td>${text}</td><td>${file}</td><td>${line}</td></tr>";
 
-                if ($file) {
-                    $text .= ' -- '.$file;
-                }
-                if ($line) {
-                    $text .= '@'.$line;
-                }
-                $s .= "<div style='text-align:left;margin:1px;padding:3px;font-family:arial,sans;font-size:12px;color:#0;background-color:$bgColor;$fw'>${typeName}: ${text}</div>";
             }
+            print "</table>";
         }
-        print '<div style="white-space: normal;padding:1px; background-color:#808080;">'.$s.'</div>';
         
-        /** @var $data ['planName'=>$planName,'dataplan'=>&$dataPlan,'file'=>$file,'line'=>$line] */
+        /** @var $data ['queryName'=>$queryName,'query'=>&$query,'file'=>$file,'line'=>$line] */
         foreach ($this->dataLogArray as $i=>&$data) {
-            $type=$data[0];
+            $type=$data['type'];
             switch($type){
-                case 'dataplan':
-                    print "<h4>".$data[1]['planName'].'</h4>';
-                    $this->dumpPlan($data[1]['dataplan']);
-
+                case 'query':
+                    print "<h4>".$data['queryName'].'</h4>';
+                    #$this->dumpQuery($data['query']);
+                    $result=[];
+                    self::dumpQueryAsHTML($data['query'], $result);
+                    foreach($result as $j=>&$s){
+                        print $s;
+                    }                    
                 break;
                 case 'queryString':
-                    print "<h4>";
-                    print $data[1]['queryString'];
-                    print "</h4>";
+                    print '<h4>Query "'.$data['id'].'" dumped in '.$data['file'].' at '. $data['line'].'</h4>';
+                    print $data['queryString'];
+                    print '<hr>';
                 break;
+                case 'indexDump':
+                    print '<h4>Result indexes filled by '.$data['id'].' dumped in '.$data['file'].' at '. $data['line'].'</h4>';
+                    print $data['indexDump'];
+                    print '<hr>';
+                break;
+        
             }
            
         }
+
+        print "</div>";
+
     }
-
-
-    public function dumpPlan(&$planEntry){
-        $result=[];
-        self::dumpPlanAsHTML($planEntry, $result);
-        foreach($result as $i=>&$s){
-            print $s;
-        }
-    }
-
 
 }
 
@@ -522,9 +542,9 @@ class FileLogger extends Logger
 
     /**
      * @param int $entryType 
-     * @param array['planName'=>$planName,'dataplan'=>&$data,'file'=>$file,'line'=>$line]
+     * @param array['queryName'=>$queryName,'query'=>&$data,'file'=>$file,'line'=>$line]
      */
-    public function pushDataPlan($entryType,$data)
+    public function pushQuery($data)
     {
         if (!$this->dataLogFileHandle) {
             return;
@@ -535,11 +555,11 @@ class FileLogger extends Logger
         fputs ($this->dataLogFileHandle, self::jsonSerialize($data));
 
     }
-    public function pushDataQuery($entryType,$data){
+    public function pushToDataLog($data){
         if (!$this->dataLogFileHandle) {
             return;
         }
-        $data['type']=$entryType;
+        $data['type']='datalog';
         $data['time']=date('Y-m-d H:i:s');
         if (isset($data['queryString'])) {
             fputs($this->dataLogFileHandle, "\n\n\nDataquery:\n");

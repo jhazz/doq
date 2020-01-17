@@ -40,8 +40,8 @@ class DataGrid {
     if(!$ok) {
       return false;
     }
-    $dataNode=$scope->dataNode;
-    if($dataNode->type!==\doq\data\DataNode::NT_DATASET) {
+    $datanode=$scope->datanode;
+    if($datanode->type!==\doq\data\Datanode::NT_DATASET) {
       trigger_error(\doq\t('Wrong path to Dataset - %s is not a Dataset!',$scope->path));
     }
 
@@ -77,7 +77,7 @@ class DataGrid {
           } else {
             if($scope->path=="/PARAMETERS") {
               $detailToMasteridxName='idx_agg_main:store/PRODUCTS_2_PRODUCT_ID';
-              $render->out[]="Aggregation-".$scope->dataNode->dataObject->resultIndexes[$detailToMasteridxName];
+              $render->out[]="Aggregation-".$scope->datanode->dataset->resultIndexes[$detailToMasteridxName];
             }
             if($scope->path=="/THE_PRODUCT_TYPE/TYPE_NAME") {
               # вот здесь мы уже потеряли value лукапа и провалились в подобъект

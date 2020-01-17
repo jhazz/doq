@@ -32,11 +32,11 @@
                   'PRODUCT_GROUP_ID'=>[
                     '#type'=>'int64',
                     '#kind'=>'lookup',
-                    '#ref'=>'main:store/PRODUCT_GROUPS'], # достаточно лишь описать какой датасет используется
+                    '#ref'=>'main:store/PRODUCT_GROUPS'],
                   'PRODUCT_SECOND_GROUP_ID'=>[
                     '#type'=>'int64',
                     '#kind'=>'lookup',
-                    '#ref'=>'main:store/PRODUCT_GROUPS'], # достаточно лишь описать какой датасет используется
+                    '#ref'=>'main:store/PRODUCT_GROUPS'],
                   'PRODUCT_TYPE_ID1' =>[
                     '#type'=>'int64',
                     '#kind'=>'lookup',

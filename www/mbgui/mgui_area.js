@@ -116,7 +116,7 @@ mgui.classes['area'] = {
         }
         if (self['#']['text'].linkage) {
           linkage = self['#']['text'].linkage
-          if ('bindPubDataNode' in linkage) {
+          if ('bindPubDatanode' in linkage) {
             pubDataAttr = linkage['bindPubDataAttr']
             pubType = ('type' in pubDataAttr) ? pubDataAttr['type'] : mgui.C.T_STRING
             switch (pubType) {

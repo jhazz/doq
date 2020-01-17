@@ -3,7 +3,7 @@ namespace doq\data;
 
 abstract class Scripter
 {
-    abstract public function buildSelectScript($planEntry);
+    abstract public function buildSelectScript($query);
 
     public static function create($providerName)
     {

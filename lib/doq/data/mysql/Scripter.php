@@ -2,20 +2,20 @@
 namespace doq\data\mysql;
 
 class Scripter {
-  public $plan;
+  public $query;
 
   public static function create() {
     return new Scripter();
   }
 
-  public function buildSelectScript(&$planEntry) {
+  public function buildSelectScript(&$query) {
     $this->tableAliases=[];
     $this->tableAliasNo=1;
     $this->columnList=[];
     $this->joins=[];
-    $this->datasourceName=$planEntry['#dataSource'];
+    $this->datasourceName=$query['#dataSource'];
     $noParent=NULL;
-    if (!$this->collectJoinsRecursive($planEntry)) {
+    if (!$this->collectJoinsRecursive($query)) {
       return false;
     }
     $s='';

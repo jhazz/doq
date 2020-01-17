@@ -121,9 +121,9 @@ mgui.lang = {
  * Класс узла данных
  * @constructor
  * @param {string} path путь к узлу
- * @param {mgui.DataNode} parentNode родительский узел
+ * @param {mgui.Datanode} parentNode родительский узел
  */
-mgui.DataNode = function(path, parentNode) {
+mgui.Datanode = function(path, parentNode) {
   var s=this
   s.path = path
   s.parentNode = parentNode
@@ -132,7 +132,7 @@ mgui.DataNode = function(path, parentNode) {
 /** @deprecated  НЕ ТЕСТИРОВАЛОСЬ
  *
  **/
-mgui.DataNode.prototype.callInherited = function(methodName, ars) {
+mgui.Datanode.prototype.callInherited = function(methodName, ars) {
   try {
     var generalClass = this['#']['class']['data']
     if (methodName in generalClass['methods']) {
@@ -141,13 +141,13 @@ mgui.DataNode.prototype.callInherited = function(methodName, ars) {
   } catch (e) {}
 }
 
-mgui.DataNode.prototype.doLater = function(methodName, params) {
+mgui.Datanode.prototype.doLater = function(methodName, params) {
   var self = this
   if ((!!self.path) && (methodName in self.methods))
     mgui.doLaterOnce(self.path + '!' + methodName, self, self.methods[methodName], params)
 }
 
-mgui.DataNode.prototype.updateCategory = function(categoryName) {
+mgui.Datanode.prototype.updateCategory = function(categoryName) {
   var self = this
   if (!self.updatingCategories)
     self.updatingCategories = {}
@@ -155,7 +155,7 @@ mgui.DataNode.prototype.updateCategory = function(categoryName) {
   self.doLater('update')
 }
 
-mgui.DataNode.prototype.checkoutCategory = function(categoryName) {
+mgui.Datanode.prototype.checkoutCategory = function(categoryName) {
   var self = this
   if('all' in self.updatingCategories){
     if(categoryName in self.updatingCategories)
@@ -168,11 +168,11 @@ mgui.DataNode.prototype.checkoutCategory = function(categoryName) {
   } else
     return false
 }
-mgui.DataNode.prototype.resetUpdateCategories = function() {
+mgui.Datanode.prototype.resetUpdateCategories = function() {
   this.updatingCategories={}
 }
 
-mgui.DataNode.prototype.getAttributeAsString = function(attrName, defaultResult) {
+mgui.Datanode.prototype.getAttributeAsString = function(attrName, defaultResult) {
   var d, format, r, t
   if (attrName in this['#']) {
     var attr = this['#'][attrName]
@@ -190,7 +190,7 @@ mgui.DataNode.prototype.getAttributeAsString = function(attrName, defaultResult)
   return defaultResult
 }
 
-mgui.DataNode.prototype.getAttributeAsNumber = function(attrName, failResult) {
+mgui.Datanode.prototype.getAttributeAsNumber = function(attrName, failResult) {
   if (attrName in this['#']) {
     var attr = this['#'][attrName]
     if ('data' in attr)
@@ -213,16 +213,16 @@ mgui.DataNode.prototype.getAttributeAsNumber = function(attrName, failResult) {
 /**
  * @param string path путь к узлу
  */
-mgui.getDataNode = function(scopeStack, path) {
+mgui.getDatanode = function(scopeStack, path) {
   var r, popOnExit = 0
   if ((path !== '') && (path !== '.')) {
     r = mgui.openPath(path, false, scopeStack)
     if (r[0] === false) return r
     popOnExit = 1
   }
-  var dataNode = scopeStack.top.dataNode
+  var datanode = scopeStack.top.datanode
   if (popOnExit) mgui.closePath(scopeStack)
-  return [dataNode.type, dataNode.value]
+  return [datanode.type, datanode.value]
 }
 
 
@@ -237,12 +237,12 @@ mgui.getDataNode = function(scopeStack, path) {
  * @param {boolean=} options.nullable атрибут допускает пустое значение
  * @param {string=} options.bindType тип связки
  * @param {boolean=} options.doCreateRefNodes создавать узлы, на которые указывает связь. По-умолчанию true
- * @param {mgui.DataNode=} options.contextScopeStack область контекста данных на которые указывают ссылки по-умолчанию
+ * @param {mgui.Datanode=} options.contextScopeStack область контекста данных на которые указывают ссылки по-умолчанию
  * @param {object=} options.handlers обработчики событий
  *
  **/
 
-mgui.DataNode.prototype.setAttribute = function(attrName, options) {
+mgui.Datanode.prototype.setAttribute = function(attrName, options) {
   if (options === undefined)
     options = {}
   var thisAttr, attrExpression, res, r, n, s, schemaAttrName, params,
@@ -305,7 +305,7 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
         thisAttr.linkage = {
           expressionRPN: expressionRPN,
           bindParams: bindParams,
-          bindPubDataNodes: [],
+          bindPubDatanodes: [],
           formula: attrExpression
         }
         for (i in bindParams) {
@@ -322,7 +322,7 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
 
           r = mgui.openPath(pubPath, doCreateRefNodes, contextScopeStack)
           if (r[0] === false) return r
-          n = contextScopeStack.top.dataNode
+          n = contextScopeStack.top.datanode
           if (!('#' in n)) {
             if (!doCreateRefNodes) return [false, 'Узел ' + pubPath + ' не содержит атрибутов']
             n['#'] = {}
@@ -343,24 +343,24 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
           } else r = n['#'][pubAttrName]
 
           // Сначала подписываемся на наличие изменений в параметрах выражения
-          thisAttr.linkage.bindPubDataNodes[i] = r
+          thisAttr.linkage.bindPubDatanodes[i] = r
           binding = mgui.subscribe(pubPath + '#' + pubAttrName, mgui.C.EV_CHANGE,
             thisScopeAttrPath + '$' + i, _changeEvaluatedBind)
           binding.paramNo = i
-          //            binding.pubDataNode=contextScopeStack.top.dataNode
-          binding.subDataNode = this
-          binding.pubDataNode = n
+          //            binding.pubDatanode=contextScopeStack.top.datanode
+          binding.subDatanode = this
+          binding.pubDatanode = n
           if (!!options.handlers)
             binding.handlers = options.handlers
           mgui.closePath(contextScopeStack)
 
           binding = mgui.subscribe(thisScopeAttrPath, mgui.C.EV_PULL, thisScopeAttrPath, _pullEvaluatedBind)
-          binding.subDataNode = this
+          binding.subDatanode = this
           // Затем подписываемся на вычисление общего результата выражения
           // и его публикацию сами к себе
           binding = mgui.subscribe(thisScopeAttrPath, mgui.C.EV_UPDATE, thisScopeAttrPath, _updateEvaluatedBind)
-          //  binding.pubDataNode=thisScope.dataNode
-          binding.subDataNode = this
+          //  binding.pubDatanode=thisScope.datanode
+          binding.subDatanode = this
           if (!!options.handlers)
             binding.handlers = options.handlers
         } // for each bindParams
@@ -383,7 +383,7 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
         pubAttrName = 'value'
       r = mgui.openPath(pubPath, doCreateRefNodes, contextScopeStack)
       if (r[0] === false) return r
-      n = contextScopeStack.top.dataNode
+      n = contextScopeStack.top.datanode
       if (!(pubAttrName in n['#'])) {
         if (!doCreateRefNodes) return [false, 'Узел ' + pubPath + ' не содержит атрибута ' + pubAttrName]
         r = n['#'][pubAttrName] = { 'data': '' }
@@ -403,22 +403,22 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
         pubPath: pubPath,
         pubAttrName: pubAttrName,
         bindPubDataAttr: r,
-        bindPubDataNode: n
+        bindPubDatanode: n
       }
       binding = mgui.subscribe(pubPath + '#' + pubAttrName, mgui.C.EV_CHANGE, thisScopeAttrPath, _changeDirectBind)
-      binding.subDataNode = this
-      binding.pubDataNode = n
+      binding.subDatanode = this
+      binding.pubDatanode = n
       if (!!options.handlers)
         binding.handlers = options.handlers
       mgui.closePath(contextScopeStack)
 
       binding = mgui.subscribe(thisScopeAttrPath, mgui.C.EV_UPDATE, thisScopeAttrPath, _updateDirectBind)
-      binding.subDataNode = this
+      binding.subDatanode = this
       if (!!options.handlers)
         binding.handlers = options.handlers
 
       binding = mgui.subscribe(thisScopeAttrPath, mgui.C.EV_PULL, thisScopeAttrPath, _pullDirectBind)
-      binding.subDataNode = this
+      binding.subDatanode = this
       if (!!options.handlers)
         binding.handlers = options.handlers
       mgui.emit(this.path, attrName, mgui.C.EV_PULL) // сначала вытягиваем данные из источников
@@ -428,7 +428,7 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
       binding = this['#'][attrName]['changeBinding']
       if (!binding) {
         this['#'][attrName]['changeBinding'] = binding = mgui.subscribe(thisScopeAttrPath, mgui.C.EV_CHANGE, thisScopeAttrPath, _changeItself)
-        binding.subDataNode = this
+        binding.subDatanode = this
       }
       if (!!options.handlers)
         binding.handlers = options.handlers
@@ -436,7 +436,7 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
       binding = this['#'][attrName]['updateBinding']
       if (!binding) {
         this['#'][attrName]['updateBinding'] = binding = mgui.subscribe(thisScopeAttrPath, mgui.C.EV_UPDATE, thisScopeAttrPath, _updateItself)
-        binding.subDataNode = this
+        binding.subDatanode = this
       }
       if (!!options.handlers)
         binding.handlers = options.handlers
@@ -461,7 +461,7 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
   // params здесь не используется, поскольку новые данные вычисляются
   function _changeEvaluatedBind(params) {
     var r, c, binding = this,
-      thisDataNode = binding.subDataNode,
+      thisDatanode = binding.subDatanode,
       paramIndex, paramIndexPos,
       thisAttr, subAttrName = binding.subPathAttr
 
@@ -470,10 +470,10 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
     if (paramIndexPos > 0)
       paramIndex = subAttrName.substring(paramIndexPos + 1),
       subAttrName = subAttrName.substring(0, paramIndexPos)
-    thisAttr = thisDataNode['#'][subAttrName]
+    thisAttr = thisDatanode['#'][subAttrName]
     if ((!!binding.handlers) && (!!(c = binding.handlers['validate']))) {
       thisAttr.state = mgui.C.US_VALIDATING
-      r = c.call(thisDataNode, binding, thisAttr)
+      r = c.call(thisDatanode, binding, thisAttr)
       if (r === false) {
         thisAttr.state = mgui.C.US_VALIDATE_ERROR
         thisAttr.error = params.error
@@ -491,10 +491,10 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
 
   function _updateEvaluatedBind() {
     var binding = this,
-      thisDataNode = binding.subDataNode,
+      thisDatanode = binding.subDatanode,
       i, ne, cmd, arg, stack = [],
       c, r,
-      thisAttr = thisDataNode['#'][binding.subPathAttr],
+      thisAttr = thisDatanode['#'][binding.subPathAttr],
       params = {}
     for (i in thisAttr.linkage.expressionRPN) {
       ne = thisAttr.linkage.expressionRPN[i]
@@ -517,7 +517,7 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
 
       if ((!!binding.handlers) && (!!(c = binding.handlers['evaluate']))) {
         thisAttr['state'] = mgui.C.US_EVALUATING
-        r = c.call(thisDataNode, binding, thisAttr, params)
+        r = c.call(thisDatanode, binding, thisAttr, params)
         if (r === false) {
           thisAttr['state'] = mgui.C.US_EVALUATE_ERROR
           thisAttr['error'] = params.error
@@ -536,7 +536,7 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
 
     if ((!!binding.handlers) && (!!(c = binding.handlers['present']))) {
       thisAttr['state'] = mgui.C.US_PRESENTING
-      r = c.call(thisDataNode, binding, thisAttr, params)
+      r = c.call(thisDatanode, binding, thisAttr, params)
       if (r === false) {
         thisAttr['state'] = mgui.C.US_PRESENT_ERROR
         thisAttr['error'] = params.error
@@ -548,8 +548,8 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
 
   function _changeDirectBind(params) {
     var r, c, binding = this,
-      thisDataNode = binding.subDataNode,
-      thisAttr = thisDataNode['#'][binding.subPathAttr]
+      thisDatanode = binding.subDatanode,
+      thisAttr = thisDatanode['#'][binding.subPathAttr]
     if (!params) params = {}
     if (params.newData === undefined) {
       r = mgui.convert(thisAttr.linkage.bindPubDataAttr['type'],
@@ -571,7 +571,7 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
       //  вроде поправил с телефона
       
        
-      r = c.call(thisDataNode, binding, thisAttr, params)
+      r = c.call(thisDatanode, binding, thisAttr, params)
       if (r[0] == mgui.C.US_VALIDATE_ERROR){
         thisAttr['state'] = mgui.C.US_VALIDATE_ERROR
         thisAttr['error'] = "get error from r"
@@ -604,13 +604,13 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
   function _pullDirectBind(params) {
     var pubAttrRef, binding = this,
       subPathAttr = binding.subPathAttr,
-      thisDataNode = binding.subDataNode,
-      expr = thisDataNode['#'][subPathAttr].linkage,
-      pubDataNode = expr.bindPubDataNode,
+      thisDatanode = binding.subDatanode,
+      expr = thisDatanode['#'][subPathAttr].linkage,
+      pubDatanode = expr.bindPubDatanode,
       pubAttrName = expr.pubAttrName
 
-    if (('#' in pubDataNode) && (pubAttrName in pubDataNode['#'])) {
-      pubAttrRef = pubDataNode['#'][pubAttrName]
+    if (('#' in pubDatanode) && (pubAttrName in pubDatanode['#'])) {
+      pubAttrRef = pubDatanode['#'][pubAttrName]
       if ('data' in pubAttrRef) {
         thisAttr['data'] = pubAttrRef['data']
         thisAttr['type'] = pubAttrRef['type']
@@ -623,11 +623,11 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
   // params не должен ничего содержать! Данные уже должны быть записаны в модель
   function _updateDirectBind(params) {
     var binding = this,
-      r, c, thisDataNode = binding.subDataNode,
-      thisAttr = thisDataNode['#'][binding.pubPathAttr]
+      r, c, thisDatanode = binding.subDatanode,
+      thisAttr = thisDatanode['#'][binding.pubPathAttr]
     thisAttr['state'] = mgui.C.US_EVALUATING
     if ((!!binding.handlers) && (!!(c = binding.handlers['evaluate']))) {
-      r = c.call(thisDataNode, binding, thisAttr, params)
+      r = c.call(thisDatanode, binding, thisAttr, params)
       if (r === false) {
         thisAttr['state'] = mgui.C.US_EVALUATE_ERROR
         thisAttr['error'] = params.error
@@ -639,7 +639,7 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
 
     if ((!!binding.handlers) && (!!(c = binding.handlers['present']))) {
       thisAttr['state'] = mgui.C.US_PRESENTING
-      r = c.call(thisDataNode, binding, thisAttr, params)
+      r = c.call(thisDatanode, binding, thisAttr, params)
       if (r === false) {
         thisAttr['state'] = mgui.C.US_PRESENT_ERROR
         thisAttr['error'] = params.error
@@ -657,8 +657,8 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
    */
   function _changeItself(params) {
     var r, r2, c, binding = this,
-      thisDataNode = binding.subDataNode,
-      thisAttr = thisDataNode['#'][binding.pubPathAttr],
+      thisDatanode = binding.subDatanode,
+      thisAttr = thisDatanode['#'][binding.pubPathAttr],
       targetDataType = thisAttr['type']
 
     mgui.log('_changeItself[' + binding.subPath + ' (' + thisAttr['type'] + ')' + thisAttr['data'] +
@@ -692,7 +692,7 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
     if ((!!binding.handlers) && (!!(c = binding.handlers['validate']))) {
       thisAttr['state'] = mgui.C.US_VALIDATING
       // при вызове handler возвращает [результат, новое_значение, новый тип]
-      r = c.call(thisDataNode, binding, thisAttr, params)
+      r = c.call(thisDatanode, binding, thisAttr, params)
       if (r == undefined) {
         thisAttr['data']=params.newData
         r = [mgui.C.US_VALIDATED]
@@ -714,12 +714,12 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
 
   function _updateItself(params) {
     var r, c, binding = this,
-      thisDataNode = binding.subDataNode,
-      thisAttr = thisDataNode['#'][binding.pubPathAttr]
+      thisDatanode = binding.subDatanode,
+      thisAttr = thisDatanode['#'][binding.pubPathAttr]
 
     if ((!!binding.handlers) && (!!(c = binding.handlers['present']))) {
       thisAttr['state'] = mgui.C.US_PRESENTING
-      r = c.call(thisDataNode, binding, thisAttr, params)
+      r = c.call(thisDatanode, binding, thisAttr, params)
       if (r === false) {
         thisAttr['state'] = mgui.C.US_PRESENT_ERROR
         thisAttr['error'] = params.error
@@ -728,22 +728,22 @@ mgui.DataNode.prototype.setAttribute = function(attrName, options) {
   }
 }
 /*
-mgui.DataNode.prototype.applySchema=function(schema,scopeStack,contextScopeStack){
+mgui.Datanode.prototype.applySchema=function(schema,scopeStack,contextScopeStack){
       // extern vars: digScopeStack, contextScopeStack
-    var dataNode=this,
+    var datanode=this,
       tAttrName, tAttrDefs, tBindType, tcAttrName, tDataType, tAttrData,
       nodeClassName = schema['#nodeClass'],
       handlers = {},
       nodeClass = undefined
-    if (!('#' in dataNode))
-      dataNode['#'] = {}
+    if (!('#' in datanode))
+      datanode['#'] = {}
     if (!!nodeClassName) {
       if (typeof nodeClassName == 'object')
         nodeClassName = nodeClassName['data']
       if (nodeClassName in mgui.classes)
         nodeClass = mgui.classes[nodeClassName]
       if ('schema' in nodeClass)
-        dataNode.applySchema(nodeClass['schema'],scopeStack,contextScopeStack)
+        datanode.applySchema(nodeClass['schema'],scopeStack,contextScopeStack)
     }
     for (tAttrName in schema) {
       if (tAttrName.indexOf('#') === 0) {
@@ -782,8 +782,8 @@ mgui.DataNode.prototype.applySchema=function(schema,scopeStack,contextScopeStack
 */
 mgui.forEachChild = function(scopeStack, callback) {
   var i, scope = scopeStack.top
-  if (!('@' in scope.dataNode)) return false
-  for (i in scope.dataNode['@']) {
+  if (!('@' in scope.datanode)) return false
+  for (i in scope.datanode['@']) {
     callback(scopeStack, i)
   }
 }
@@ -798,21 +798,21 @@ mgui.copyObject = function(obj) {
 }
 
 mgui.setAttribute = function(thisScopeStack, attrName, options) {
-  return thisScopeStack.top.dataNode.setAttribute(attrName, options)
+  return thisScopeStack.top.datanode.setAttribute(attrName, options)
 }
 
 
 
 mgui.openContext = function(params) {
   
-  function _buildNodeBySchema(dataNode, schema) {
+  function _buildNodeBySchema(datanode, schema) {
     // extern vars: digScopeStack, contextScopeStack
     var tAttrName, tAttrDefs, tBindType, tcAttrName, tAttrData,
       schemaClass, schemaClassName,
-      nodeClass, nodeClassName = dataNode.nodeClassName,
+      nodeClass, nodeClassName = datanode.nodeClassName,
       handlers = {}
-    if (!('#' in dataNode))
-      dataNode['#'] = {}
+    if (!('#' in datanode))
+      datanode['#'] = {}
 
     schemaClassName=schema['#nodeClass']
     if (!!schemaClassName) {
@@ -821,7 +821,7 @@ mgui.openContext = function(params) {
       if (schemaClassName in mgui.classes)
         schemaClass = mgui.classes[schemaClassName]
       if ('schema' in schemaClass)
-        _buildNodeBySchema(dataNode, schemaClass['schema'])
+        _buildNodeBySchema(datanode, schemaClass['schema'])
     }
     if((!!nodeClassName)&&(nodeClassName in mgui.classes)){
        nodeClass=mgui.classes[nodeClassName]
@@ -869,7 +869,7 @@ mgui.openContext = function(params) {
     newSchema=params.newSchema,
     nodeClass, digScopeStack, schemaNode, 
     i, j, scope, s, 
-    recordPath, dataNode, path,
+    recordPath, datanode, path,
     aPath = newPath.split('/')
   
   if ((aPath.length > 1) && (aPath[0] === '')) {
@@ -884,13 +884,13 @@ mgui.openContext = function(params) {
     }
   }
   if (scope !== undefined) {
-    dataNode = scope.dataNode
+    datanode = scope.datanode
     schemaNode = scope.schemaNode
     path = scope.path
   } else {
-    dataNode = mgui.model
-    if (dataNode === undefined) {
-      dataNode = mgui.model = new mgui.DataNode('/')
+    datanode = mgui.model
+    if (datanode === undefined) {
+      datanode = mgui.model = new mgui.Datanode('/')
     }
     schemaNode = mgui.schema // может быть undefined
     path = '/'
@@ -901,7 +901,7 @@ mgui.openContext = function(params) {
 
   digScopeStack = []
   digScopeStack.push(digScopeStack.top = {
-    dataNode: dataNode,
+    datanode: datanode,
     schemaNode: schemaNode,
     path: path
   })
@@ -934,34 +934,34 @@ mgui.openContext = function(params) {
         // Чтобы не было перехода по верхнему условию
         newSchema = undefined
       }
-      if (!('@' in dataNode)) {
+      if (!('@' in datanode)) {
         if (!createIfNE) return [false, "Узел '" + path + "' не содержит дочерних элементов"]
         if (strictCreate) {
           if (schemaNode === undefined) return [false, "Узел '" + path + "' не определен в схеме"]
         }
-        dataNode['@'] = {}
+        datanode['@'] = {}
       }
-      if (s in dataNode['@']) {
+      if (s in datanode['@']) {
         if (failIfExist)
           return [false, "Узел '" + s + "' уже есть в пространстве данных '" + path + "'"]
-        dataNode = dataNode['@'][s]
+        datanode = datanode['@'][s]
         digScopeStack.push(digScopeStack.top = { 
-          dataNode: dataNode, 
+          datanode: datanode, 
           schemaNode: schemaNode, path: path })
       } else {
         if (!createIfNE)
           return [false, "Узел '" + s + "' отсутствует в пространстве данных '" + path + "'"]
         // Узел отсутствует, но если указан флаг createIfNE, то создаем этот узел
-        // с шаблонами класса из схемы, передавая dataNode в качестве родительского
-        dataNode = dataNode['@'][s] = new mgui.DataNode(path, dataNode)
+        // с шаблонами класса из схемы, передавая datanode в качестве родительского
+        datanode = datanode['@'][s] = new mgui.Datanode(path, datanode)
         if (!!contextScopeStack) {
-          dataNode.contextPath = contextScopeStack.top.path
-          dataNode.contextDataNode = contextScopeStack.top.dataNode
-          dataNode.contextSchemaNode = contextScopeStack.top.schemaNode
+          datanode.contextPath = contextScopeStack.top.path
+          datanode.contextDatanode = contextScopeStack.top.datanode
+          datanode.contextSchemaNode = contextScopeStack.top.schemaNode
         }
 
         digScopeStack.push(digScopeStack.top = {
-          dataNode: dataNode, schemaNode: schemaNode, path: path
+          datanode: datanode, schemaNode: schemaNode, path: path
         })
 
         if (schemaNode !== undefined) {
@@ -970,25 +970,25 @@ mgui.openContext = function(params) {
             if (typeof cn === 'object') cn = cn['data']
             if (cn in mgui.classes) {
               nodeClass = mgui.classes[cn]
-              dataNode['nodeClassName'] = cn
+              datanode['nodeClassName'] = cn
               if ((nodeClass !== undefined) && ('methods' in nodeClass)) {
-                dataNode.methods = nodeClass['methods']
-                if('create' in dataNode.methods){
-                  dataNode.methods['create'].call(dataNode, digScopeStack, contextScopeStack)
+                datanode.methods = nodeClass['methods']
+                if('create' in datanode.methods){
+                  datanode.methods['create'].call(datanode, digScopeStack, contextScopeStack)
                 }
               }
             } else {
-              mgui.error('Unknown DataNode class: ' + cn)
+              mgui.error('Unknown Datanode class: ' + cn)
             }
           }
-          _buildNodeBySchema(dataNode, schemaNode)
+          _buildNodeBySchema(datanode, schemaNode)
         }
       }
     }
   }
   if (scopeStack === undefined) scopeStack = []
   scopeStack.push(scopeStack.top = {
-    dataNode: digScopeStack.top.dataNode,
+    datanode: digScopeStack.top.datanode,
     path: digScopeStack.top.path,
     schemaNode: digScopeStack.top.schemaNode
   })
@@ -1008,17 +1008,17 @@ mgui.openContext = function(params) {
  * @returns ScopeStack||Array[false,errorText]
  **/
 mgui.openPath = function(newPath, createIfNE, scopeStack, failIfExist, strictCreate, contextScopeStack, newSchema) {
-  var nodeClass, digScopeStack, schemaNode, i, scope, s, dataNode, path,
+  var nodeClass, digScopeStack, schemaNode, i, scope, s, datanode, path,
     recordPath, j,  aPath = newPath.split('/')
 
-  function _buildNodeBySchema(dataNode, schema) {
+  function _buildNodeBySchema(datanode, schema) {
     // extern vars: digScopeStack, contextScopeStack
     var tAttrName, tAttrDefs, tBindType, tcAttrName, tAttrData,
       schemaClass, schemaClassName,
-      nodeClass, nodeClassName = dataNode.nodeClassName,
+      nodeClass, nodeClassName = datanode.nodeClassName,
       handlers = {}
-    if (!('#' in dataNode))
-      dataNode['#'] = {}
+    if (!('#' in datanode))
+      datanode['#'] = {}
 
     schemaClassName=schema['#nodeClass']
     if (!!schemaClassName) {
@@ -1027,7 +1027,7 @@ mgui.openPath = function(newPath, createIfNE, scopeStack, failIfExist, strictCre
       if (schemaClassName in mgui.classes)
         schemaClass = mgui.classes[schemaClassName]
       if ('schema' in schemaClass)
-        _buildNodeBySchema(dataNode, schemaClass['schema'])
+        _buildNodeBySchema(datanode, schemaClass['schema'])
     }
     if((!!nodeClassName)&&(nodeClassName in mgui.classes)){
        nodeClass=mgui.classes[nodeClassName]
@@ -1078,13 +1078,13 @@ mgui.openPath = function(newPath, createIfNE, scopeStack, failIfExist, strictCre
     }
   }
   if (scope !== undefined) {
-    dataNode = scope.dataNode
+    datanode = scope.datanode
     schemaNode = scope.schemaNode
     path = scope.path
   } else {
-    dataNode = mgui.model
-    if (dataNode === undefined) {
-      dataNode = mgui.model = new mgui.DataNode('/')
+    datanode = mgui.model
+    if (datanode === undefined) {
+      datanode = mgui.model = new mgui.Datanode('/')
     }
     schemaNode = mgui.schema // может быть undefined
     path = '/'
@@ -1095,7 +1095,7 @@ mgui.openPath = function(newPath, createIfNE, scopeStack, failIfExist, strictCre
 
   digScopeStack = []
   digScopeStack.push(digScopeStack.top = {
-    dataNode: dataNode,
+    datanode: datanode,
     schemaNode: schemaNode,
     path: path
   })
@@ -1128,34 +1128,34 @@ mgui.openPath = function(newPath, createIfNE, scopeStack, failIfExist, strictCre
         // Чтобы не было перехода по верхнему условию
         newSchema = undefined
       }
-      if (!('@' in dataNode)) {
+      if (!('@' in datanode)) {
         if (!createIfNE) return [false, "Узел '" + path + "' не содержит дочерних элементов"]
         if (strictCreate) {
           if (schemaNode === undefined) return [false, "Узел '" + path + "' не определен в схеме"]
         }
-        dataNode['@'] = {}
+        datanode['@'] = {}
       }
-      if (s in dataNode['@']) {
+      if (s in datanode['@']) {
         if (failIfExist)
           return [false, "Узел '" + s + "' уже есть в пространстве данных '" + path + "'"]
-        dataNode = dataNode['@'][s]
+        datanode = datanode['@'][s]
         digScopeStack.push(digScopeStack.top = { 
-          dataNode: dataNode, 
+          datanode: datanode, 
           schemaNode: schemaNode, path: path })
       } else {
         if (!createIfNE)
           return [false, "Узел '" + s + "' отсутствует в пространстве данных '" + path + "'"]
         // Узел отсутствует, но если указан флаг createIfNE, то создаем этот узел
-        // с шаблонами класса из схемы, передавая dataNode в качестве родительского
-        dataNode = dataNode['@'][s] = new mgui.DataNode(path, dataNode)
+        // с шаблонами класса из схемы, передавая datanode в качестве родительского
+        datanode = datanode['@'][s] = new mgui.Datanode(path, datanode)
         if (!!contextScopeStack) {
-          dataNode.contextPath = contextScopeStack.top.path
-          dataNode.contextDataNode = contextScopeStack.top.dataNode
-          dataNode.contextSchemaNode = contextScopeStack.top.schemaNode
+          datanode.contextPath = contextScopeStack.top.path
+          datanode.contextDatanode = contextScopeStack.top.datanode
+          datanode.contextSchemaNode = contextScopeStack.top.schemaNode
         }
 
         digScopeStack.push(digScopeStack.top = {
-          dataNode: dataNode, schemaNode: schemaNode, path: path
+          datanode: datanode, schemaNode: schemaNode, path: path
         })
 
         if (schemaNode !== undefined) {
@@ -1164,25 +1164,25 @@ mgui.openPath = function(newPath, createIfNE, scopeStack, failIfExist, strictCre
             if (typeof cn === 'object') cn = cn['data']
             if (cn in mgui.classes) {
               nodeClass = mgui.classes[cn]
-              dataNode['nodeClassName'] = cn
+              datanode['nodeClassName'] = cn
               if ((nodeClass !== undefined) && ('methods' in nodeClass)) {
-                dataNode.methods = nodeClass['methods']
-                if('create' in dataNode.methods){
-                  dataNode.methods['create'].call(dataNode, digScopeStack, contextScopeStack)
+                datanode.methods = nodeClass['methods']
+                if('create' in datanode.methods){
+                  datanode.methods['create'].call(datanode, digScopeStack, contextScopeStack)
                 }
               }
             } else {
-              mgui.error('Unknown DataNode class: ' + cn)
+              mgui.error('Unknown Datanode class: ' + cn)
             }
           }
-          _buildNodeBySchema(dataNode, schemaNode)
+          _buildNodeBySchema(datanode, schemaNode)
         }
       }
     }
   }
   if (scopeStack === undefined) scopeStack = []
   scopeStack.push(scopeStack.top = {
-    dataNode: digScopeStack.top.dataNode,
+    datanode: digScopeStack.top.datanode,
     path: digScopeStack.top.path,
     schemaNode: digScopeStack.top.schemaNode
   })
@@ -1201,7 +1201,7 @@ mgui.showPage = function(pageId, callbackOnReady) {
   var page, r,
     vmScopeStack = mgui.openPath('/vmodel/pager', true),
     mScopeStack = mgui.openPath('/', true),
-    pageNode = vmScopeStack.top.dataNode,
+    pageNode = vmScopeStack.top.datanode,
     el = pageNode.htmlElement
   if (!el)
     el = pageNode.htmlElement = mgui.guiContainer
@@ -1912,18 +1912,18 @@ mgui.convert = function(srcType, srcValue, dstType, stringFormat, inputMode) {
 
 
 mgui.getOperandValue = function(operand) {
-  var dataNodeAttr, value, type = operand[0]
+  var datanodeAttr, value, type = operand[0]
   if (type == mgui.C.T_BINDREF) {
-    dataNodeAttr = operand[1]
-    if ('value' in dataNodeAttr) {
-      value = dataNodeAttr['value']
+    datanodeAttr = operand[1]
+    if ('value' in datanodeAttr) {
+      value = datanodeAttr['value']
     } else {
-      if ('data' in dataNodeAttr)
-        value = dataNodeAttr['data']
+      if ('data' in datanodeAttr)
+        value = datanodeAttr['data']
       else
         value = mgui.C.T_UNDEFINED
     }
-    type = dataNodeAttr['type']
+    type = datanodeAttr['type']
   } else {
     value = operand[1]
   }
@@ -1933,9 +1933,9 @@ mgui.getOperandValue = function(operand) {
 
 mgui.expressionElementHandlers = {}
 mgui.expressionElementHandlers[mgui.C.E_BIND] = function(arg, stack, linkage) {
-  var bindPubDataNodes = linkage.bindPubDataNodes,
+  var bindPubDatanodes = linkage.bindPubDatanodes,
     paramNo = arg[1] //paramNo
-  var node = bindPubDataNodes[paramNo]
+  var node = bindPubDatanodes[paramNo]
   if (!node)
     stack.push([mgui.C.T_UNDEFINED, '(' + arg[0] + ' is undefined)'])
   else

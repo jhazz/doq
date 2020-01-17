@@ -7,10 +7,10 @@ function main()
     $schemaFileTime=filemtime($schemaFile);
     print '<meta charset="utf-8">';
 
-    if (isset($GLOBALS['doq']['env']['@caches']['dataplans'])) {
-        list($ok, $dataplanCache)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['dataplans']);
+    if (isset($GLOBALS['doq']['env']['@caches']['querys'])) {
+        list($ok, $queryCache)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['querys']);
         if ($ok) {
-            doq\data\View::setDefaultCache($dataplanCache);
+            doq\data\View::setDefaultCache($queryCache);
         }
     }
 
@@ -25,11 +25,12 @@ function main()
 
     list($ok, $viewProducts)=doq\data\View::create($GLOBALS['doq']['schema'],$GLOBALS['doq']['views']['Products'],'Products1');
     $viewProducts->prepare($schemaFileTime, true);
-    doq\Logger::dataPlan($viewProducts->plan, 'View products');
+    doq\Logger::query($viewProducts->query, 'View products');
 
     $params=[];
+    /** @var \doq\data\Datanode $products */
     list($ok, $products)=$viewProducts->read($params, 'view_products');
-    #$products->dataObject->dumpData();
+    print $products->dataset->dataToHTML();
    
     /** @var \doq\TemplateParser Template parser */
     $templateParser=null;

@@ -20,8 +20,8 @@ class Render {
     $this->fragments=array();
   }
 
-  public function build(&$dataNode,&$template) {
-    list($ok,$scopeStack)=\doq\data\ScopeStack::create($dataNode);
+  public function build(&$datanode,&$template) {
+    list($ok,$scopeStack)=\doq\data\ScopeStack::create($datanode);
     return $this->fromTemplate($scopeStack,$template,$template->rootBlock);
   }
 
