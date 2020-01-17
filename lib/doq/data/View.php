@@ -169,27 +169,27 @@ class View
                             '@values'=>&$parentValueSet
                         ]
                     ];
-                /*
-                $newParams['@createIndex']=[
-                  'type'=>'single',
-                  'indexId'=>$datasetId.'-'.$detailDatasetId,
-                  'masterColumnNo'=>$subQuery['#masterColumnNo'],
-                  'childToMasterField'=>$subQuery['#childToMasterField']  # ==PRODUCT_TYPES/PRODUCT_TYPE_ID
-                  ];
-                  */
+                    /*
+                    $newParams['@createIndex']=[
+                    'type'=>'single',
+                    'indexId'=>$datasetId.'-'.$detailDatasetId,
+                    'masterColumnNo'=>$subQuery['#masterColumnNo'],
+                    'childToMasterField'=>$subQuery['#childToMasterField']  # ==PRODUCT_TYPES/PRODUCT_TYPE_ID
+                    ];
+                    */
 
-          # =IF=TYPE AGGREGATION..
-          #$newParams['@createIndex']=[
-          #  'type'=>'multiple',
-          #  'indexId'=>$datasetId.'-'.$detailDatasetId,
-          #  'masterColumnNo'=>$subQuery['#masterColumnNo'],  #==PRODUCT_ID
-          #  'childToMasterField'=>$subQuery['#childToMasterField']  #==PRODUCT_PARAMETERS/PRODUCT_ID
-          #  ];
-          #$newParams['@filter']=[
-          #$newParams['@filter']=[
-          #  ['field'=>$subQuery['#childToMasterField'], 'operand'=>'IN', 'values'=>&$parentValueSet]
-          #];
-          #  ];
+                    # =IF=TYPE AGGREGATION..
+                    #$newParams['@createIndex']=[
+                    #  'type'=>'multiple',
+                    #  'indexId'=>$datasetId.'-'.$detailDatasetId,
+                    #  'masterColumnNo'=>$subQuery['#masterColumnNo'],  #==PRODUCT_ID
+                    #  'childToMasterField'=>$subQuery['#childToMasterField']  #==PRODUCT_PARAMETERS/PRODUCT_ID
+                    #  ];
+                    #$newParams['@filter']=[
+                    #$newParams['@filter']=[
+                    #  ['field'=>$subQuery['#childToMasterField'], 'operand'=>'IN', 'values'=>&$parentValueSet]
+                    #];
+                    #  ];
                 } else {
                     trigger_error('Unknown query linking', E_USER_ERROR);
                     return false;

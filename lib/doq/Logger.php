@@ -287,9 +287,9 @@ abstract class Logger
             }
         }
 
-#    if(isset($entry['#filterDetailByColumn'])) {
-#      $row1.='<tr><td bgcolor="#ffa0a0" colspan="5">#filterDetailByColumn: <b> '.$entry['#filterDetailByColumn'].'</b> #filterDetailField:'.$entry['#filterDetailField'].'</td></tr>';
-#    }
+        #    if(isset($entry['#filterDetailByColumn'])) {
+        #      $row1.='<tr><td bgcolor="#ffa0a0" colspan="5">#filterDetailByColumn: <b> '.$entry['#filterDetailByColumn'].'</b> #filterDetailField:'.$entry['#filterDetailField'].'</td></tr>';
+        #    }
         if (isset($entry['#mastertupleFieldNo'])) {
             $row1.='<tr><td bgcolor="#ffa0a0" colspan="5">#mastertupleFieldNo: <b>'.$entry['#mastertupleFieldNo'].'</b><br/>#detailDatasetId:'.$entry['#detailDatasetId'].'</td></tr>';
         }
@@ -307,9 +307,11 @@ abstract class Logger
         }
         foreach ($dataset['@fields'] as $i=>&$field) {
             $kind=(isset($field['#kind'])?$field['#kind']:'text');
-            $row2.='<tr><td>id#'.$field['#columnId'].(isset($field['#tupleFieldNo'])?'<br/>['.$field['#tupleFieldNo'].']':'(virt)')
-                .'</td><td>['.$field['#field'].']'
-                .(((isset($field['#originField'])&&$field['#originField']!==$field['#field'])?':'.$field['#originField']:''))
+            $row2.='<tr valign="top"><td>'
+                .'<span title="columnId#">columnId='.$field['#columnId'].'</span>'
+                .(isset($field['#tupleFieldNo'])?'<br/>tupleFieldNo:['.$field['#tupleFieldNo'].']</span>':'<br/>(virtual)')
+                .'</td><td>field:"'.$field['#field'].'"'
+                .(((isset($field['#originField'])&&$field['#originField']!==$field['#field'])?'<br/>origin:'.$field['#originField']:''))
                 .'</td><td>'.$kind.'</td>'
                 .'<td>'.(isset($field['#label'])?'<i>'.$field['#label'].'</i><br/>':'');
 
