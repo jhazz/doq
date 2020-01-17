@@ -50,7 +50,7 @@ class TemplateParser
     public function __construct($templatesPath, $isCacheable, &$cache=null){
         $this->templatesPath=$templatesPath;
         $this->isCacheable=$isCacheable;
-        $this->$cache=&$cache;
+        $this->cache=&$cache;
     }
 
     public function readTemplate($from)
