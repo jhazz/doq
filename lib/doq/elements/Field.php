@@ -11,7 +11,7 @@ class Field {
       $scopeStack->push($path);
     }
     $scope=$scopeStack->top;
-    $render->out[]='<input type="text" value="'.$scope->value().'"><br/><span style="font-size:10px;">{'.$scope->path.'['.$scope->curTupleNo.']}</span>';
+    $render->out[]='<input type="text" value="'.$scope->value().'"><br/><span style="font-size:10px;">{'.$scope->path.'}</span>';
     if($path!=='') {
       $scopeStack->pop();
     }

@@ -81,7 +81,7 @@ class Scope extends \doq\data\Scope {
         break;
       case self::SW_INDEX_RECORDS:
       case self::SW_AGGREGATED_INDEX_RECORDS:
-        #TODO reset,next,end создают копию массива, которая нам не нужна. Надо избавиться от таких функций
+        // TODO reset,next,end могут создавать копию массива, которая нам не нужна. Надо избавиться от таких функций
         if (!is_array($this->curIndexAggregate)) {
           $this->curTuple=NULL;
           #trigger_error(\doq\t('scope::seek called to move inside aggregated index but curIndexAggregate is not an array'),E_USER_ERROR);
@@ -90,7 +90,7 @@ class Scope extends \doq\data\Scope {
         switch ($to) {
           case self::SEEK_TO_START:
             reset($this->curIndexAggregate);
-            $this->curTupleNo=0;
+            $position=0;
             break;
           case self::SEEK_TO_NEXT:
             if(next($this->curIndexAggregate)!==false) {
@@ -99,9 +99,10 @@ class Scope extends \doq\data\Scope {
             break;
           case self::SEEK_TO_END:
             end($this->curIndexAggregate);
-            $this->curTupleNo=$this->curIndexLen-1;
+            $position=$this->curIndexLen-1;
             break;
         }
+        $this->curTupleNo=$position;
         $k=key($this->curIndexAggregate);
         if(isset($this->curTuple)) unset($this->curTuple);
         $this->curTuple=&$this->curIndexAggregate[$k];
@@ -144,7 +145,7 @@ class Scope extends \doq\data\Scope {
     $masterTupleFieldNo=$masterDataset->query['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
     $masterValue=$this->curTuple[$masterTupleFieldNo];
     $detailIndexName=$masterDataset->query['@detailIndexByFieldNo'][$masterFieldNo];
-    return $detailDatanode->dataset->makeScope($detailDatanode,$detailIndexName,$masterValue,$path.'/'.$masterFieldName);
+    return $detailDatanode->dataset->makeScope($detailDatanode,$detailIndexName,$masterValue,null,'['.$masterValue.']'.'/'.$masterFieldName.'/'.$path);
   }
 
   public function asString() {

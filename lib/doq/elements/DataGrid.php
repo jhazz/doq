@@ -68,6 +68,7 @@ class DataGrid {
               # Проблема: КАК ПОЛУЧИТЬ ИСХОДНЫЙ master value  и как получить indexName
               # думаю, когда делается лукап - не надо входить во вложенный датасет,
               # чтобы не терять value, а для агрегации надо по идее передавать родительский key_id
+        $rowScope=$scopeStack->top;
         list($ok,$scope)=$scopeStack->push($cellPath);
         if($ok) {
           if(isset($cellBlocks[$cellPath])) {
@@ -75,18 +76,11 @@ class DataGrid {
           } elseif(isset($cellBlocks['*'])) {
             $render->fromTemplate($scopeStack,$template,$cellBlocks['*']);
           } else {
-            if($scope->path=="/PARAMETERS") {
-              $detailToMasteridxName='idx_agg_main:store/PRODUCTS_2_PRODUCT_ID';
-              $render->out[]="Aggregation-".$scope->datanode->dataset->resultIndexes[$detailToMasteridxName];
-            }
-            if($scope->path=="/THE_PRODUCT_TYPE/TYPE_NAME") {
-              # вот здесь мы уже потеряли value лукапа и провалились в подобъект
-              $render->out[]="Heello";
-            }
-            $render->out[]=$scope->asString().'<br/><span style="font-size:10px;">{'.$scope->path.'['.$scope->curTupleNo.']}</span>';
+            $render->out[]=$scope->asString().'<br/><span style="font-size:10px;">{'.$scope->path.'}</span>';
           }
           $render->out[]='</td>';
           $scopeStack->pop();
+
         }
       }
       $render->out[]='</tr>';
