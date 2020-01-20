@@ -2,9 +2,9 @@
 namespace doq\data;
 
 /**
- * Datanode is an addressing data element that could be identifyied by a path
- * Datanode creates by View after Dataset had been successfully read a data.
- * Template addresses a Datanode via Scope address and put data from referred
+ * Datanode is an addressing data element that could be identifyied by a path.
+ * Datanode creating by a View after Dataset had been successfully read a data inside.
+ * Template addresses a Datanode via Scope address and put data from referred.
  * Dataset to the template controls
  */
 class Datanode
