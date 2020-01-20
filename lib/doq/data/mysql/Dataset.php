@@ -131,7 +131,7 @@ class Dataset extends \doq\data\Dataset
         }
     }
 
-    public function uniqueValuesOfTupleSetField($tupleFieldNo)
+    public function getTupleFieldValues($tupleFieldNo)
     {
         if (isset($this->tuples)) {
             $valueSet=[];

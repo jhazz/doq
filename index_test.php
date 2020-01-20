@@ -48,7 +48,7 @@ function main() {
   $template=doq\Template::create();
   $template->setTemplatePath($GLOBALS['doq']['env']['#templatesPath']);
   $template->setCachePath($GLOBALS['doq']['env']['#parsedTemplatesCachePath']);
-  if ($template->readTemplate('page1')){
+  if ($template->load('page1')){
     print '<meta http-equiv="content-type" content="text/html; charset=utf-8" /><pre>';
     $page1=doq\Render::create();
     $page1->build($products,$template);

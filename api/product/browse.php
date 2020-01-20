@@ -17,10 +17,10 @@ function main()
     if (isset($GLOBALS['doq']['env']['@caches']['templates'])) {
         list($ok, $templatesCache)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['templates']);
         if ($ok) {
-            doq\TemplateParser::setDefaultCache($templatesCache);
+            doq\Template::setDefaultCache($templatesCache);
         }
     }
-    doq\TemplateParser::setDefaultTemplatesPath($GLOBALS['doq']['env']['#templatesPath']);
+    doq\Template::setDefaultTemplatesPath($GLOBALS['doq']['env']['#templatesPath']);
     doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
 
     list($ok, $viewProducts)=doq\data\View::create($GLOBALS['doq']['schema'],$GLOBALS['doq']['views']['Products'],'Products1');
@@ -32,14 +32,14 @@ function main()
     list($ok, $products)=$viewProducts->read($params, 'view_products');
     print $products->dataset->dataToHTML();
    
-    /** @var \doq\TemplateParser Template parser */
-    $templateParser=null;
-    list($ok,$templateParser)=\doq\TemplateParser::create();
+    /** @var \doq\Template Template parser */
+    $Template=null;
+    list($ok,$Template)=\doq\Template::create();
 
-    if ($templateParser->readTemplate('page1')) {
+    if ($Template->load('page1')) {
         print '<meta http-equiv="content-type" content="text/html; charset=utf-8" /><pre>';
         list($ok,$page1)=doq\Render::create();
-        $page1->build($products, $templateParser);
+        $page1->build($products, $Template);
         foreach ($page1->out as $i=>&$s) {
             print "$s\n";
         }

@@ -100,68 +100,50 @@ class View
     }
 
     /**
-    * Executes query that reading data from a database
-    * @param array $params
-    * @param $datasetId
+    * Executes query that reads data from a database to datasets
+    * @param array $params any paramaters to a query, i.e. @filters
+    * @param $newDatasetId any string identifies creating Dataset 
+    * @return Array [ok,\doq\data\Datanode | errorString]
     */
-    public function read(&$params, $datasetId)
+    public function read(&$params, $newDatasetId)
     {
-        /** @var  \doq\data\Datanode is a tree-like node that holds reference to a Dataset
-         *        and links to parentNode and to childNodes[]
-         */
-        $datanode=new \doq\data\Datanode(\doq\data\Datanode::NT_DATASET, $datasetId);
-        $ok=$this->readQuery($this->query, $datanode, $params, $datasetId);
-        return [$ok,$datanode];
+        $datanode=new \doq\data\Datanode(\doq\data\Datanode::NT_DATASET, $newDatasetId);
+        $r=$this->readQuery($this->query, $datanode, $params, $newDatasetId);
+        if($r[0]){
+            return [true,$datanode];
+        } else {
+            return $r;
+        }        
     }
 
 
     /**
-    *
+    * Recursive loading data into Dataset wrapped by Datanodes
     */
-    private function readQuery(&$query, $datanode, &$params, $datasetId)
+    private function readQuery(&$query, \doq\data\Datanode $datanode, &$params, $newDatasetId)
     {
         $providerName=$query['#dataProvider'];
-        /** @var \doq\data\Dataset $dataset */
-
-        list($ok, $dataset)=\doq\data\Dataset::create($providerName, $query, $datasetId);
+        list($ok, $dataset)=\doq\data\Dataset::create($providerName, $query, $newDatasetId);
         if (!$ok) {
-            return false;
+            return [false,$dataset];
         }
         $datanode->dataset=$dataset;
         if ($dataset->connect()) {
             $dataset->read($params);
         }
-
-        $dataset->collectDatanodesRecursive($query, $datanode);
-
+        $datanode->wrap($query, $dataset);
         if (isset($query['@subQuery'])) {
             foreach ($query['@subQuery'] as $i=>&$subQuery) {
                 if (isset($subQuery['#detailDatasetId'])) {
                     $detailDatasetId=$subQuery['#detailDatasetId'];
-                    if (!isset($query['@dataset']['@fields'])) {
-                        trigger_error(\doq\t('В query[@subQuery] отсутствуют колонки'), E_USER_ERROR);
-                        return false;
-                    }
                     $masterFieldNo=$subQuery['#masterFieldNo'];
-
-                    # для виртуального aggregation $masterFieldNo должен указывать всегда на колонку данных
-                    # первичного ключа masterDataSet
-                    # для lookup это номер колонки данных, из которой идет ссылка на справочник
-                    #list($ok,$parentValueSet)=$dataset->uniqueDataOfColumn($masterFieldNo);
-
-                    # ПРИДУМЫВАЙ КАК ПОЛУЧИТЬ ColumnNo
-                    # FieldNo работает только в masterDataset,
                     $masterColumnNo=$dataset->query['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
-                    #$dataset-> self::getColumnByFieldNo($masterFieldNo);
-
-                    list($ok, $parentValueSet)=$dataset->uniqueValuesOfTupleSetField($masterColumnNo);
-
+                    list($ok, $parentValueSet)=$dataset->getTupleFieldValues($masterColumnNo);
                     if (!$ok) {
                         return false;
                     }
                     $newParams=[];
-                    #$newParams['@keyValuesIn']=&$parentValueSet;
-                    # ОТСУТСТВУЕТ detailToMasterField , так как он еще не известен
+                    # detailToMasterField STILL NOT KNOWN ! Will be evaluated later
                     $newParams['@filter']=[
                         [
                             '#columnId'=>$subQuery['#detailToMasterColumnId'], // detail index ColumnID
@@ -169,27 +151,6 @@ class View
                             '@values'=>&$parentValueSet
                         ]
                     ];
-                    /*
-                    $newParams['@createIndex']=[
-                    'type'=>'single',
-                    'indexId'=>$datasetId.'-'.$detailDatasetId,
-                    'masterColumnNo'=>$subQuery['#masterColumnNo'],
-                    'childToMasterField'=>$subQuery['#childToMasterField']  # ==PRODUCT_TYPES/PRODUCT_TYPE_ID
-                    ];
-                    */
-
-                    # =IF=TYPE AGGREGATION..
-                    #$newParams['@createIndex']=[
-                    #  'type'=>'multiple',
-                    #  'indexId'=>$datasetId.'-'.$detailDatasetId,
-                    #  'masterColumnNo'=>$subQuery['#masterColumnNo'],  #==PRODUCT_ID
-                    #  'childToMasterField'=>$subQuery['#childToMasterField']  #==PRODUCT_PARAMETERS/PRODUCT_ID
-                    #  ];
-                    #$newParams['@filter']=[
-                    #$newParams['@filter']=[
-                    #  ['field'=>$subQuery['#childToMasterField'], 'operand'=>'IN', 'values'=>&$parentValueSet]
-                    #];
-                    #  ];
                 } else {
                     trigger_error('Unknown query linking', E_USER_ERROR);
                     return false;
@@ -202,7 +163,7 @@ class View
                 }
             }
         }
-        return true;
+        return [true];
     }
 
     /**

@@ -1,7 +1,7 @@
 <?php
 namespace doq;
 
-class TemplateParser
+class Template
 {
     public $templateSource;
     public $templateSplitted;
@@ -53,7 +53,7 @@ class TemplateParser
         $this->cache=&$cache;
     }
 
-    public function readTemplate($from)
+    public function load($from)
     {
         // TODO Allow subfolders for templates structure. For now, only flat list is allowed. Convert $from to any hash()
         $base=basename($from, 'html');

@@ -20,7 +20,7 @@ return [
     'Strange join to the other Datasource %s:%s/%s. Joining cancelled'=>'Неизвестный join к строннему источнику данных %s:%s/%s. Отмена связывания данных',
 
     # Dataset
-    'Dublicate field name "%s" is found in the view config "%s"'=>'Дублированное название поля "%s" обнаружено в конфигурации вида "%s"',
+    'Dublicate field name "%s" is found in the query entry "%s"'=>'Дублированное название поля "%s" обнаружено в конфигурации вида "%s"',
 
     # mysql\Dataset
     'Unique value %s are repeating in the index %s'=>'Уникальное значение %s повторяется в индексе %s',

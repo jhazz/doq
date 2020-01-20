@@ -24,32 +24,6 @@ abstract class Dataset
         trigger_error('Abstract Dataset class should not used to create itself!', E_USER_ERROR);
     }
 
-    /**
-     * @param array config from query
-     * @param \doq\Datanode the datanode collects data items
-     */
-    public function collectDatanodesRecursive(&$config, $datanode)
-    {
-        $fields=&$config['@dataset']['@fields'];
-        foreach ($fields as $i=>&$field) {
-            $fieldName=$field['#field'];
-            if (isset($datanode->childNodes[$fieldName])) {
-                trigger_error(\doq\tr('doq','Dublicate field name "%s" is found in the view config "%s"', $fieldName, $config['#schema'].'/'.$config['#dataset']), E_USER_ERROR);
-                continue;
-            }
-            if (isset($field['@dataset'])) {
-                $node=new Datanode(Datanode::NT_SUBCOLUMNS, $fieldName, $datanode);
-                $node->dataset=$this;
-                $node->fieldDefs=&$field['@dataset'];
-                $this->collectDatanodesRecursive($field, $node);
-            } else {
-                $node=new Datanode(Datanode::NT_COLUMN, $fieldName, $datanode);
-                $node->dataset=$this;
-                $node->fieldDefs=&$field;
-            }
-        }
-    }
-
     /** Routine that collects field names from query dataset
      * 
      * @param $query
