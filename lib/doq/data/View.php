@@ -138,8 +138,8 @@ class View
                 if (isset($subQuery['#detailDatasetId'])) {
                     $detailDatasetId=$subQuery['#detailDatasetId'];
                     $masterFieldNo=$subQuery['#masterFieldNo'];
-                    $masterColumnNo=$dataset->queryDefs['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
-                    list($ok, $parentValueSet)=$dataset->getTupleFieldValues($masterColumnNo);
+                    $masterTupleFieldNo=$dataset->queryDefs['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
+                    list($ok, $parentValueSet)=$dataset->getTupleFieldValues($masterTupleFieldNo);
                     if (!$ok) {
                         return false;
                     }
