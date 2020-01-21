@@ -3,77 +3,55 @@ namespace doq\data\mysql;
 
 class Scope extends \doq\data\Scope
 {
-    public const SEEK_TO_START=0;
-    public const SEEK_TO_NEXT=1;
-    public const SEEK_TO_END=2;
-    /** @var ScopeWindow указывает тип окна, по которому движется курсор*/
-    public const SW_ALL_RECORDS='all';
-    public const SW_INDEX_RECORDS='index';
-    public const SW_ONE_INDEX_RECORD='one index';
-    public const SW_AGGREGATED_INDEX_RECORDS='agg index';
-    public const SW_ONE_FIELD='one field';
+
 
     //inherited public $path;
     //inherited public $datanode;
     /** @var array|null Текущий индекс */
-    public $curIndex;
-    /** @var array|null Текущий индекс агрегата. Предназначен для быстрого доступа к кортежу по ключевому значению */
-    public $curIndexAggregate;
-    /** @var array|null Текущий массив строк агрегата индекса, именно по нему производится обход через seek */
-    public $curRowsAggregate;
+    public $index;
+    /** @var array|null Ссылки на кортежи по ключам индекса. Предназначен для быстрого доступа к кортежу по ключевому значению */
+    public $tuplesByKey;
+    /** @var array|null Ссылки на строки кортежа в выборке индекса, именно по нему производится обход через seek */
+    public $tuplesByNo;
 
     /** @var integer позиция в индексе, если он есть или позиция в агрегате индекса, или позиция в dataset->rows */
     
-    public $curTupleNo;
+    public $rowNo;
     /** @var array|null ссылка на ту запись данных, на которую указывает позиция */
     public $curTuple;
-    /** @var int одно из значений констант SW_ */
+    /** @var одно из значений констант SW_ */
     public $curType;
     /** @var int длина выборки индекса по которому перемещаем указатель через seek*/
-    public $curIndexLen;
+    public $indexSize;
 
-    public function __construct(\doq\data\Datanode $datanode, $indexName='', $masterValue=null, $datasetScope=null, $path='')
+    public function __construct(\doq\data\Datanode $datanode, $indexName='', $masterValue=null, $masterScope=null, $path='')
     {
         $this->datanode=$datanode;
         $this->path=$path;
         $this->curType=null;
-        $this->curTupleNo=null;
+        $this->rowNo=null;
         $this->curTuple=null;
-        $this->curIndexLen=0;
+        $this->indexSize=0;
+        $this->index=null;
+
         if ($indexName!='') {
-            $this->curIndex=&$datanode->dataset->resultIndexes[$indexName];
-            $this->curIndexAggregate=null;
-            switch ($this->curIndex['#type']) {
+            $this->index=&$datanode->dataset->resultIndexes[$indexName];
+            $this->tuplesByKey=null;
+            switch ($this->index['#type']) {
                 case 'unique':
+                    $this->curType=self::SW_ONE_INDEX_RECORD;
                     if ($masterValue!==null) {
-                        $this->curType=self::SW_ONE_INDEX_RECORD;
-                        #$this->curIndexAggregate=&$this->curIndex['@indexedTuples'][$masterValue];
-                        #$this->curRowsAggregate=&$this->curIndex['@rowsOfTuples'][$masterValue];
-                        $this->curTuple=&$this->curIndex['@indexedTuples'][$masterValue];
-                        $this->curIndexLen=1;
-                    } else {
-                        // $this->curType=self::SW_INDEX_RECORDS;
-                        // $this->curIndexAggregate=&$this->curIndex['@indexedTuples'];
-                        // $this->curRowsAggregate=&$this->curIndex['@rowsOfTuples'];
-                        // $this->curIndexLen=count($this->curRowsAggregate);
-                        $this->curType=null;
-                        $this->curIndexAggregate=null;
-                        $this->curRowsAggregate=null;
+                        $this->curTuple=&$this->index['@tuplesByKey'][$masterValue];
+                        $this->indexSize=1;
                     }
                     break;
                 case 'nonunique':
                     $this->curType=self::SW_AGGREGATED_INDEX_RECORDS;
                     if ($masterValue!==null) {
-                        if (isset($this->curIndex['@indexedTuples'][$masterValue])) {
-                            $this->curIndexAggregate=&$this->curIndex['@indexedTuples'][$masterValue];
-                            $this->curRowsAggregate=&$this->curIndex['@rowsOfTuples'][$masterValue];
-                            $this->curIndexLen=count($this->curRowsAggregate);
-                            
-                        } else {
-                            //  если в текущем индексе кортежей нет индексного значения 
-                            $this->curIndexAggregate=null;
-                            $this->curRowsAggregate=null;
-                            $this->curIndexLen=0;
+                        if (isset($this->index['@tuplesByKey'][$masterValue])) {
+                            $this->tuplesByKey=&$this->index['@tuplesByKey'][$masterValue];
+                            $this->tuplesByNo=&$this->index['@tuplesByNo'][$masterValue];
+                            $this->indexSize=count($this->tuplesByNo);
                         }
                     } else {
                         trigger_error(\doq\t('FATAL ERROR! Do not use aggregated index without master value defining scope window'), E_USER_ERROR);
@@ -83,13 +61,15 @@ class Scope extends \doq\data\Scope
                     trigger_error(\doq\t('FATAL ERROR! Unknown index type [%s]', $index['#type']), E_USER_ERROR);
             }
         } else {
-            $this->curIndex=null;
             if ($this->datanode->type==\doq\data\Datanode::NT_COLUMN) {
                 $this->curType=self::SW_ONE_FIELD;
-                $this->curTuple=&$datasetScope->curTuple;
+                $this->curTuple=&$masterScope->curTuple;
             } else {
                 $this->curType=self::SW_ALL_RECORDS;
-                $this->curIndexLen=count($this->datanode->dataset->tuples);
+                $this->indexSize=count($this->datanode->dataset->tuples);
+                if($this->indexSize>0){
+
+                }
             }
         }
     }
@@ -105,60 +85,61 @@ class Scope extends \doq\data\Scope
                 break;
             case self::SW_INDEX_RECORDS:
             case self::SW_AGGREGATED_INDEX_RECORDS:
-                if (!is_array($this->curRowsAggregate)) {
+                
+                if (!is_array($this->tuplesByNo)) {
                     $this->curTuple=null;
                     return true;
-                    //throw new \Exception('Scope::seek() called inside aggregated index but curIndexAggregate is not an array');
+                    //throw new \Exception('Scope::seek() called inside aggregated index but tuplesByKey is not an array');
                 }
                 switch ($to) {
                     case self::SEEK_TO_START:
-                        $position=0;
+                        $newRowNo=0;
                         break;
                     case self::SEEK_TO_NEXT:
-                        $position=$this->curTupleNo+1;
+                        $newRowNo=$this->rowNo+1;
                         break;
                     case self::SEEK_TO_END:
-                        $position=$this->curIndexLen-1;
+                        $newRowNo=$this->indexSize-1;
                         break;
                 }
-                if ($position >= $this->curIndexLen) {
-                    $position=$this->curIndexLen-1;
+                if ($newRowNo >= $this->indexSize) {
+                    $newRowNo=$this->indexSize-1;
                     $EOT=true;
                 }
-                $this->curTupleNo=$position;
+                $this->rowNo=$newRowNo;
                 
                 if (isset($this->curTuple)) {
                     unset($this->curTuple);
                 }
-                $this->curTuple=&$this->curRowsAggregate[$position];
+                $this->curTuple=&$this->tuplesByNo[$newRowNo];
                 break;
 
         case self::SW_ALL_RECORDS:
-            if ($this->curIndexLen) {
+            if ($this->indexSize) {
                 switch ($to) {
                     case self::SEEK_TO_START:
-                        $position=0;
+                        $newRowNo=0;
                         break;
                     case self::SEEK_TO_NEXT:
-                        $position=$this->curTupleNo+1;
+                        $newRowNo=$this->rowNo+1;
                         break;
                     case self::SEEK_TO_END:
-                        $position=$this->curIndexLen-1;
+                        $newRowNo=$this->indexSize-1;
                         break;
                     default:
                         trigger_error('Unknown seeking type '.$origin, E_USER_ERROR);
                         return false;
                 }
-                if ($position >= $this->curIndexLen) {
-                    $position=$this->curIndexLen-1;
+                if ($newRowNo >= $this->indexSize) {
+                    $newRowNo=$this->indexSize-1;
                     $EOT=true;
                 }
-                $this->curTupleNo=$position;
+                $this->rowNo=$newRowNo;
             }
             if (isset($this->curTuple)) {
                 unset($this->curTuple);
             }
-            $this->curTuple=&$this->datanode->dataset->tuples[$position];
+            $this->curTuple=&$this->datanode->dataset->tuples[$newRowNo];
             break;
         default:
             #throw new \Exception('Unknown cursor type in the scope');
@@ -196,7 +177,7 @@ class Scope extends \doq\data\Scope
                     return '';
                 }
                 if ($tupleFieldNo>=count($this->curTuple)) {
-                    trigger_error(\doq\t('Column index %s is out of data columns range %s', $tupleFieldNo, count($this->curTuple)), E_USER_ERROR);
+                    throw new \Exception(\sprintf('Column index %s is out of data columns range %s', $tupleFieldNo, count($this->curTuple)));
                 }
                 $value=$this->curTuple[$tupleFieldNo];
                 return $value;

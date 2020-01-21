@@ -80,7 +80,7 @@ class Dataset extends \doq\data\Dataset
                     $keyTupleFieldNo=$resultIndexDef['#keyTupleFieldNo'];
                     switch ($indexType) {
                         case 'unique':
-                            $indexedTuples=[];
+                            $tuplesByKey=[];
                             $rowsOfTuples=[];
                             # тупо проходим по всем данным. Возможно есть способ более скоростного обхода
                             # когда индекс имеет тип 'unique' тогда каждый вектор - это ссылка на строку
@@ -88,10 +88,10 @@ class Dataset extends \doq\data\Dataset
                             foreach ($this->tuples as $tupleNo=>&$tuple) {
                                 $value=$tuple[$indexByTupleFieldNo];
                                 if (!is_null($value)) {
-                                    if (isset($indexedTuples[$value])) {
+                                    if (isset($tuplesByKey[$value])) {
                                         trigger_error(\doq\tr('doq','Unique value %s are repeating in the index %s', $value, $indexName), E_USER_ERROR);
                                     } else {
-                                        $indexedTuples[$value]=&$tuple;
+                                        $tuplesByKey[$value]=&$tuple;
                                     }
 
                                     $rowsOfTuples[$tupleNo]=&$tuple;
@@ -100,12 +100,12 @@ class Dataset extends \doq\data\Dataset
                             $this->resultIndexes[$indexName]=[
                                 '#type'=>$indexType,
                                 '#indexByTupleFieldNo'=>$indexByTupleFieldNo,
-                                '@indexedTuples'=>&$indexedTuples,
-                                '@rowsOfTuples'=>&$rowsOfTuples
+                                '@tuplesByKey'=>&$tuplesByKey,
+                                '@tuplesByNo'=>&$rowsOfTuples
                                 ];
                         break;
                         case 'nonunique':
-                            $indexedTuples=[];
+                            $tuplesByKey=[];
                             $rowsOfTuples=[];
                             # когда индекс имеет тип 'nonunique' тогда каждый вектор - это
                             # набор ссылок на строки
@@ -115,11 +115,11 @@ class Dataset extends \doq\data\Dataset
                             foreach ($this->tuples as $tupleNo=>&$tuple) {
                                 $byValue=$tuple[$indexByTupleFieldNo];
                                 if (!is_null($byValue)) {
-                                    if (!isset($indexedTuples[$byValue])) {
-                                        $indexedTuples[$byValue]=[];
+                                    if (!isset($tuplesByKey[$byValue])) {
+                                        $tuplesByKey[$byValue]=[];
                                     } 
                                     $key=$tuple[$keyTupleFieldNo];
-                                    $indexedTuples[$byValue][$key]=&$tuple;
+                                    $tuplesByKey[$byValue][$key]=&$tuple;
                                     
 
                                     if (!isset($rowsOfTuples[$byValue])) {
@@ -134,9 +134,9 @@ class Dataset extends \doq\data\Dataset
                             $this->resultIndexes[$indexName]=[
                                 '#type'=>$indexType,
                                 '#indexByTupleFieldNo'=>$indexByTupleFieldNo,
-                                '#$keyTupleFieldNo'=>$keyTupleFieldNo,
-                                '@indexedTuples'=>&$indexedTuples,
-                                '@rowsOfTuples'=>&$rowsOfTuples
+                                '#keyTupleFieldNo'=>$keyTupleFieldNo,
+                                '@tuplesByKey'=>&$tuplesByKey,
+                                '@tuplesByNo'=>&$rowsOfTuples
                                 ];
                         break;
                     }
@@ -144,6 +144,26 @@ class Dataset extends \doq\data\Dataset
                 if(\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_DATAQUERY){
                     \doq\Logger::debugDatasetIndexes('Dataset['.$this->id.']', $this->indexesToHTML(), __FILE__, __LINE__);
                 }
+            } else {
+                \doq\Logger::info('Сейчас буду индексировать ВСЕ');
+                // TODO Нужно проверить как работает загрузка корневой таблицы с и без определения ключевого поля
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
             }
         } else {
             $this->tuples=false;
@@ -202,7 +222,7 @@ class Dataset extends \doq\data\Dataset
         $result=[];
         foreach ($this->resultIndexes as $indexName=>&$index) {
             $result[]='<table border=1><tr><td colspan=20>Index name: "' .$indexName.'", type:'.$index['#type'].'</td></tr>';
-            $recordVectors=&$index['@indexedTuples'];
+            $recordVectors=&$index['@tuplesByKey'];
             $indexByTupleFieldNo=$index['#indexByTupleFieldNo'];
             switch ($index['#type']) {
                 case 'unique':

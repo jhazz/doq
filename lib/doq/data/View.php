@@ -186,7 +186,7 @@ class View
         $schemaName='',
         $datasetName='',
         $parentRef='',
-        $masterFieldNo=false,
+        $masterFieldNo=null,
         $detailDatasetId=false,
         $masterKind=false,
         $isNewQuery=true,
@@ -428,7 +428,7 @@ class View
                 $parentViewColumn['#nonuniqueIndex']=$newIdxName;
                 $queryDefs['#detailToMasterColumnId']=$foundDetailColumnForMaster['#columnId'];
             }
-            if ($masterFieldNo!==false) {
+            if ($masterFieldNo!==null) {
                 $queryDefs['#masterFieldNo']=$masterFieldNo;
                 $queryDefs['#detailDatasetId']=$detailDatasetId;
                 if (!isset($masterQuery['@detailIndexByFieldNo'])) {
