@@ -1,17 +1,27 @@
 <?php
 namespace doq\data;
 
-abstract class Scripter
+class Scripter
 {
-    abstract public function buildSelectScript($query);
+    /**
+     * Build select script according to data provider 
+     * @param array $queryDefs
+     * @return string
+     */
+    public function buildSelectScript(&$queryDefs){
+        return '';
+    }
 
-    public static function create($providerName)
+    
+    public static function create($providerType)
     {
-        switch ($providerName) {
+        
+        switch ($providerType) {
         case 'mysql':
-            return \doq\data\mysql\Scripter::create();
+            $r=new \doq\data\mysql\Scripter();
+            return [true,$r];
         default:
-            return new Scripter();
+            throw new Exception('Unknown Data provider type');
         }
     }
 

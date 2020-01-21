@@ -117,7 +117,7 @@ class Template
                 for ($j=1;$j<$count;$j++) {
                     $paramName=$arr[2][$j];
                     if (!$paramName) {
-                        trigger_error(\doq\t('tpl_error_in_line', $this->filename, $strBlock), E_USER_ERROR);
+                        trigger_error(\doq\tr('doq','Template error in "%s" at tag "%s"', $this->filename, $strBlock), E_USER_ERROR);
                         return -1;
                     }
                     $paramValue=$arr[4][$j];

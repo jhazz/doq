@@ -72,6 +72,9 @@ class ScopeStack
                     $childNode=$scope->datanode->childNodes[$pathElementName];
 
                     if ($childNode->type==Datanode::NT_DATASET) {
+                        if($pathElementName=='THE_PRODUCT_TYPE'){
+                            $x=1;
+                        }
                         $scope=$scope->makeDetailScope($scope->path, $pathElementName);
                         $scope->seek(Scope::SEEK_TO_START);
                     } else {
@@ -79,7 +82,7 @@ class ScopeStack
                         $path.='/'.$pathElementName;
                         $scope=$nextDatanode->dataset->makeScope($nextDatanode, '', null, $datasetScope, $path);
                     }
-                break;
+                    break;
                 case Datanode::NT_SUBCOLUMNS:
                     if (!isset($scope->datanode->childNodes[$pathElementName])) {
                         trigger_error(\doq\tr('doq', 'Dataset %s has no column %s', $scope->datanode->dataset->id, $pathElementName), E_USER_ERROR);
@@ -93,12 +96,12 @@ class ScopeStack
                         return [false,$err];
                     }
                     $scope=$nextDatanode->dataset->makeScope($nextDatanode, '', null, $datasetScope, $path);
-                break;
-                    case Datanode::NT_COLUMN:
+                    break;
+                case Datanode::NT_COLUMN:
                         $err=\doq\tr('doq', 'Column %s cannot not have any subnames like %s', $scope->path, $pathElementName);
                         trigger_error($err, E_USER_ERROR);
                     return [false,$err];
-                break;
+                    break;
             }
         }
 

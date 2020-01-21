@@ -4,33 +4,33 @@ namespace doq\data;
 abstract class Dataset
 {
     public $id;
-    public $query;
+    public $queryDefs;
     abstract protected function makeScope(Datanode $datanode);
     abstract public function dataToHTML();
     abstract public function indexesToHTML();
 
-    public static function create($providerName, &$query, $id)
+    public static function create($providerName, &$queryDefs, $id)
     {
         switch ($providerName) {
         case 'mysql':
-            return [true,new mysql\Dataset($query, $id)];
+            return [true,new mysql\Dataset($queryDefs, $id)];
         default:
             return [false,'Unknown provider '.$providerName];
         }
     }
 
-    public function __construct(&$query, &$params, $id)
+    public function __construct(&$queryDefs, &$params, $id)
     {
         trigger_error('Abstract Dataset class should not used to create itself!', E_USER_ERROR);
     }
 
-    /** Routine that collects field names from query dataset
+    /** Routine that collects field names from queryDefs dataset
      * 
-     * @param $query
+     * @param $queryDefs
      * */
-    public static function collectFieldList(&$query, &$fieldList)
+    public static function collectFieldList(&$queryDefs, &$fieldList)
     {
-        $fields=&$query['@dataset']['@fields'];
+        $fields=&$queryDefs['@dataset']['@fields'];
         foreach ($fields as $i=>&$field) {
             $fieldList[]=&$field;
             if (isset($field['@dataset'])) {
@@ -39,9 +39,9 @@ abstract class Dataset
         }
     }
 
-    public static function getFieldByColumnId($findColumnId, &$query)
+    public static function getFieldByColumnId($findColumnId, &$queryDefs)
     {
-        foreach ($query['@dataset']['@fields'] as $i=>&$field) {
+        foreach ($queryDefs['@dataset']['@fields'] as $i=>&$field) {
             if (isset($field['#columnId']) && ($field['#columnId']==$findColumnId)) {
                 return [true,&$field];
             }

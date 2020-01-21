@@ -7,15 +7,15 @@ namespace doq\data;
  * */
 abstract class Scope
 {
-    const SEEK_TO_START=0;
-    const SEEK_TO_NEXT=1;
-    const SEEK_TO_END=2;
+    public const SEEK_TO_START=0;
+    public const SEEK_TO_NEXT=1;
+    public const SEEK_TO_END=2;
     /** @var ScopeWindow указывает тип окна, по которому движется курсор*/
-    const SW_ALL_RECORDS=0;
-    const SW_INDEX_RECORDS=1;
-    const SW_ONE_INDEX_RECORD=2;
-    const SW_AGGREGATED_INDEX_RECORDS=3;
-    const SW_ONE_FIELD=4;
+    public const SW_ALL_RECORDS='all';
+    public const SW_INDEX_RECORDS='index';
+    public const SW_ONE_INDEX_RECORD='one index';
+    public const SW_AGGREGATED_INDEX_RECORDS='agg index';
+    public const SW_ONE_FIELD='one field';
 
     public $datanode;
     public $path;

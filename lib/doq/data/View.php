@@ -2,19 +2,18 @@
 namespace doq\data;
 
 /**
-* View - is a data loading query that creates Datasets that will read data according to parameters
+* View - is a data loading queryDefs that creates Datasets that will read data according to parameters
 *
 */
 class View
 {
     private static $defaultCache;
+    public $queryDefs; // Used by logger dumper
     public $viewId;
     public $cfgView;
     public $cfgSchema;
-    public $dataset;
     public $viewColumns;
     public $linkedDatasources;
-#    public $subDatasets;
     /** @var  \doq\Cache */
     public $cache;
 
@@ -64,7 +63,7 @@ class View
     }
 
     /**
-     * Prepares query for view. Create from view configuration or reuse from cache
+     * Prepares queryDefs for view. Create from view configuration or reuse from cache
      * @param int $configMtime timestamp of external configuration file
      * @param boolean $forceRebuild force to recreate cache and set configMtime timestamp to it
      */
@@ -76,39 +75,39 @@ class View
             }
             if ($this->makeQuery()) {
                 if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                    \doq\Logger::debug('view', 'Overwrite rebuild query for view "'.$this->viewId.'"', __FILE__, __LINE__);
+                    \doq\Logger::debug('view', 'Overwrite rebuild queryDefs for view "'.$this->viewId.'"', __FILE__, __LINE__);
                 }
 
-                $this->cache->put($configMtime, $this->viewId, $this->query);
+                $this->cache->put($configMtime, $this->viewId, $this->queryDefs);
             }
         } else {
             list($ok, $data)=$this->cache->get($configMtime, $this->viewId);
             if ($ok) {
                 if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                    \doq\Logger::debug('view', 'Reuse query from cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
+                    \doq\Logger::debug('view', 'Reuse queryDefs from cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
                 }
-                $this->query=&$data;
+                $this->queryDefs=&$data;
             } else {
                 if ($this->makeQuery()) {
                     if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                        \doq\Logger::debug('view', 'Store query in cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
+                        \doq\Logger::debug('view', 'Store queryDefs in cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
                     }
-                    $this->cache->put($configMtime, $this->viewId, $this->query);
+                    $this->cache->put($configMtime, $this->viewId, $this->queryDefs);
                 }
             }
         }
     }
 
     /**
-    * Executes query that reads data from a database to datasets
-    * @param array $params any paramaters to a query, i.e. @filters
-    * @param $newDatasetId any string identifies creating Dataset 
-    * @return Array [ok,\doq\data\Datanode | errorString]
+    * Executes queryDefs that reads data from a database to datasets
+    * @param array $params any paramaters to a queryDefs, i.e. @filters
+    * @param string $newDatasetId any string identifies creating Dataset 
+    * @return array (boolean status, \doq\data\Datanode node)
     */
     public function read(&$params, $newDatasetId)
     {
         $datanode=new \doq\data\Datanode(\doq\data\Datanode::NT_DATASET, $newDatasetId);
-        $r=$this->readQuery($this->query, $datanode, $params, $newDatasetId);
+        $r=$this->readQuery($this->queryDefs, $datanode, $params, $newDatasetId);
         if($r[0]){
             return [true,$datanode];
         } else {
@@ -116,14 +115,16 @@ class View
         }        
     }
 
+    
 
     /**
     * Recursive loading data into Dataset wrapped by Datanodes
     */
-    private function readQuery(&$query, \doq\data\Datanode $datanode, &$params, $newDatasetId)
+    private function readQuery(&$queryDefs, \doq\data\Datanode $datanode, &$params, $newDatasetId)
     {
-        $providerName=$query['#dataProvider'];
-        list($ok, $dataset)=\doq\data\Dataset::create($providerName, $query, $newDatasetId);
+
+        $providerName=$queryDefs['#dataProvider'];
+        list($ok, $dataset)=\doq\data\Dataset::create($providerName, $queryDefs, $newDatasetId);
         if (!$ok) {
             return [false,$dataset];
         }
@@ -131,13 +132,13 @@ class View
         if ($dataset->connect()) {
             $dataset->read($params);
         }
-        $datanode->wrap($query, $dataset);
-        if (isset($query['@subQuery'])) {
-            foreach ($query['@subQuery'] as $i=>&$subQuery) {
+        $datanode->wrap($queryDefs, $dataset);
+        if (isset($queryDefs['@subQuery'])) {
+            foreach ($queryDefs['@subQuery'] as $i=>&$subQuery) {
                 if (isset($subQuery['#detailDatasetId'])) {
                     $detailDatasetId=$subQuery['#detailDatasetId'];
                     $masterFieldNo=$subQuery['#masterFieldNo'];
-                    $masterColumnNo=$dataset->query['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
+                    $masterColumnNo=$dataset->queryDefs['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
                     list($ok, $parentValueSet)=$dataset->getTupleFieldValues($masterColumnNo);
                     if (!$ok) {
                         return false;
@@ -152,7 +153,7 @@ class View
                         ]
                     ];
                 } else {
-                    trigger_error('Unknown query linking', E_USER_ERROR);
+                    trigger_error('Unknown queryDefs linking', E_USER_ERROR);
                     return false;
                 }
 
@@ -167,19 +168,19 @@ class View
     }
 
     /**
-     * Forms query based on view configuration, query
+     * Forms queryDefs based on view configuration, queryDefs
      */
     public function makeQuery()
     {
-        $this->query=[];
+        $this->queryDefs=[];
         $this->lastQueryId=1;
         $viewColumns=null;
-        return $this->makeQueryRecursive($this->cfgView, $this->query, $viewColumns);
+        return $this->makeQueryRecursive($this->cfgView, $this->queryDefs, $viewColumns);
     }
 
     private function makeQueryRecursive(
         &$cfgView,
-        &$query,
+        &$queryDefs,
         &$parentViewColumn,
         $datasourceName='',
         $schemaName='',
@@ -193,7 +194,12 @@ class View
     ) {
         $parentDatasetname=$datasetName;
         if (isset($cfgView['#dataset'])) {
-            list($datasourceName, $schemaName, $datasetName, $isOtherDatasource)=\doq\data\Scripter::getDatasetPathElements($cfgView['#dataset'], $datasourceName, $schemaName, $datasetName);
+            list($datasourceName, $schemaName, $datasetName, $isOtherDatasource)
+            =\doq\data\Scripter::getDatasetPathElements(
+                $cfgView['#dataset'],
+                $datasourceName, 
+                $schemaName, 
+                $datasetName);
         }
 
         $datasetRef=$datasourceName.':'.$schemaName.'/'.$datasetName;
@@ -206,46 +212,46 @@ class View
 
         if ($isOtherDatasource) {
             $subQuery=[];
-            if (!isset($query['@subQuery'])) {
-                $query['@subQuery']=[&$subQuery];
+            if (!isset($queryDefs['@subQuery'])) {
+                $queryDefs['@subQuery']=[&$subQuery];
             } else {
-                $query['@subQuery'][]=&$subQuery;
+                $queryDefs['@subQuery'][]=&$subQuery;
             }
-            $masterQuery=&$query;
-            $query=&$subQuery;
+            $masterQuery=&$queryDefs;
+            $queryDefs=&$subQuery;
             $isNewQuery=true;
         }
-        $dataset=['#schema'=>$schemaName,'#datasetName'=>$datasetName,'@fields'=>[]];
+        $datasetDefs=['#schema'=>$schemaName,'#datasetName'=>$datasetName,'@fields'=>[]];
 
         if (isset($cfgSchemaDataset['@keyFields'])) {
             trigger_error('Unsupported multiple field primary keys', E_USER_ERROR);
             return false;
         } elseif (isset($cfgSchemaDataset['#keyField'])) {
-            $dataset['#keyField']=$cfgSchemaDataset['#keyField'];
+            $datasetDefs['#keyField']=$cfgSchemaDataset['#keyField'];
         }
 
 
         if ($isNewQuery) {
-            $query['#lastColumnId']=0;
-            $query['#lastTupleFieldNo']=0;
-            $query['#queryId']=$this->lastQueryId;
+            $queryDefs['#lastColumnId']=0;
+            $queryDefs['#lastTupleFieldNo']=0;
+            $queryDefs['#queryId']=$this->lastQueryId;
             $this->lastQueryId++;
-            $query['#dataSource']=$datasourceName;
+            $queryDefs['#dataSource']=$datasourceName;
             $cfgDatasource=&$this->cfgSchema['@datasources'][$datasourceName];
             $dataConnectionName=$cfgDatasource['#dataConnection'];
-            $query['#dataConnection']=$dataConnectionName;
+            $queryDefs['#dataConnection']=$dataConnectionName;
             list($ok, $connection) = \doq\data\Connections::getConnection($dataConnectionName);
             $providerName=$connection->provider;
-            $query['#dataProvider']=$providerName;
+            $queryDefs['#dataProvider']=$providerName;
         } else {
-            $parentViewColumn['@dataset']=&$dataset;
+            $parentViewColumn['@dataset']=&$datasetDefs;
         }
 
         $foundDetailColumnForMaster=false;
         $foundKeyColumn=false;
 
-        if (isset($dataset['#keyField'])) {
-            $keyField=$dataset['#keyField'];
+        if (isset($datasetDefs['#keyField'])) {
+            $keyField=$datasetDefs['#keyField'];
         } else {
             $keyField=false;
         }
@@ -254,8 +260,8 @@ class View
         foreach ($cfgView as $localFieldName=>&$viewFieldDef) {
             $fc=$localFieldName[0];
             if (($fc!='#')&&($fc!='@')) {
-                $newColumn=['#columnId'=>$query['#lastColumnId'],'#field'=>$localFieldName,'#fieldNo'=>$fieldNo];
-                $query['#lastColumnId']++;
+                $newColumn=['#columnId'=>$queryDefs['#lastColumnId'],'#field'=>$localFieldName,'#fieldNo'=>$fieldNo];
+                $queryDefs['#lastColumnId']++;
                 $fieldNo++;
 
                 unset($modelFieldDef);
@@ -279,8 +285,8 @@ class View
                     continue;
                 }
                 if ($type!=='virtual') {
-                    $newColumn['#tupleFieldNo']=$query['#lastTupleFieldNo'];
-                    $query['#lastTupleFieldNo']++;
+                    $newColumn['#tupleFieldNo']=$queryDefs['#lastTupleFieldNo'];
+                    $queryDefs['#lastTupleFieldNo']++;
                 }
 
 
@@ -332,7 +338,7 @@ class View
                         }
                         $this->makeQueryRecursive(
                             $viewFieldDef['@linked'],
-                            $query,
+                            $queryDefs,
                             $newColumn,
                             $RdatasourceName,
                             $RschemaName,
@@ -350,14 +356,14 @@ class View
                 } elseif (!isset($modelFieldDef)) {
                     $newColumn['#error']='Unknown field '.$localFieldName;
                 }
-                $dataset['@fields'][]=&$newColumn;
+                $datasetDefs['@fields'][]=&$newColumn;
                 unset($newColumn);
             }
         }
 
 
         if ($isNewQuery) {
-            $query['@dataset']=&$dataset;
+            $queryDefs['@dataset']=&$datasetDefs;
             if ($masterKind=='lookup') {
                 if (!$foundKeyColumn) {
                     if ($keyField) {
@@ -367,69 +373,74 @@ class View
                     }
                     return false;
                 }
-                $newIdxName='idx_look_'.$parentRef.'--'.$dataset['#keyField'];
-                if (!isset($query['@resultIndexes'])) {
-                    $query['@resultIndexes']=[];
+                $newIdxName='idx_look_'.$parentRef.'--'.$datasetDefs['#keyField'];
+                if (!isset($queryDefs['@resultIndexes'])) {
+                    $queryDefs['@resultIndexes']=[];
                 }
-                if (isset($query['@resultIndexes'][$newIdxName])) {
+                if (isset($queryDefs['@resultIndexes'][$newIdxName])) {
                     for ($i=0;$i<10;$i++) {
                         $s=$newIdxName.'/'.$i;
-                        if (!isset($query['@resultIndexes'][$s])) {
+                        if (!isset($queryDefs['@resultIndexes'][$s])) {
                             $newIdxName=$s;
                             break;
                         }
                     }
                 }
-                $query['@resultIndexes'][$newIdxName]=[
+                $queryDefs['@resultIndexes'][$newIdxName]=[
                     '#type'=>'unique',
                     '#name'=>$newIdxName,
+                    '#keyFieldName'=>$foundKeyColumn['#field'],
+                    '#keyTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo'],
                     '#byTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo']
                 ];
                 $parentViewColumn['#uniqueIndex']=$newIdxName;
-                $query['#detailToMasterColumnId']=$foundKeyColumn['#columnId'];
+                $queryDefs['#detailToMasterColumnId']=$foundKeyColumn['#columnId'];
             } elseif ($masterKind=='aggregation') {
                 # aggregation by the real multilookup field and by the virtual field as default
                 if (!$foundDetailColumnForMaster) {
                     trigger_error(\doq\t('Not found back referenced lookup to %s from %s', $parentRef, $datasetRef), E_USER_ERROR);
                     return false;
                 }
-                $newIdxName='idx_agg_'.$parentRef.'_2_'.$foundDetailColumnForMaster['#originField'];
-                if (!isset($query['@resultIndexes'])) {
-                    $query['@resultIndexes']=[];
+                $newIdxName='idx_agg_'.$parentRef.'=='.$foundDetailColumnForMaster['#originField'];
+                if (!isset($queryDefs['@resultIndexes'])) {
+                    $queryDefs['@resultIndexes']=[];
                 }
-                if (isset($query['@resultIndexes'][$newIdxName])) {
+                if (isset($queryDefs['@resultIndexes'][$newIdxName])) {
                     for ($i=0;$i<10;$i++) {
                         $s=$newIdxName.'/'.$i;
-                        if (!isset($query['@resultIndexes'][$s])) {
+                        if (!isset($queryDefs['@resultIndexes'][$s])) {
                             $newIdxName=$s;
                             break;
                         }
                     }
                 }
+                
                 # Этот индекс, в отличие от лукапа, создает неуникальный индекс,
                 # в котором ключами являются ID родителей, а внутри них группируются
                 # ссылки на записи деток, которые в него входят
-                $query['@resultIndexes'][$newIdxName]=[
+                $queryDefs['@resultIndexes'][$newIdxName]=[
                     '#type'=>'nonunique',
                     '#name'=>$newIdxName,
+                    '#keyFieldName'=>$foundKeyColumn['#field'],
+                    '#keyTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo'],
                     '#byTupleFieldNo'=>$foundDetailColumnForMaster['#tupleFieldNo']
                 ];
                 $parentViewColumn['#nonuniqueIndex']=$newIdxName;
-                $query['#detailToMasterColumnId']=$foundDetailColumnForMaster['#columnId']; # вслепую
+                $queryDefs['#detailToMasterColumnId']=$foundDetailColumnForMaster['#columnId'];
             }
             if ($masterFieldNo!==false) {
-                $query['#masterFieldNo']=$masterFieldNo;
-                $query['#detailDatasetId']=$detailDatasetId;
+                $queryDefs['#masterFieldNo']=$masterFieldNo;
+                $queryDefs['#detailDatasetId']=$detailDatasetId;
                 if (!isset($masterQuery['@detailIndexByFieldNo'])) {
                     $masterQuery['@detailIndexByFieldNo']=[];
                 }
                 $masterQuery['@detailIndexByFieldNo'][$masterFieldNo]=$newIdxName;
             }
 
-            $scripter=\doq\data\Scripter::create($providerName);
-            $selectScript=$scripter->buildSelectScript($query);
+            list($ok,$scripter)=\doq\data\Scripter::create($providerName);
+            $selectScript=$scripter->buildSelectScript($queryDefs);
             if ($selectScript!==false) {
-                $query['#readScript']=$selectScript;
+                $queryDefs['#readScript']=$selectScript;
             }
         }
         return true;

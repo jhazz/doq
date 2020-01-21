@@ -9,9 +9,9 @@ class Dataset extends \doq\data\Dataset
     public $resultIndexes;
     public static $useFetchAll;
 
-    public function __construct(&$query, $id)
+    public function __construct(&$queryDefs, $id)
     {
-        $this->query=&$query;
+        $this->queryDefs=&$queryDefs;
         $this->id=$id;
     }
 
@@ -22,7 +22,7 @@ class Dataset extends \doq\data\Dataset
 
     public function connect()
     {
-        $r=\doq\data\Connections::getConnection($this->query['#dataConnection']);
+        $r=\doq\data\Connections::getConnection($this->queryDefs['#dataConnection']);
         if ($r[0]) {
             $this->connection=$r[1];
             return true;
@@ -33,14 +33,14 @@ class Dataset extends \doq\data\Dataset
 
     public function read(&$params)
     {
-        $s=$this->query['#readScript'];
+        $s=$this->queryDefs['#readScript'];
         $where=[];
         if (isset($params['@filter'])) {
             foreach ($params['@filter'] as $i=>&$param) {
                 switch ($param['#operand']) {
                 case 'IN':
                     $columnId=$param['#columnId'];
-                    $res=self::getFieldByColumnId($columnId, $this->query);
+                    $res=self::getFieldByColumnId($columnId, $this->queryDefs);
                     if (!$res[0]) {
                         trigger_error(\doq\t('Column with id=%d not found in %s', $columnId, 'dataset'), E_USER_ERROR);
                     }
@@ -72,14 +72,16 @@ class Dataset extends \doq\data\Dataset
             }
             $this->mysqlresult->close();
             unset($this->mysqlresult);
-            if (isset($this->query['@resultIndexes'])) {
-                foreach ($this->query['@resultIndexes'] as $i=>&$resultIndexDef) {
+            if (isset($this->queryDefs['@resultIndexes'])) {
+                foreach ($this->queryDefs['@resultIndexes'] as $i=>&$resultIndexDef) {
                     $indexName=$resultIndexDef['#name'];
                     $indexByTupleFieldNo=$resultIndexDef['#byTupleFieldNo'];
                     $indexType=$resultIndexDef['#type'];
+                    $keyTupleFieldNo=$resultIndexDef['#keyTupleFieldNo'];
                     switch ($indexType) {
                         case 'unique':
                             $indexedTuples=[];
+                            $rowsOfTuples=[];
                             # тупо проходим по всем данным. Возможно есть способ более скоростного обхода
                             # когда индекс имеет тип 'unique' тогда каждый вектор - это ссылка на строку
                             # с уникальным значением
@@ -91,33 +93,50 @@ class Dataset extends \doq\data\Dataset
                                     } else {
                                         $indexedTuples[$value]=&$tuple;
                                     }
+
+                                    $rowsOfTuples[$tupleNo]=&$tuple;
                                 }
                             }
                             $this->resultIndexes[$indexName]=[
                                 '#type'=>$indexType,
                                 '#indexByTupleFieldNo'=>$indexByTupleFieldNo,
-                                '@indexedTuples'=>&$indexedTuples
+                                '@indexedTuples'=>&$indexedTuples,
+                                '@rowsOfTuples'=>&$rowsOfTuples
                                 ];
                         break;
                         case 'nonunique':
                             $indexedTuples=[];
+                            $rowsOfTuples=[];
                             # когда индекс имеет тип 'nonunique' тогда каждый вектор - это
                             # набор ссылок на строки
                             # с найденными значениями индекса
+                            // TODO ИСПРАВИТЬ ЗДЕСЬ
+
                             foreach ($this->tuples as $tupleNo=>&$tuple) {
-                                $value=$tuple[$indexByTupleFieldNo];
-                                if (!is_null($value)) {
-                                    if (!isset($indexedTuples[$value])) {
-                                        $indexedTuples[$value]=[&$tuple];
+                                $byValue=$tuple[$indexByTupleFieldNo];
+                                if (!is_null($byValue)) {
+                                    if (!isset($indexedTuples[$byValue])) {
+                                        $indexedTuples[$byValue]=[];
+                                    } 
+                                    $key=$tuple[$keyTupleFieldNo];
+                                    $indexedTuples[$byValue][$key]=&$tuple;
+                                    
+
+                                    if (!isset($rowsOfTuples[$byValue])) {
+                                        $rowsOfTuples[$byValue]=[&$tuple];
                                     } else {
-                                        $indexedTuples[$value][]=&$tuple;
+                                        $rowsOfTuples[$byValue][]=&$tuple;
                                     }
+
                                 }
                             }
+
                             $this->resultIndexes[$indexName]=[
                                 '#type'=>$indexType,
                                 '#indexByTupleFieldNo'=>$indexByTupleFieldNo,
-                                '@indexedTuples'=>&$indexedTuples
+                                '#$keyTupleFieldNo'=>$keyTupleFieldNo,
+                                '@indexedTuples'=>&$indexedTuples,
+                                '@rowsOfTuples'=>&$rowsOfTuples
                                 ];
                         break;
                     }
@@ -152,7 +171,7 @@ class Dataset extends \doq\data\Dataset
     {
         $result=[];
         $fieldList=[];
-        self::collectFieldList($this->query, $fieldList);
+        self::collectFieldList($this->queryDefs, $fieldList);
         $result[]='<table class="dpd" border=1><tr valign="top" bgcolor="#ffffa0">';
         foreach ($fieldList as $i=>$field) {
             if (!isset($field['#tupleFieldNo'])) {
@@ -189,32 +208,34 @@ class Dataset extends \doq\data\Dataset
                 case 'unique':
                     foreach ($recordVectors as $value=>&$data) {
                         $result[]='<tr><td bgcolor="#ffff80">'.$value.'</td>';
-                        foreach ($data as $col=>&$value) {
+                        foreach ($data as $col=>&$v) {
                             if ($col!=$indexByTupleFieldNo) {
                                 $bgColor='#a0ffa0';
                             } else {
                                 $bgColor='#a0a0a0';
                             }
-                            $result[]='<td bgcolor="'.$bgColor.'">'.$value.'</td>';
+                            $result[]='<td bgcolor="'.$bgColor.'">'.$v.'</td>';
                         }
                         $result[]='</tr>';
                     }
                 break;
                 case 'nonunique':
                     foreach ($recordVectors as $value=>&$portions) {
-                        $count=sizeof($portions);
-                        $result[]= '<tr><td bgcolor="#ffaa80" rowspan='.$count.'>'.$value.'</td>';
+                        $count=count($portions);
+                        $result[]= '<tr><td bgcolor="#ffaa80" rowspan="'.$count.'">Aggregated by'.$value.'</td>';
+                        $first=true;
                         foreach ($portions as $i=>&$data) {
-                            if ($i>0) {
+                            if (!$first) {
                                 $result[]='<tr>';
                             }
-                            foreach ($data as $col=>&$value) {
+                            $first=false;
+                            foreach ($data as $col=>&$item) {
                                 if ($col!=$indexByTupleFieldNo) {
                                     $bgColor='#a0ffa0';
                                 } else {
                                     $bgColor='#a0a0a0';
                                 }
-                                $result[]= '<td bgcolor="'.$bgColor.'">'.$value.'</td>';
+                                $result[]= '<td bgcolor="'.$bgColor.'">'.$item.'</td>';
                             }
                             $result[]= '</tr>';
                         }

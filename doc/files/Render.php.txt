@@ -48,11 +48,11 @@ class Render {
               if(file_exists($elementFile)){
                 require_once($elementFile);
               } else {
-                trigger_error(\doq\t('tpl_error_load_element',$elementFile),E_USER_ERROR);
+                trigger_error(\doq\tr('doq','Error loading template element file %s',$elementFile),E_USER_ERROR);
                 return -1;
               }
               if (!method_exists($elementClassName,$tagName)) {
-                trigger_error(\doq\t('tpl_error_element_no_method',$elementFile,$elementClassName,$tagName),E_USER_ERROR);
+                trigger_error(\doq\tr('doq','Template element defined in %s has does not contain defined public static method %s::%s',$elementFile,$elementClassName,$tagName),E_USER_ERROR);
                 return -1;
               }
             }

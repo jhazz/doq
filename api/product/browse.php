@@ -25,7 +25,7 @@ function main()
 
     list($ok, $viewProducts)=doq\data\View::create($GLOBALS['doq']['schema'],$GLOBALS['doq']['views']['Products'],'Products1');
     $viewProducts->prepare($schemaFileTime, true);
-    doq\Logger::query($viewProducts->query, 'View products');
+    doq\Logger::query($viewProducts->queryDefs, 'View products');
 
     $params=[];
     /** @var \doq\data\Datanode $products */
@@ -34,6 +34,7 @@ function main()
    
     /** @var \doq\Template Template parser */
     $Template=null;
+    
     list($ok,$Template)=\doq\Template::create();
 
     if ($Template->load('page1')) {
