@@ -247,20 +247,24 @@ class View
             $parentViewColumn['@dataset']=&$datasetDefs;
         }
 
-        $foundDetailColumnForMaster=false;
-        $foundKeyColumn=false;
+        $foundDetailColumnForMaster=null;
+        $foundKeyColumn=null;
 
         if (isset($datasetDefs['#keyField'])) {
             $keyField=$datasetDefs['#keyField'];
         } else {
-            $keyField=false;
+            $keyField=null;
         }
 
         $fieldNo=0;
         foreach ($cfgView as $localFieldName=>&$viewFieldDef) {
             $fc=$localFieldName[0];
             if (($fc!='#')&&($fc!='@')) {
-                $newColumn=['#columnId'=>$queryDefs['#lastColumnId'],'#field'=>$localFieldName,'#fieldNo'=>$fieldNo];
+                $newColumn=[
+                    '#columnId'=>$queryDefs['#lastColumnId'],
+                    '#field'=>$localFieldName,
+                    '#fieldNo'=>$fieldNo
+                ];
                 $queryDefs['#lastColumnId']++;
                 $fieldNo++;
 
@@ -269,8 +273,13 @@ class View
                 if (isset($viewFieldDef['#field'])) {
                     $originField=$viewFieldDef['#field'];
                 }
-                if ($keyField && ($keyField===$originField)) {
+                // if ($keyField && ($keyField===$originField)) {
+                //     $foundKeyColumn=&$newColumn;
+                // }
+                
+                if (($keyField!==null) && ($keyField==$localFieldName)) {
                     $foundKeyColumn=&$newColumn;
+                    #$queryDefs['#keyTupleFieldNo']=$queryDefs['#lastTupleFieldNo'];
                 }
                 if (isset($cfgSchemaDataset['@fields'][$originField])) {
                     $modelFieldDef=&$cfgSchemaDataset['@fields'][$originField];
@@ -326,7 +335,7 @@ class View
                             if ($kind=='aggregation') {
                                 if ($type=='virtual') {
                                     # virtual is a mostly common type of aggregation field
-                                    if (!$foundKeyColumn) {
+                                    if ($foundKeyColumn===null) {
                                         trigger_error('Define primary key field in the View first!');
                                         return false;
                                     }
@@ -365,7 +374,7 @@ class View
         if ($isNewQuery) {
             $queryDefs['@dataset']=&$datasetDefs;
             if ($masterKind=='lookup') {
-                if (!$foundKeyColumn) {
+                if (is_null($foundKeyColumn)) {
                     if ($keyField) {
                         trigger_error(\doq\t('Not found key field %s in view from %s', $keyField, $datasetRef), E_USER_ERROR);
                     } else {
@@ -373,7 +382,7 @@ class View
                     }
                     return false;
                 }
-                $newIdxName='idx_look_'.$parentRef.'--'.$datasetDefs['#keyField'];
+                $newIdxName='idx_look_'.$parentRef.'>'.$datasetDefs['#keyField'];
                 if (!isset($queryDefs['@resultIndexes'])) {
                     $queryDefs['@resultIndexes']=[];
                 }
@@ -386,6 +395,9 @@ class View
                         }
                     }
                 }
+
+
+                // TODO Странно выглядить назначение foundKeyColumn и в keyTupleFieldNo и в byTupleFieldNo
                 $queryDefs['@resultIndexes'][$newIdxName]=[
                     '#type'=>'unique',
                     '#name'=>$newIdxName,
@@ -397,8 +409,8 @@ class View
                 $queryDefs['#detailToMasterColumnId']=$foundKeyColumn['#columnId'];
             } elseif ($masterKind=='aggregation') {
                 # aggregation by the real multilookup field and by the virtual field as default
-                if (!$foundDetailColumnForMaster) {
-                    trigger_error(\doq\t('Not found back referenced lookup to %s from %s', $parentRef, $datasetRef), E_USER_ERROR);
+                if (is_null($foundDetailColumnForMaster)) {
+                    trigger_error(\doq\tr('doq','Not found back referenced lookup to %s from %s', $parentRef, $datasetRef), E_USER_ERROR);
                     return false;
                 }
                 $newIdxName='idx_agg_'.$parentRef.'=='.$foundDetailColumnForMaster['#originField'];
@@ -427,7 +439,22 @@ class View
                 ];
                 $parentViewColumn['#nonuniqueIndex']=$newIdxName;
                 $queryDefs['#detailToMasterColumnId']=$foundDetailColumnForMaster['#columnId'];
+            } else {
+
+                if (!is_null($foundKeyColumn)) {
+                    if (!isset($queryDefs['@resultIndexes'])) {
+                        $queryDefs['@resultIndexes']=[];
+                    }
+                    $queryDefs['@resultIndexes']['*PRIMARY*']=[
+                        '#type'=>'unique',
+                        '#name'=>'*PRIMARY*',
+                        '#keyFieldName'=>$foundKeyColumn['#field'],
+                        '#keyTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo'],
+                        '#byTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo']
+                    ];
+                }
             }
+
             if ($masterFieldNo!==null) {
                 $queryDefs['#masterFieldNo']=$masterFieldNo;
                 $queryDefs['#detailDatasetId']=$detailDatasetId;
@@ -437,6 +464,7 @@ class View
                 $masterQuery['@detailIndexByFieldNo'][$masterFieldNo]=$newIdxName;
             }
 
+            
             list($ok,$scripter)=\doq\data\Scripter::create($providerName);
             $selectScript=$scripter->buildSelectScript($queryDefs);
             if ($selectScript!==false) {

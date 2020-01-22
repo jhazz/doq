@@ -34,6 +34,9 @@ return [
     'Dataset %s has no column %s'=>'Объект данных "%s" не содержит в себе колонку "%s"',
     'Column %s has no dataset in previous scopes of path %s. Subcolumn should be the next scope after any dataset scope'=>'У колонки "%s" нет родительского набора данных по адресу "%s". Колонки должны следовать сразу за набором данных dataset',
     'Column %s cannot not have any subnames like %s'=>'Колонка "%s" не может иметь вложенных имен, таких как "%s"',
-    'Scope stack reach emptyness. Seems like had called unusable pop from stack'=>'Произведено извлечение из пустого стека областей видимости данных. Похоже, был сделан лишний вызов pop()'
+    'Scope stack reach emptyness. Seems like had called unusable pop from stack'=>'Произведено извлечение из пустого стека областей видимости данных. Похоже, был сделан лишний вызов pop()',
+    # View
+    'Not found back referenced lookup to %s from %s'=>'Не обнаружена обратная связь полей данных с %s на %s'
+
 ];
 ?>

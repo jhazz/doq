@@ -81,7 +81,7 @@ class Dataset extends \doq\data\Dataset
                     switch ($indexType) {
                         case 'unique':
                             $tuplesByKey=[];
-                            $rowsOfTuples=[];
+                            $tuplesByNo=[];
                             # тупо проходим по всем данным. Возможно есть способ более скоростного обхода
                             # когда индекс имеет тип 'unique' тогда каждый вектор - это ссылка на строку
                             # с уникальным значением
@@ -94,19 +94,19 @@ class Dataset extends \doq\data\Dataset
                                         $tuplesByKey[$value]=&$tuple;
                                     }
 
-                                    $rowsOfTuples[$tupleNo]=&$tuple;
+                                    $tuplesByNo[$tupleNo]=&$tuple;
                                 }
                             }
                             $this->resultIndexes[$indexName]=[
                                 '#type'=>$indexType,
                                 '#indexByTupleFieldNo'=>$indexByTupleFieldNo,
                                 '@tuplesByKey'=>&$tuplesByKey,
-                                '@tuplesByNo'=>&$rowsOfTuples
+                                '@tuplesByNo'=>&$tuplesByNo
                                 ];
                         break;
                         case 'nonunique':
                             $tuplesByKey=[];
-                            $rowsOfTuples=[];
+                            $tuplesByNo=[];
                             # когда индекс имеет тип 'nonunique' тогда каждый вектор - это
                             # набор ссылок на строки
                             # с найденными значениями индекса
@@ -122,10 +122,10 @@ class Dataset extends \doq\data\Dataset
                                     $tuplesByKey[$byValue][$key]=&$tuple;
                                     
 
-                                    if (!isset($rowsOfTuples[$byValue])) {
-                                        $rowsOfTuples[$byValue]=[&$tuple];
+                                    if (!isset($tuplesByNo[$byValue])) {
+                                        $tuplesByNo[$byValue]=[&$tuple];
                                     } else {
-                                        $rowsOfTuples[$byValue][]=&$tuple;
+                                        $tuplesByNo[$byValue][]=&$tuple;
                                     }
 
                                 }
@@ -136,7 +136,7 @@ class Dataset extends \doq\data\Dataset
                                 '#indexByTupleFieldNo'=>$indexByTupleFieldNo,
                                 '#keyTupleFieldNo'=>$keyTupleFieldNo,
                                 '@tuplesByKey'=>&$tuplesByKey,
-                                '@tuplesByNo'=>&$rowsOfTuples
+                                '@tuplesByNo'=>&$tuplesByNo
                                 ];
                         break;
                     }
@@ -163,7 +163,7 @@ class Dataset extends \doq\data\Dataset
 
 
 
-                
+
             }
         } else {
             $this->tuples=false;
