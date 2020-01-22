@@ -6,7 +6,7 @@ class Dataset extends \doq\data\Dataset
 #    public $params;
     public $connection;
     public $tuples;
-    public $resultIndexes;
+    public $index;
     public static $useFetchAll;
 
     public function __construct(&$queryDefs, $id)
@@ -72,56 +72,45 @@ class Dataset extends \doq\data\Dataset
             }
             $this->mysqlresult->close();
             unset($this->mysqlresult);
-            if (isset($this->queryDefs['@resultIndexes'])) {
-                foreach ($this->queryDefs['@resultIndexes'] as $i=>&$resultIndexDef) {
-                    $indexName=$resultIndexDef['#name'];
-                    $indexByTupleFieldNo=$resultIndexDef['#byTupleFieldNo'];
-                    $indexType=$resultIndexDef['#type'];
-                    $keyTupleFieldNo=$resultIndexDef['#keyTupleFieldNo'];
+            if (isset($this->queryDefs['@indexes'])) {
+                foreach ($this->queryDefs['@indexes'] as $i=>&$indexDefs) {
+                    $indexName=$indexDefs['#name'];
+                    $indexType=$indexDefs['#type'];
+                    $keyTupleFieldNo=$indexDefs['#keyTupleFieldNo'];
                     switch ($indexType) {
                         case 'unique':
                             $tuplesByKey=[];
                             $tuplesByNo=[];
-                            # тупо проходим по всем данным. Возможно есть способ более скоростного обхода
-                            # когда индекс имеет тип 'unique' тогда каждый вектор - это ссылка на строку
-                            # с уникальным значением
                             foreach ($this->tuples as $tupleNo=>&$tuple) {
-                                $value=$tuple[$indexByTupleFieldNo];
+                                $value=$tuple[$keyTupleFieldNo];
                                 if (!is_null($value)) {
                                     if (isset($tuplesByKey[$value])) {
                                         trigger_error(\doq\tr('doq','Unique value %s are repeating in the index %s', $value, $indexName), E_USER_ERROR);
                                     } else {
                                         $tuplesByKey[$value]=&$tuple;
                                     }
-
                                     $tuplesByNo[$tupleNo]=&$tuple;
                                 }
                             }
-                            $this->resultIndexes[$indexName]=[
+                            $this->index[$indexName]=[
                                 '#type'=>$indexType,
-                                '#indexByTupleFieldNo'=>$indexByTupleFieldNo,
+                                '#keyTupleFieldNo'=>$keyTupleFieldNo,
                                 '@tuplesByKey'=>&$tuplesByKey,
                                 '@tuplesByNo'=>&$tuplesByNo
                                 ];
-                        break;
+                            break;
                         case 'nonunique':
                             $tuplesByKey=[];
                             $tuplesByNo=[];
-                            # когда индекс имеет тип 'nonunique' тогда каждый вектор - это
-                            # набор ссылок на строки
-                            # с найденными значениями индекса
-                            // TODO ИСПРАВИТЬ ЗДЕСЬ
-
+                            $byTupleFieldNo=$indexDefs['#byTupleFieldNo'];
                             foreach ($this->tuples as $tupleNo=>&$tuple) {
-                                $byValue=$tuple[$indexByTupleFieldNo];
+                                $byValue=$tuple[$byTupleFieldNo];
                                 if (!is_null($byValue)) {
                                     if (!isset($tuplesByKey[$byValue])) {
                                         $tuplesByKey[$byValue]=[];
                                     } 
                                     $key=$tuple[$keyTupleFieldNo];
                                     $tuplesByKey[$byValue][$key]=&$tuple;
-                                    
-
                                     if (!isset($tuplesByNo[$byValue])) {
                                         $tuplesByNo[$byValue]=[&$tuple];
                                     } else {
@@ -131,14 +120,14 @@ class Dataset extends \doq\data\Dataset
                                 }
                             }
 
-                            $this->resultIndexes[$indexName]=[
+                            $this->index[$indexName]=[
                                 '#type'=>$indexType,
-                                '#indexByTupleFieldNo'=>$indexByTupleFieldNo,
+                                '#byTupleFieldNo'=>$byTupleFieldNo,
                                 '#keyTupleFieldNo'=>$keyTupleFieldNo,
                                 '@tuplesByKey'=>&$tuplesByKey,
                                 '@tuplesByNo'=>&$tuplesByNo
                                 ];
-                        break;
+                            break;
                     }
                 }
                 if(\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_DATAQUERY){
@@ -146,24 +135,6 @@ class Dataset extends \doq\data\Dataset
                 }
             } else {
                 \doq\Logger::info('Сейчас буду индексировать ВСЕ');
-                // TODO Нужно проверить как работает загрузка корневой таблицы с и без определения ключевого поля
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             }
         } else {
             $this->tuples=false;
@@ -220,19 +191,20 @@ class Dataset extends \doq\data\Dataset
     public function indexesToHTML()
     {
         $result=[];
-        foreach ($this->resultIndexes as $indexName=>&$index) {
-            $result[]='<table border=1><tr><td colspan=20>Index name: "' .$indexName.'", type:'.$index['#type'].'</td></tr>';
+        foreach ($this->index as $indexName=>&$index) {
+            $result[]='<table border=1><tr><td colspan=20>'.$index['#type'].' index "<b>' .$indexName.'</b>"</td></tr>';
             $recordVectors=&$index['@tuplesByKey'];
-            $indexByTupleFieldNo=$index['#indexByTupleFieldNo'];
+            $keyTupleFieldNo=$index['#keyTupleFieldNo'];
+
             switch ($index['#type']) {
                 case 'unique':
                     foreach ($recordVectors as $value=>&$data) {
-                        $result[]='<tr><td bgcolor="#ffff80">'.$value.'</td>';
+                        $result[]='<tr><td bgcolor="#ffff80">[PK='.$value.']</td>';
                         foreach ($data as $col=>&$v) {
-                            if ($col!=$indexByTupleFieldNo) {
+                            if ($col!=$keyTupleFieldNo) {
                                 $bgColor='#a0ffa0';
                             } else {
-                                $bgColor='#a0a0a0';
+                                $bgColor='#ffffa0';
                             }
                             $result[]='<td bgcolor="'.$bgColor.'">'.$v.'</td>';
                         }
@@ -240,6 +212,7 @@ class Dataset extends \doq\data\Dataset
                     }
                 break;
                 case 'nonunique':
+                    $byTupleFieldNo=$index['#byTupleFieldNo'];
                     foreach ($recordVectors as $value=>&$portions) {
                         $count=count($portions);
                         $result[]= '<tr><td bgcolor="#ffaa80" rowspan="'.$count.'">Aggregated by'.$value.'</td>';
@@ -250,7 +223,7 @@ class Dataset extends \doq\data\Dataset
                             }
                             $first=false;
                             foreach ($data as $col=>&$item) {
-                                if ($col!=$indexByTupleFieldNo) {
+                                if ($col!=$byTupleFieldNo) {
                                     $bgColor='#a0ffa0';
                                 } else {
                                     $bgColor='#a0a0a0';

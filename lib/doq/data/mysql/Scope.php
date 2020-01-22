@@ -35,7 +35,7 @@ class Scope extends \doq\data\Scope
         $this->index=null;
 
         if ($indexName!='') {
-            $this->index=&$datanode->dataset->resultIndexes[$indexName];
+            $this->index=&$datanode->dataset->index[$indexName];
             $this->tuplesByKey=null;
             switch ($this->index['#type']) {
                 case 'unique':
@@ -85,7 +85,7 @@ class Scope extends \doq\data\Scope
                 break;
             case self::SW_INDEX_RECORDS:
             case self::SW_AGGREGATED_INDEX_RECORDS:
-                
+
                 if (!is_array($this->tuplesByNo)) {
                     $this->curTuple=null;
                     return true;

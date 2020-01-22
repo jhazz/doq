@@ -383,27 +383,23 @@ class View
                     return false;
                 }
                 $newIdxName='idx_look_'.$parentRef.'>'.$datasetDefs['#keyField'];
-                if (!isset($queryDefs['@resultIndexes'])) {
-                    $queryDefs['@resultIndexes']=[];
+                if (!isset($queryDefs['@indexes'])) {
+                    $queryDefs['@indexes']=[];
                 }
-                if (isset($queryDefs['@resultIndexes'][$newIdxName])) {
+                if (isset($queryDefs['@indexes'][$newIdxName])) {
                     for ($i=0;$i<10;$i++) {
                         $s=$newIdxName.'/'.$i;
-                        if (!isset($queryDefs['@resultIndexes'][$s])) {
+                        if (!isset($queryDefs['@indexes'][$s])) {
                             $newIdxName=$s;
                             break;
                         }
                     }
                 }
-
-
-                // TODO Странно выглядить назначение foundKeyColumn и в keyTupleFieldNo и в byTupleFieldNo
-                $queryDefs['@resultIndexes'][$newIdxName]=[
+                $queryDefs['@indexes'][$newIdxName]=[
                     '#type'=>'unique',
                     '#name'=>$newIdxName,
                     '#keyFieldName'=>$foundKeyColumn['#field'],
-                    '#keyTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo'],
-                    '#byTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo']
+                    '#keyTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo']
                 ];
                 $parentViewColumn['#uniqueIndex']=$newIdxName;
                 $queryDefs['#detailToMasterColumnId']=$foundKeyColumn['#columnId'];
@@ -414,13 +410,13 @@ class View
                     return false;
                 }
                 $newIdxName='idx_agg_'.$parentRef.'=='.$foundDetailColumnForMaster['#originField'];
-                if (!isset($queryDefs['@resultIndexes'])) {
-                    $queryDefs['@resultIndexes']=[];
+                if (!isset($queryDefs['@indexes'])) {
+                    $queryDefs['@indexes']=[];
                 }
-                if (isset($queryDefs['@resultIndexes'][$newIdxName])) {
+                if (isset($queryDefs['@indexes'][$newIdxName])) {
                     for ($i=0;$i<10;$i++) {
                         $s=$newIdxName.'/'.$i;
-                        if (!isset($queryDefs['@resultIndexes'][$s])) {
+                        if (!isset($queryDefs['@indexes'][$s])) {
                             $newIdxName=$s;
                             break;
                         }
@@ -430,7 +426,7 @@ class View
                 # Этот индекс, в отличие от лукапа, создает неуникальный индекс,
                 # в котором ключами являются ID родителей, а внутри них группируются
                 # ссылки на записи деток, которые в него входят
-                $queryDefs['@resultIndexes'][$newIdxName]=[
+                $queryDefs['@indexes'][$newIdxName]=[
                     '#type'=>'nonunique',
                     '#name'=>$newIdxName,
                     '#keyFieldName'=>$foundKeyColumn['#field'],
@@ -440,17 +436,15 @@ class View
                 $parentViewColumn['#nonuniqueIndex']=$newIdxName;
                 $queryDefs['#detailToMasterColumnId']=$foundDetailColumnForMaster['#columnId'];
             } else {
-
                 if (!is_null($foundKeyColumn)) {
-                    if (!isset($queryDefs['@resultIndexes'])) {
-                        $queryDefs['@resultIndexes']=[];
+                    if (!isset($queryDefs['@indexes'])) {
+                        $queryDefs['@indexes']=[];
                     }
-                    $queryDefs['@resultIndexes']['*PRIMARY*']=[
+                    $queryDefs['@indexes']['*PRIMARY*']=[
                         '#type'=>'unique',
                         '#name'=>'*PRIMARY*',
                         '#keyFieldName'=>$foundKeyColumn['#field'],
-                        '#keyTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo'],
-                        '#byTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo']
+                        '#keyTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo']
                     ];
                 }
             }
@@ -464,7 +458,6 @@ class View
                 $masterQuery['@detailIndexByFieldNo'][$masterFieldNo]=$newIdxName;
             }
 
-            
             list($ok,$scripter)=\doq\data\Scripter::create($providerName);
             $selectScript=$scripter->buildSelectScript($queryDefs);
             if ($selectScript!==false) {

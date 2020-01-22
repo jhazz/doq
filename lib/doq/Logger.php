@@ -295,8 +295,8 @@ abstract class Logger
         if (isset($entry['#mastertupleFieldNo'])) {
             $row1.='<tr><td bgcolor="#ffa0a0" colspan="5">#mastertupleFieldNo: <b>'.$entry['#mastertupleFieldNo'].'</b><br/>#detailDatasetId:'.$entry['#detailDatasetId'].'</td></tr>';
         }
-        if (isset($entry['@resultIndexes'])) {
-            foreach ($entry['@resultIndexes'] as $i=>&$idx) {
+        if (isset($entry['@indexes'])) {
+            foreach ($entry['@indexes'] as $i=>&$idx) {
                 $row1.='<tr><td bgcolor="#eeffff" colspan="5">@index #type:'
                     .$idx['#type']
                     .', name:<b>'.$idx['#name']
@@ -466,7 +466,7 @@ class HTMLEndLogger extends Logger {
                     print '<hr>';
                 break;
                 case 'indexDump':
-                    print '<h4>Result indexes filled by '.$data['id'].' dumped in '.$data['file'].' at '. $data['line'].'</h4>';
+                    print '<h4>Indexes filled by '.$data['id'].' dumped in '.$data['file'].' at '. $data['line'].'</h4>';
                     print $data['indexDump'];
                     print '<hr>';
                 break;
