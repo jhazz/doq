@@ -338,7 +338,7 @@ abstract class Logger
                 $row2.='Reference type:'.$refType.' ==> <b>'.$field['#ref'].'</b><br/>'
                     .'<b>'.(isset($field['#refDatasource'])?$field['#refDatasource']:'this').'</b>:'
                     .$field['#refSchema'].'/'.$field['#refDataset']
-                    .'<br/>'.(isset($field['#nonuniqueIndex'])?'#nonuniqueIndex:'.$field['#nonuniqueIndex']:'(Error! No #nonuniqueIndex!)');
+                    .'<br/>'.(isset($field['#clusterIndex'])?'#clusterIndex:'.$field['#clusterIndex']:'(Error! No #clusterIndex!)');
                 $row2.='<table class="dpd" border=1>'.self::dumpQuery($field).'</table>';
             }
             if (isset($field['#error'])) {

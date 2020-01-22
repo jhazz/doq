@@ -35,7 +35,7 @@ class Scope extends \doq\data\Scope
         $this->index=null;
 
         if ($indexName!='') {
-            $this->index=&$datanode->dataset->index[$indexName];
+            $this->index=&$datanode->dataset->indexes[$indexName];
             $this->tuplesByKey=null;
             switch ($this->index['#type']) {
                 case 'unique':
@@ -45,7 +45,7 @@ class Scope extends \doq\data\Scope
                         $this->indexSize=1;
                     }
                     break;
-                case 'nonunique':
+                case 'cluster':
                     $this->curType=self::SW_AGGREGATED_INDEX_RECORDS;
                     if ($masterValue!==null) {
                         if (isset($this->index['@tuplesByKey'][$masterValue])) {

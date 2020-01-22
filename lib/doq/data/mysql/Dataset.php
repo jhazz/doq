@@ -6,7 +6,7 @@ class Dataset extends \doq\data\Dataset
 #    public $params;
     public $connection;
     public $tuples;
-    public $index;
+    public $indexes;
     public static $useFetchAll;
 
     public function __construct(&$queryDefs, $id)
@@ -92,14 +92,14 @@ class Dataset extends \doq\data\Dataset
                                     $tuplesByNo[$tupleNo]=&$tuple;
                                 }
                             }
-                            $this->index[$indexName]=[
+                            $this->indexes[$indexName]=[
                                 '#type'=>$indexType,
                                 '#keyTupleFieldNo'=>$keyTupleFieldNo,
                                 '@tuplesByKey'=>&$tuplesByKey,
                                 '@tuplesByNo'=>&$tuplesByNo
                                 ];
                             break;
-                        case 'nonunique':
+                        case 'cluster':
                             $tuplesByKey=[];
                             $tuplesByNo=[];
                             $byTupleFieldNo=$indexDefs['#byTupleFieldNo'];
@@ -120,7 +120,7 @@ class Dataset extends \doq\data\Dataset
                                 }
                             }
 
-                            $this->index[$indexName]=[
+                            $this->indexes[$indexName]=[
                                 '#type'=>$indexType,
                                 '#byTupleFieldNo'=>$byTupleFieldNo,
                                 '#keyTupleFieldNo'=>$keyTupleFieldNo,
@@ -141,6 +141,9 @@ class Dataset extends \doq\data\Dataset
         }
     }
 
+    /**
+     * @param int $tupleFieldNo number of 
+     */
     public function getTupleFieldValues($tupleFieldNo)
     {
         if (isset($this->tuples)) {
@@ -191,7 +194,7 @@ class Dataset extends \doq\data\Dataset
     public function indexesToHTML()
     {
         $result=[];
-        foreach ($this->index as $indexName=>&$index) {
+        foreach ($this->indexes as $indexName=>&$index) {
             $result[]='<table border=1><tr><td colspan=20>'.$index['#type'].' index "<b>' .$indexName.'</b>"</td></tr>';
             $recordVectors=&$index['@tuplesByKey'];
             $keyTupleFieldNo=$index['#keyTupleFieldNo'];
@@ -211,7 +214,7 @@ class Dataset extends \doq\data\Dataset
                         $result[]='</tr>';
                     }
                 break;
-                case 'nonunique':
+                case 'cluster':
                     $byTupleFieldNo=$index['#byTupleFieldNo'];
                     foreach ($recordVectors as $value=>&$portions) {
                         $count=count($portions);

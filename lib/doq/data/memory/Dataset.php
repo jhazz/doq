@@ -23,9 +23,9 @@ class Dataset extends \doq\data\Dataset{
 
   const KT_PRIMARY=1;
   const KT_UNIQUE=2;
-  const KT_NONUNIQUE=3;
+  const KT_CLUSTER=3;
   const MAX_KEY_LENGTH=80;
-  public static $KEY_TYPES=['primary'=>self::KT_PRIMARY,'unique'=>self::KT_UNIQUE,'nonunique'=>self::KT_NONUNIQUE];
+  public static $KEY_TYPES=['primary'=>self::KT_PRIMARY,'unique'=>self::KT_UNIQUE,'cluster'=>self::KT_CLUSTER];
 
 /**
 *
@@ -211,7 +211,7 @@ class Dataset extends \doq\data\Dataset{
           case self::KT_UNIQUE:
             $vectors[$keyStr]=$myRowNo;
             break;
-          case self::KT_NONUNIQUE:
+          case self::KT_CLUSTER:
             if (!isset($vectors[$keyStr])) {
               $vectors[$keyStr]=[$myRowNo];
             } else {

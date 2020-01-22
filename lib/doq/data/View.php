@@ -427,13 +427,13 @@ class View
                 # в котором ключами являются ID родителей, а внутри них группируются
                 # ссылки на записи деток, которые в него входят
                 $queryDefs['@indexes'][$newIdxName]=[
-                    '#type'=>'nonunique',
+                    '#type'=>'cluster',
                     '#name'=>$newIdxName,
                     '#keyFieldName'=>$foundKeyColumn['#field'],
                     '#keyTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo'],
                     '#byTupleFieldNo'=>$foundDetailColumnForMaster['#tupleFieldNo']
                 ];
-                $parentViewColumn['#nonuniqueIndex']=$newIdxName;
+                $parentViewColumn['#clusterIndex']=$newIdxName;
                 $queryDefs['#detailToMasterColumnId']=$foundDetailColumnForMaster['#columnId'];
             } else {
                 if (!is_null($foundKeyColumn)) {
