@@ -9,15 +9,15 @@ class Dataset extends \doq\data\Dataset
     public $indexes;
     public static $useFetchAll;
 
-    public function __construct(&$queryDefs, $id)
+    public function __construct(&$queryDefs, $newDatasetName)
     {
         $this->queryDefs=&$queryDefs;
-        $this->id=$id;
+        $this->name=$newDatasetName;
     }
 
-    public function makeScope(\doq\data\Datanode $datanode, $indexName='', $indexKey=null, $datasetScope=null, $path='')
+    public function makeScope(\doq\data\Datanode $datanode, $path='', $indexName='', $masterValue=null, $masterScope=null)
     {
-        return new Scope($datanode, $indexName, $indexKey, $datasetScope, $path);
+        return new Scope($datanode, $path, $indexName, $masterValue, $masterScope);
     }
 
     public function connect()
@@ -56,7 +56,7 @@ class Dataset extends \doq\data\Dataset
         }
         $s.=';';
         if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_DATAQUERY){
-            \doq\Logger::debugDataQuery($this->id,$s,__FILE__,__LINE__);
+            \doq\Logger::debugDataQuery($this->name,$s,__FILE__,__LINE__);
         }
         
         $this->mysqlresult=$this->connection->mysqli->query($s);
@@ -116,7 +116,6 @@ class Dataset extends \doq\data\Dataset
                                     } else {
                                         $tuplesByNo[$byValue][]=&$tuple;
                                     }
-
                                 }
                             }
 
@@ -131,7 +130,7 @@ class Dataset extends \doq\data\Dataset
                     }
                 }
                 if(\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_DATAQUERY){
-                    \doq\Logger::debugDatasetIndexes('Dataset['.$this->id.']', $this->indexesToHTML(), __FILE__, __LINE__);
+                    \doq\Logger::debugDatasetIndexes('Dataset['.$this->name.']', $this->indexesToHTML(), __FILE__, __LINE__);
                 }
             } else {
                 \doq\Logger::info('Сейчас буду индексировать ВСЕ');

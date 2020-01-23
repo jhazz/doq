@@ -101,17 +101,14 @@ class View
     /**
     * Executes queryDefs that reads data from a database to datasets
     * @param array $params any paramaters to a queryDefs, i.e. @filters
-    * @param string $newDatasetId any string identifies creating Dataset 
+    * @param string $newDatasetName any string identifies creating Dataset 
     * @return array (boolean status, \doq\data\Datanode node)
     */
-    public function read(&$params, $newDatasetId)
+    public function read(&$params, $newDatasetName)
     {
-        $datanode=new \doq\data\Datanode(\doq\data\Datanode::NT_DATASET, $newDatasetId);
-        $r=$this->readQuery($this->queryDefs, $datanode, $params, $newDatasetId);
-        if($r[0]){
+        $datanode=new \doq\data\Datanode(\doq\data\Datanode::NT_DATASET, $newDatasetName);
+        if ($this->readQuery($this->queryDefs, $datanode, $params, $newDatasetName)) {
             return [true,$datanode];
-        } else {
-            return $r;
         }        
     }
 
@@ -120,13 +117,12 @@ class View
     /**
     * Recursive loading data into Dataset wrapped by Datanodes
     */
-    private function readQuery(&$queryDefs, \doq\data\Datanode $datanode, &$params, $newDatasetId)
+    private function readQuery(&$queryDefs, \doq\data\Datanode $datanode, &$params, $newDatasetName)
     {
-
         $providerName=$queryDefs['#dataProvider'];
-        list($ok, $dataset)=\doq\data\Dataset::create($providerName, $queryDefs, $newDatasetId);
+        list($ok, $dataset)=\doq\data\Dataset::create($providerName, $queryDefs, $newDatasetName);
         if (!$ok) {
-            return [false,$dataset];
+            throw new \Exception($dataset);
         }
         $datanode->dataset=$dataset;
         if ($dataset->connect()) {
@@ -135,8 +131,8 @@ class View
         $datanode->wrap($queryDefs, $dataset);
         if (isset($queryDefs['@subQuery'])) {
             foreach ($queryDefs['@subQuery'] as $i=>&$subQuery) {
-                if (isset($subQuery['#detailDatasetId'])) {
-                    $detailDatasetId=$subQuery['#detailDatasetId'];
+                if (isset($subQuery['#detailDatasetName'])) {
+                    $detailDatasetName=$subQuery['#detailDatasetName'];
                     $masterFieldNo=$subQuery['#masterFieldNo'];
                     $masterTupleFieldNo=$dataset->queryDefs['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
                     list($ok, $parentValueSet)=$dataset->getTupleFieldValues($masterTupleFieldNo);
@@ -157,14 +153,14 @@ class View
                     return false;
                 }
 
-                $childNode=new \doq\data\Datanode(Datanode::NT_DATASET, $detailDatasetId, $datanode);
-                $ok=$this->readQuery($subQuery, $childNode, $newParams, $detailDatasetId);
+                $childNode=new \doq\data\Datanode(Datanode::NT_DATASET, $detailDatasetName, $datanode);
+                $ok=$this->readQuery($subQuery, $childNode, $newParams, $detailDatasetName);
                 if (!$ok) {
                     return false;
                 }
             }
         }
-        return [true];
+        return true;
     }
 
     /**
@@ -187,7 +183,7 @@ class View
         $datasetName='',
         $parentRef='',
         $masterFieldNo=null,
-        $detailDatasetId=false,
+        $detailDatasetName=false,
         $masterKind=false,
         $isNewQuery=true,
         $isOtherDatasource=false
@@ -409,7 +405,7 @@ class View
                     trigger_error(\doq\tr('doq','Not found back referenced lookup to %s from %s', $parentRef, $datasetRef), E_USER_ERROR);
                     return false;
                 }
-                $newIdxName='idx_agg_'.$parentRef.'=='.$foundDetailColumnForMaster['#originField'];
+                $newIdxName='idx_agg_'.$parentRef.'^'.$foundDetailColumnForMaster['#originField'];
                 if (!isset($queryDefs['@indexes'])) {
                     $queryDefs['@indexes']=[];
                 }
@@ -451,7 +447,7 @@ class View
 
             if ($masterFieldNo!==null) {
                 $queryDefs['#masterFieldNo']=$masterFieldNo;
-                $queryDefs['#detailDatasetId']=$detailDatasetId;
+                $queryDefs['#detailDatasetName']=$detailDatasetName;
                 if (!isset($masterQuery['@detailIndexByFieldNo'])) {
                     $masterQuery['@detailIndexByFieldNo']=[];
                 }

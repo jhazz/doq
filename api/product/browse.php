@@ -29,7 +29,7 @@ function main()
 
     $params=[];
     /** @var \doq\data\Datanode $products */
-    list($ok, $products)=$viewProducts->read($params, 'view_products');
+    list($ok, $products)=$viewProducts->read($params, 'VIEW1');
     print $products->dataset->dataToHTML();
    
     /** @var \doq\Template Template parser */

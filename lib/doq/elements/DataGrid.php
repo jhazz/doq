@@ -1,5 +1,6 @@
 <?php
 namespace doq\elements;
+use \doq\data\Scope;
 
 class DataGrid
 {
@@ -36,7 +37,7 @@ class DataGrid
         } else {
             $path='';
         }
-        list($ok, $scope)=$scopeStack->push($path);
+        list($ok, $scope)=$scopeStack->open($path);
         if (!$ok) {
             return false;
         }
@@ -46,9 +47,9 @@ class DataGrid
         }
 
         $columnCount=count($columns);
-        if ($scope->seek(\doq\data\Scope::SEEK_TO_START)) {
+        if ($scope->seek(Scope::TO_START)) {
             $render->out[]='Dataset is empty';
-            $scopeStack->pop();
+            $scopeStack->close();
             return true;
         }
         $render->out[]='<table border=1 cellspacing=0><tr>';
@@ -58,38 +59,37 @@ class DataGrid
         $render->out[]='</tr>';
 
         $i=0;
-
+        $basePath=$scope->path;
         while (true) {
             $render->out[]='<tr>';
             for ($j=0;$j<$columnCount;$j++) {
                 $cellPath=$columns[$j]['path'];
                 $render->out[]='<td>';
-                # Проблема: КАК ПОЛУЧИТЬ ИСХОДНЫЙ master value  и как получить indexName
-                # думаю, когда делается лукап - не надо входить во вложенный датасет,
-                # чтобы не терять value, а для агрегации надо по идее передавать родительский key_id
                 $rowScope=$scopeStack->top;
-                list($ok, $scope)=$scopeStack->push($cellPath);
+                $key=$rowScope->curTupleKey;
+                $rowScope->path=$basePath.'['.$key.']';
+                list($ok, $cellScope)=$scopeStack->open($cellPath);
                 if ($ok) {
                     if (isset($cellBlocks[$cellPath])) {
                         $render->fromTemplate($scopeStack, $template, $cellBlocks[$cellPath]);
                     } elseif (isset($cellBlocks['*'])) {
                         $render->fromTemplate($scopeStack, $template, $cellBlocks['*']);
                     } else {
-                        $render->out[]=$scope->asString().'<br/><span style="font-size:10px;">{'.$scope->path.'}</span>';
+                        $render->out[]=$cellScope->asString().'<br/><span style="font-size:10px;">'.$cellScope->path.'</span>';
                     }
                     $render->out[]='</td>';
-                    $scopeStack->pop();
+                    $rowScope=$scopeStack->close();
                 }
             }
             $render->out[]='</tr>';
             $i++;
             $scope=$scopeStack->top;
-            if (($scope->seek()) || ($i>100)) {
+            if (($scope->seek(Scope::TO_NEXT)) || ($i>100)) {
                 break;
             }
         }
         $render->out[]='</table>';
-        $scopeStack->pop();
+        $scopeStack->close();
         return true;
     }
 }

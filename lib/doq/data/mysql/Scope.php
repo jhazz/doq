@@ -24,7 +24,7 @@ class Scope extends \doq\data\Scope
     /** @var int длина выборки индекса по которому перемещаем указатель через seek*/
     public $indexSize;
 
-    public function __construct(\doq\data\Datanode $datanode, $indexName='', $masterValue=null, $masterScope=null, $path='')
+    public function __construct(\doq\data\Datanode $datanode, $path='', $indexName='', $masterValue=null, $masterScope=null)
     {
         $this->datanode=$datanode;
         $this->path=$path;
@@ -54,28 +54,34 @@ class Scope extends \doq\data\Scope
                             $this->indexSize=count($this->tuplesByNo);
                         }
                     } else {
-                        trigger_error(\doq\t('FATAL ERROR! Do not use aggregated index without master value defining scope window'), E_USER_ERROR);
+                        throw new \Exception('Do not use aggregated index without master value defining scope window');
                     }
                     break;
                 default:
-                    trigger_error(\doq\t('FATAL ERROR! Unknown index type [%s]', $index['#type']), E_USER_ERROR);
+                    throw new \Exception('FATAL ERROR! Unknown index type '.$index['#type']);
             }
         } else {
             if ($this->datanode->type==\doq\data\Datanode::NT_COLUMN) {
                 $this->curType=self::SW_ONE_FIELD;
                 $this->curTuple=&$masterScope->curTuple;
             } else {
-                $this->curType=self::SW_ALL_RECORDS;
-                $this->indexSize=count($this->datanode->dataset->tuples);
-                if($this->indexSize>0){
-
+                $pkIndexName='*PRIMARY*';
+                if(isset($this->datanode->dataset->indexes[$pkIndexName])) {
+                    $this->curType=self::SW_INDEX_RECORDS;
+                    $this->index=&$datanode->dataset->indexes[$pkIndexName];
+                    $this->tuplesByKey=&$this->index['@tuplesByKey'];
+                    $this->tuplesByNo=&$this->index['@tuplesByNo'];
+                    $this->indexSize=count($this->tuplesByNo);
+        } else {
+                    $this->curType=self::SW_ALL_RECORDS;
+                    $this->indexSize=count($this->datanode->dataset->tuples);
                 }
             }
         }
     }
 
 
-    public function seek($to=self::SEEK_TO_NEXT)
+    public function seek($to=self::TO_NEXT)
     {
         $EOT=false;
         switch ($this->curType) {
@@ -92,13 +98,13 @@ class Scope extends \doq\data\Scope
                     //throw new \Exception('Scope::seek() called inside aggregated index but tuplesByKey is not an array');
                 }
                 switch ($to) {
-                    case self::SEEK_TO_START:
+                    case self::TO_START:
                         $newRowNo=0;
                         break;
-                    case self::SEEK_TO_NEXT:
+                    case self::TO_NEXT:
                         $newRowNo=$this->rowNo+1;
                         break;
-                    case self::SEEK_TO_END:
+                    case self::TO_END:
                         $newRowNo=$this->indexSize-1;
                         break;
                 }
@@ -112,18 +118,19 @@ class Scope extends \doq\data\Scope
                     unset($this->curTuple);
                 }
                 $this->curTuple=&$this->tuplesByNo[$newRowNo];
+                $this->curTupleKey=$this->curTuple[$this->index['#keyTupleFieldNo']];
                 break;
 
         case self::SW_ALL_RECORDS:
             if ($this->indexSize) {
                 switch ($to) {
-                    case self::SEEK_TO_START:
+                    case self::TO_START:
                         $newRowNo=0;
                         break;
-                    case self::SEEK_TO_NEXT:
+                    case self::TO_NEXT:
                         $newRowNo=$this->rowNo+1;
                         break;
-                    case self::SEEK_TO_END:
+                    case self::TO_END:
                         $newRowNo=$this->indexSize-1;
                         break;
                     default:
@@ -140,6 +147,7 @@ class Scope extends \doq\data\Scope
                 unset($this->curTuple);
             }
             $this->curTuple=&$this->datanode->dataset->tuples[$newRowNo];
+            $this->curTupleKey='$R'.$newRowNo;
             break;
         default:
             #throw new \Exception('Unknown cursor type in the scope');
@@ -158,7 +166,8 @@ class Scope extends \doq\data\Scope
         $masterTupleFieldNo=$masterDataset->queryDefs['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
         $masterValue=$this->curTuple[$masterTupleFieldNo];
         $detailIndexName=$masterDataset->queryDefs['@detailIndexByFieldNo'][$masterFieldNo];
-        return $detailDatanode->dataset->makeScope($detailDatanode, $detailIndexName, $masterValue, null, '['.$masterValue.']'.'/'.$masterFieldName.'/'.$path);
+        return $detailDatanode->dataset->makeScope($detailDatanode, $path.'/'.$masterFieldName, $detailIndexName, $masterValue, null);
+    
     }
 
     public function asString()

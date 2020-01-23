@@ -20,12 +20,14 @@ class Datanode
     public $dataset;
     /** @var Array */
     public $childNodes;
+    public $name;
 
-    public function __construct($type, $nodeId, $parendNode=null)
+    public function __construct($type, $name, $parendNode=null)
     {
         if ($parendNode!==null) {
-            $parendNode->childNodes[$nodeId]=$this;
+            $parendNode->childNodes[$name]=$this;
         }
+        $this->name=$name;
         $this->type=$type;
         if ($this->type!==self::NT_COLUMN) {
             $this->childNodes=[];

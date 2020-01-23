@@ -255,8 +255,10 @@ abstract class Logger
             $result=[];
         }
         
-        $result[]='<style>.dpd{font-family:arial,sans;font-size:11px;}</style>'
-            .'<table class="dpd" border=1><tr><td bgcolor="#ffff80" colspan="5">'
+        $result[]='<style>'
+            .'td.dpd {border: 1px solid black; padding: 3px; font-family:arial,sans;font-size:11px;}'
+            .'table.dpd {border-collapse: collapse;}</style>'
+            .'<table class="dpd" border="1" cellspacing="0" cellpadding="5"><tr><td bgcolor="#ffff80" colspan="5">'
             .$query['#dataConnection'].'(data provider='
             .$query['#dataProvider'].', datasource='.$query['#dataSource'].')</td></tr>';
 
@@ -293,27 +295,27 @@ abstract class Logger
         #      $row1.='<tr><td bgcolor="#ffa0a0" colspan="5">#filterDetailByColumn: <b> '.$entry['#filterDetailByColumn'].'</b> #filterDetailField:'.$entry['#filterDetailField'].'</td></tr>';
         #    }
         if (isset($entry['#mastertupleFieldNo'])) {
-            $row1.='<tr><td bgcolor="#ffa0a0" colspan="5">#mastertupleFieldNo: <b>'.$entry['#mastertupleFieldNo'].'</b><br/>#detailDatasetId:'.$entry['#detailDatasetId'].'</td></tr>';
+            $row1.='<tr><td bgcolor="#ffa0a0" colspan="5">#mastertupleFieldNo: <b>'.$entry['#mastertupleFieldNo'].'</b><br/>#detailDatasetName:'.$entry['#detailDatasetName'].'</td></tr>';
         }
         if (isset($entry['@indexes'])) {
             foreach ($entry['@indexes'] as $i=>&$idx) {
                 $row1.='<tr><td bgcolor="#eeffff" colspan="5">@index #type:'
                     .$idx['#type']
                     .', name:<b>'.$idx['#name']
-                    .'</b> (#byTupleFieldNo: '.$idx['#byTupleFieldNo'].' )</td></tr>';
+                    .'</b> (#keyFieldName:"'.$idx['#keyFieldName'].'",#keyTupleFieldNo:'.$idx['#keyTupleFieldNo'].' )</td></tr>';
             }
         }
-        $row1.='<tr><td bgcolor="#ff8080" colspan="5">dataset are reading from <b>'.$dataset['#schema'].'/'.$dataset['#datasetName'].'</b></td></tr>';
+        $row1.='<tr><td style="border:solid 4px;" bgcolor="#eeeeee" colspan="5">Dataset schema: <b>'.$dataset['#schema'].'/'.$dataset['#datasetName'].'</b></td></tr>';
         if (!$dataset['@fields']) {
             trigger_error('пусто', E_USER_ERROR);
         }
         foreach ($dataset['@fields'] as $i=>&$field) {
             $kind=(isset($field['#kind'])?$field['#kind']:'text');
             $row2.='<tr valign="top"><td>'
-                .'<span title="columnId#">columnId='.$field['#columnId'].'</span>'
-                .(isset($field['#tupleFieldNo'])?'<br/>tupleFieldNo:['.$field['#tupleFieldNo'].']</span>':'<br/>(virtual)')
-                .'</td><td>field:"'.$field['#field'].'"'
-                .(((isset($field['#originField'])&&$field['#originField']!==$field['#field'])?'<br/>origin:'.$field['#originField']:''))
+                .'<span title="columnId#">columnId:'.$field['#columnId'].'</span>'
+                .(isset($field['#tupleFieldNo'])?'<br/>tupleFieldNo:'.$field['#tupleFieldNo'].'</span>':'<br/>(virtual)')
+                .'</td><td>#field:"<b>'.$field['#field'].'</b>"'
+                .(((isset($field['#originField'])&&$field['#originField']!==$field['#field'])?'<br/>#originField:'.$field['#originField']:''))
                 .'</td><td>'.$kind.'</td>'
                 .'<td>'.(isset($field['#label'])?'<i>'.$field['#label'].'</i><br/>':'');
 
@@ -321,24 +323,27 @@ abstract class Logger
             if ($kind=='lookup') {
                 $refType=isset($field['#refType'])? $field['#refType'] : "";
                 if ($refType) {
-                    $row2.='Reference type:'.$refType.' ==> <b>'.$field['#ref'].'</b><br/>';
-                    $row2.='<b>'.(isset($field['#refDatasource'])?$field['#refDatasource']:'this').'</b>:'
-                        .(isset($field['#refSchema'])? $field['#refSchema']:'.')
-                        .(isset($field['#refDataset'])?'/'.$field['#refDataset']:'/.');
+                    $row2.='Reference type:<font color=green>'.$refType.'</font> ==> <b>'.$field['#ref'].'</b><br/>';
+                    $row2.='#refDatasource:"<b>'
+                        .(isset($field['#refDatasource'])?$field['#refDatasource']:'').'</b>", ' 
+                        .'#refSchema:"<b>'.$field['#refSchema'].'</b>", '
+                        .'#refDataset:"<b>'.$field['#refDataset'].'</b>"';
                 }
                 if (isset($field['#uniqueIndex'])) {
-                    $row2.='<br/>'.(isset($field['#uniqueIndex'])?'#uniqueIndex:'.$field['#uniqueIndex']:'(Error! No #uniqueIndex!)');
+                    $row2.='<br/>'.(isset($field['#uniqueIndex'])?'#uniqueIndex:"<b>'.$field['#uniqueIndex'].'</b>"'
+                    :'(Error! No #uniqueIndex!)');
                 }
                 if (isset($field['#refType'])) {
-                    $row2.='<table class="dpd" border=1>'.self::dumpQuery($field).'</table>';
+                    $row2.='<table class="dpd" border=1 cellspacing="0" cellpadding="5">'.self::dumpQuery($field).'</table>';
                 }
-                # Если это агрегат, то ссылка может быть только удаленной
             } elseif ($kind=='aggregation') {
+                # Если это агрегат, то ссылка может быть только удаленной
                 $refType=isset($field['#refType'])? $field['#refType'] : "(NO REFTYPE!)";
-                $row2.='Reference type:'.$refType.' ==> <b>'.$field['#ref'].'</b><br/>'
-                    .'<b>'.(isset($field['#refDatasource'])?$field['#refDatasource']:'this').'</b>:'
-                    .$field['#refSchema'].'/'.$field['#refDataset']
-                    .'<br/>'.(isset($field['#clusterIndex'])?'#clusterIndex:'.$field['#clusterIndex']:'(Error! No #clusterIndex!)');
+                $row2.='Reference type:<font color=red>'.$refType.' ==> <b>'.$field['#ref'].'</font></b><br/>'
+                    .'#refDatasource:"<b>'.(isset($field['#refDatasource'])?$field['#refDatasource']:'').'</b>", ' 
+                    .'#refSchema:"<b>'.$field['#refSchema'].'</b>", '
+                    .'#refDataset:"<b>'.$field['#refDataset'].'</b>"'
+                    .'<br/>'.(isset($field['#clusterIndex'])?'#clusterIndex:"<b>'.$field['#clusterIndex'].'</b>"':'(Error! No #clusterIndex!)');
                 $row2.='<table class="dpd" border=1>'.self::dumpQuery($field).'</table>';
             }
             if (isset($field['#error'])) {
@@ -459,22 +464,19 @@ class HTMLEndLogger extends Logger {
                     foreach($result as $j=>&$s){
                         print $s;
                     }                    
-                break;
+                    break;
                 case 'queryString':
                     print '<h4>Query "'.$data['id'].'" dumped in '.$data['file'].' at '. $data['line'].'</h4>';
                     print $data['queryString'];
                     print '<hr>';
-                break;
+                    break;
                 case 'indexDump':
                     print '<h4>Indexes filled by '.$data['id'].' dumped in '.$data['file'].' at '. $data['line'].'</h4>';
                     print $data['indexDump'];
                     print '<hr>';
-                break;
-        
+                    break;
             }
-           
         }
-
         print "</div>";
 
     }

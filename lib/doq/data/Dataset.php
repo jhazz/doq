@@ -3,17 +3,17 @@ namespace doq\data;
 
 abstract class Dataset
 {
-    public $id;
+    public $name;
     public $queryDefs;
     abstract protected function makeScope(Datanode $datanode);
     abstract public function dataToHTML();
     abstract public function indexesToHTML();
 
-    public static function create($providerName, &$queryDefs, $id)
+    public static function create($providerName, &$queryDefs, $newDatasetName)
     {
         switch ($providerName) {
         case 'mysql':
-            return [true,new mysql\Dataset($queryDefs, $id)];
+            return [true,new mysql\Dataset($queryDefs, $newDatasetName)];
         default:
             return [false,'Unknown provider '.$providerName];
         }

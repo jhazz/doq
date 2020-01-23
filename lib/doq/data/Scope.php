@@ -7,9 +7,9 @@ namespace doq\data;
  * */
 abstract class Scope
 {
-    const SEEK_TO_START=0;
-    const SEEK_TO_NEXT=1;
-    const SEEK_TO_END=2;
+    const TO_START=0;
+    const TO_NEXT=1;
+    const TO_END=2;
     /** @var ScopeWindow указывает тип окна, по которому движется курсор*/
     const SW_ALL_RECORDS='all';
     const SW_INDEX_RECORDS='index';
