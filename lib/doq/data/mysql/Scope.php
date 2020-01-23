@@ -81,14 +81,21 @@ class Scope extends \doq\data\Scope
     }
 
 
+    /**
+     * Moves scope cursor TO_START, TO_END or TO_NEXT. 
+     * Scope cursor moves over array of tuples stored in the array scope->tuplesByNo[]. 
+     * This scope->curTuple is an active tuple and scope->curTupleKey contains current tuple key value
+     * that could be used for accessing tuple by key value. Tuples arranged by keys are stored in scope->tuplesByKey[]
+     * @param mixed $to=Scope::TO_NEXT direction
+     * @return boolean true if end of index is reached
+     */
     public function seek($to=self::TO_NEXT)
     {
         $EOT=false;
         switch ($this->curType) {
             case self::SW_ONE_FIELD:
             case self::SW_ONE_INDEX_RECORD:
-                $EOT=true;
-                break;
+                return true;
             case self::SW_INDEX_RECORDS:
             case self::SW_AGGREGATED_INDEX_RECORDS:
 
@@ -119,7 +126,7 @@ class Scope extends \doq\data\Scope
                 }
                 $this->curTuple=&$this->tuplesByNo[$newRowNo];
                 $this->curTupleKey=$this->curTuple[$this->index['#keyTupleFieldNo']];
-                break;
+                return $EOT;
 
         case self::SW_ALL_RECORDS:
             if ($this->indexSize) {
@@ -148,15 +155,16 @@ class Scope extends \doq\data\Scope
             }
             $this->curTuple=&$this->datanode->dataset->tuples[$newRowNo];
             $this->curTupleKey='$R'.$newRowNo;
-            break;
+            return $EOT;
         default:
-            #throw new \Exception('Unknown cursor type in the scope');
             return true;
         }
-        return $EOT;
     }
 
-    /** @return \doq\data\Scope */
+    /** 
+     * @param string $path to 
+     * @param string $masterFieldName is a master's dataset field name that a new scope will be created by
+     * @return \doq\data\Scope */
     public function makeDetailScope($path, $masterFieldName)
     {
         $masterDatanode=$this->datanode;

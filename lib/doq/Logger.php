@@ -154,7 +154,7 @@ abstract class Logger
         }
     }
 
-    public static function query (&$query, $id='', $file=null, $line=null)
+    public static function debugQuery (&$query, $id='', $file=null, $line=null)
     {
         if (self::$logMode & self::LE_DEBUG_QUERY) {
             if (!is_object(self::$loggerInstance)) {

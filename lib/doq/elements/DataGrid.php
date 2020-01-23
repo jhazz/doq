@@ -52,7 +52,23 @@ class DataGrid
             $scopeStack->close();
             return true;
         }
-        $render->out[]='<table border=1 cellspacing=0><tr>';
+
+        list($cssTable,$cssCell)=$render->addRenderStyles(
+            [   'cssTable'=>'datagrid-tab',
+                'cssCell'=>'datagrid-cell'
+            ],$block['params'],
+            ['datagrid-tab'=>['border-collapse'=>'collapse'],
+            'datagrid-cell'=>[
+                'border'=>'1px  solid black',
+                'padding'=>'3px',
+                'font-family'=>'arial,sans',
+                'font-size'=>'9px'
+                ]
+            ]);
+            
+
+        #$render->addStyle($cssTable,['border-collapse'=>'collapse']);
+        $render->out[]='<table class="'.$cssTable.'"><tr>';
         for ($i=0;$i<$columnCount;$i++) {
             $render->out[]='<td bgcolor="#a0f0a0">'.$columns[$i]['path'].'</td>';
         }
@@ -64,7 +80,7 @@ class DataGrid
             $render->out[]='<tr>';
             for ($j=0;$j<$columnCount;$j++) {
                 $cellPath=$columns[$j]['path'];
-                $render->out[]='<td>';
+                $render->out[]='<td class="'.$cssCell.'">';
                 $rowScope=$scopeStack->top;
                 $key=$rowScope->curTupleKey;
                 $rowScope->path=$basePath.'['.$key.']';

@@ -269,9 +269,6 @@ class View
                 if (isset($viewFieldDef['#field'])) {
                     $originField=$viewFieldDef['#field'];
                 }
-                // if ($keyField && ($keyField===$originField)) {
-                //     $foundKeyColumn=&$newColumn;
-                // }
                 
                 if (($keyField!==null) && ($keyField==$localFieldName)) {
                     $foundKeyColumn=&$newColumn;
@@ -330,7 +327,7 @@ class View
                             $newColumn['#refDatasource']=$RdatasourceName;
                             if ($kind=='aggregation') {
                                 if ($type=='virtual') {
-                                    # virtual is a mostly common type of aggregation field
+                                    // virtual is a type of aggregation field for now
                                     if ($foundKeyColumn===null) {
                                         trigger_error('Define primary key field in the View first!');
                                         return false;
@@ -366,7 +363,6 @@ class View
             }
         }
 
-
         if ($isNewQuery) {
             $queryDefs['@dataset']=&$datasetDefs;
             if ($masterKind=='lookup') {
@@ -400,7 +396,8 @@ class View
                 $parentViewColumn['#uniqueIndex']=$newIdxName;
                 $queryDefs['#detailToMasterColumnId']=$foundKeyColumn['#columnId'];
             } elseif ($masterKind=='aggregation') {
-                # aggregation by the real multilookup field and by the virtual field as default
+                // aggregation index by the real multilookup field and
+                // by the virtual field as default
                 if (is_null($foundDetailColumnForMaster)) {
                     trigger_error(\doq\tr('doq','Not found back referenced lookup to %s from %s', $parentRef, $datasetRef), E_USER_ERROR);
                     return false;
@@ -462,8 +459,5 @@ class View
         }
         return true;
     }
-
-
-
 
 }

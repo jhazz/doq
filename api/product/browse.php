@@ -5,7 +5,6 @@ function main()
 {
     $schemaFile=$GLOBALS['doq']['env']['#commonPath'].'/schema.php';
     $schemaFileTime=filemtime($schemaFile);
-    print '<meta charset="utf-8">';
 
     if (isset($GLOBALS['doq']['env']['@caches']['querys'])) {
         list($ok, $queryCache)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['querys']);
@@ -23,28 +22,38 @@ function main()
     doq\Template::setDefaultTemplatesPath($GLOBALS['doq']['env']['#templatesPath']);
     doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
 
-    list($ok, $viewProducts)=doq\data\View::create($GLOBALS['doq']['schema'],$GLOBALS['doq']['views']['Products'],'Products1');
+    list($ok, $viewProducts)=doq\data\View::create(
+        $GLOBALS['doq']['schema'],
+        $GLOBALS['doq']['views']['Products'],
+        'Products1');
     $viewProducts->prepare($schemaFileTime, true);
-    doq\Logger::query($viewProducts->queryDefs, 'View products');
+    doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
 
     $params=[];
-    /** @var \doq\data\Datanode $products */
     list($ok, $products)=$viewProducts->read($params, 'VIEW1');
-    print $products->dataset->dataToHTML();
+    //print $products->dataset->dataToHTML();
    
-    /** @var \doq\Template Template parser */
-    $Template=null;
-    
-    list($ok,$Template)=\doq\Template::create();
-
-    if ($Template->load('page1')) {
-        print '<meta http-equiv="content-type" content="text/html; charset=utf-8" /><pre>';
-        list($ok,$page1)=doq\Render::create();
-        $page1->build($products, $Template);
-        foreach ($page1->out as $i=>&$s) {
-            print "$s\n";
+    list($ok,$template)=\doq\Template::create();
+    $template->load('page1');
+    list($ok,$page1)=doq\Render::create();
+    $page1->build($products, $template);
+    print "<html><head><meta charset='utf-8'>'\n";
+    if(count($page1->cssStyles)>0){
+        print "<style>";
+        foreach($page1->cssStyles as $styleSelector=>&$style){
+            print '.'.$styleSelector.' {';
+            foreach ($style as $styleParam=>&$styleValue) {
+                print '    '.$styleParam.':'.$styleValue.";\n";
+            }
+            print "}\n";
         }
+        print "</style>";
     }
+    print "</head><body>";
+    foreach ($page1->out as $i=>&$s) {
+        print "$s\n";
+    }
+
 }
   
 main();
