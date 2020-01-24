@@ -54,6 +54,91 @@ function main()
         print "$s\n";
     }
 
+    print "<hr>";
+
+    $datanode=$products;
+    
+    
+    // list($ok, $scopeStack)=\doq\data\ScopeStack::create($datanode, $datanode->name.':');
+    // list($ok, $scope)=$scopeStack->open('');
+    // do { 
+        
+    // } while (!$scope->seek(\doq\data\Scope::TO_NEXT));
+    // $scopeStack->close();
+    $fields=[];
+    \doq\data\Dataset::collectFieldList($datanode->dataset->queryDefs, $fields);
+    #print '<pre>';
+    #\doq\Logger::debug('app',$fields);
+    function extractNode(\doq\data\Datanode $node,$level=0){
+                if($level>10){
+            print 'Reach maximum level 10<br>';
+            return;
+        }
+        ([\doq\data\Datanode::NT_COLUMN=>function($aNode,$level){
+            print '[COLUMN:'.$aNode->name.']<br>';
+        },
+        \doq\data\Datanode::NT_SUBCOLUMNS=>function ($aNode){
+            print '[SUBCOLUMNS:'.$aNode->name.']<br>';
+            extractNode($childNode,$level+1);
+        },
+        \doq\data\Datanode::NT_DATASET=>function ($aNode,$level){
+            $s='';
+            for ($i=$level;$i>0;$i--) {
+                $s.='&nbsp;&nbsp;&nbsp;';
+            }
+            print $s.'"#datasetName:"'.$aNode->name."\",\n";
+            
+            $fieldsStr='';
+            // $fieldDefs=$aNode->dataset->queryDefs['@dataset']['@fields'];
+            $first=true;
+            $columns=$aNode->dataset->getColumns();
+            foreach ($columns as $columnId=>$fieldDef) {
+                
+                $type=$fieldDef['#type'];
+                 if (!$type) {
+                     throw new \Exception('Field '.$fieldDef['#field'].' has no type! JSON could be invalid');
+                 }
+
+                if ($type!='virtual') {
+                    if (!$first) {
+                        $fieldsStr.=',  ';
+                    }
+                    $fieldsStr.='"'.$fieldDef['#field'].'":';
+                    $fieldsStr.='"'.$type.'"';
+                    $first=false;
+                }
+            
+            }
+            print $s.'"@fields":['.$fieldsStr."],\n";
+            print $s."\"@data\":[";
+            
+            foreach($aNode->dataset->tuples as $rowNo=>&$tuple){
+                $rowStr='';
+                
+                foreach ($tuple as $tupleFieldNo=>&$value) {
+                    if ($rowStr) {
+                        $rowStr.=', ';
+                    }   
+                    $rowStr.='"'.$value.'"';
+                }
+                print $s.'['.$rowStr."],\n";
+            }
+            print $s.']';
+            print "\n";
+            if(isset($aNode->childNodes)){
+                foreach($aNode->childNodes as $childNodeName=>&$childNode){
+                    if($childNode->type==\doq\data\Datanode::NT_DATASET){
+                        extractNode($childNode,$level+1);
+                    }
+                }
+            }
+        }
+        ])[$node->type]($node,$level);
+    }
+    print "<pre>";
+    extractNode($datanode);
+
+    #\doq\Logger::debug('app',$datanode->childNodes);
 }
   
 main();

@@ -150,6 +150,9 @@ abstract class Logger
                 print_r($data);
                 return;
             }
+            // if(is_array($data)){
+            //     $data=print_r($data, true);
+            // }
             self::$loggerInstance->pushMessageToLog(self::LE_DEBUG_INFO, ['category'=>$category,'data'=>&$data,'file'=>$file,'line'=>$line]);
         }
     }
@@ -262,7 +265,7 @@ abstract class Logger
             .$query['#dataConnection'].'(data provider='
             .$query['#dataProvider'].', datasource='.$query['#dataSource'].')</td></tr>';
 
-        $result[]=self::dumpQuery($query);
+        $result[]=self::dumpQueryEntry($query);
 
         $result[]='<tr><td colspan="2">Select script:</td><td colspan="5" bgcolor="#e0ffe0"><pre>'
             .$query['#readScript'].'</pre></td></tr>'
@@ -278,7 +281,7 @@ abstract class Logger
 
     }
 
-    public static function dumpQuery(&$entry)
+    public static function dumpQueryEntry(&$entry)
     {
         $dataset=&$entry['@dataset'];
         $row1='';
@@ -334,7 +337,7 @@ abstract class Logger
                     :'(Error! No #uniqueIndex!)');
                 }
                 if (isset($field['#refType'])) {
-                    $row2.='<table class="dpd" border=1 cellspacing="0" cellpadding="5">'.self::dumpQuery($field).'</table>';
+                    $row2.='<table class="dpd" border=1 cellspacing="0" cellpadding="5">'.self::dumpQueryEntry($field).'</table>';
                 }
             } elseif ($kind=='aggregation') {
                 # Если это агрегат, то ссылка может быть только удаленной
@@ -344,7 +347,7 @@ abstract class Logger
                     .'#refSchema:"<b>'.$field['#refSchema'].'</b>", '
                     .'#refDataset:"<b>'.$field['#refDataset'].'</b>"'
                     .'<br/>'.(isset($field['#clusterIndex'])?'#clusterIndex:"<b>'.$field['#clusterIndex'].'</b>"':'(Error! No #clusterIndex!)');
-                $row2.='<table class="dpd" border=1>'.self::dumpQuery($field).'</table>';
+                $row2.='<table class="dpd" border=1>'.self::dumpQueryEntry($field).'</table>';
             }
             if (isset($field['#error'])) {
                 $row2.='ERROR! '.$field['#error'].'</br>';
@@ -442,7 +445,7 @@ class HTMLEndLogger extends Logger {
 
                 $text='';
                 if (!is_scalar($data)) {
-                    $text = var_export($data, true);
+                    $text = '<pre>'.var_export($data, true).'</pre>';
                 } else {
                     $text = $data;
                 }
@@ -458,7 +461,7 @@ class HTMLEndLogger extends Logger {
             switch($type){
                 case 'query':
                     print "<h4>".$data['queryName'].'</h4>';
-                    #$this->dumpQuery($data['query']);
+                    #$this->dumpQueryEntry($data['query']);
                     $result=[];
                     self::dumpQueryAsHTML($data['query'], $result);
                     foreach($result as $j=>&$s){

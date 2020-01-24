@@ -433,9 +433,9 @@ class View
                     if (!isset($queryDefs['@indexes'])) {
                         $queryDefs['@indexes']=[];
                     }
-                    $queryDefs['@indexes']['*PRIMARY*']=[
+                    $queryDefs['@indexes'][\doq\data\Dataset::PRIMARY_KEY_NAME]=[
                         '#type'=>'unique',
-                        '#name'=>'*PRIMARY*',
+                        '#name'=>\doq\data\Dataset::PRIMARY_KEY_NAME,
                         '#keyFieldName'=>$foundKeyColumn['#field'],
                         '#keyTupleFieldNo'=>$foundKeyColumn['#tupleFieldNo']
                     ];

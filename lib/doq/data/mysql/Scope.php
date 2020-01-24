@@ -65,7 +65,7 @@ class Scope extends \doq\data\Scope
                 $this->curType=self::SW_ONE_FIELD;
                 $this->curTuple=&$masterScope->curTuple;
             } else {
-                $pkIndexName='*PRIMARY*';
+                $pkIndexName=\doq\data\Dataset::PRIMARY_KEY_NAME;
                 if(isset($this->datanode->dataset->indexes[$pkIndexName])) {
                     $this->curType=self::SW_INDEX_RECORDS;
                     $this->index=&$datanode->dataset->indexes[$pkIndexName];

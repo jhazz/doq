@@ -9,9 +9,9 @@ namespace doq\data;
  */
 class Datanode
 {
-    const NT_COLUMN='! Column';
-    const NT_SUBCOLUMNS='! Subcolumns';
-    const NT_DATASET='! Dataset';
+    const NT_COLUMN='COLUMN';
+    const NT_SUBCOLUMNS='SUBCOLUMNS';
+    const NT_DATASET='DATASET';
 
     public $type;
     /** @var Array */

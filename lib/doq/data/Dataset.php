@@ -3,6 +3,8 @@ namespace doq\data;
 
 abstract class Dataset
 {
+    const PRIMARY_KEY_NAME='*PRIMARY*';
+
     public $name;
     public $queryDefs;
     abstract protected function makeScope(Datanode $datanode);
@@ -24,6 +26,42 @@ abstract class Dataset
         trigger_error('Abstract Dataset class should not used to create itself!', E_USER_ERROR);
     }
 
+    /**
+     * Sometime useful to make tupleFields list inside Dataset
+     */
+    public function &getTupleFields(){
+        if(isset($this->tupleFields)){
+            return $this->tupleFields;
+        } else {
+            $fieldDefs=&$this->queryDefs['@dataset']['@fields'];
+            foreach ($fieldDefs as $fieldNo=>&$fieldDef) {
+                if(isset($fieldDef['#tupleFieldNo'])){
+                    $this->tupleFields[$fieldDef['#tupleFieldNo']]=&$fieldDef;
+                }
+            }
+        };
+        return $this->tupleFields;
+    }
+
+    /**
+     * Sometime useful to make tupleFields list inside Dataset
+     */
+    public function &getColumns(){
+        if(isset($this->columns)){
+            return $this->columns;
+        } else {
+            $this->columns=[];
+            $fieldDefs=&$this->queryDefs['@dataset']['@fields'];
+            foreach ($fieldDefs as $fieldNo=>&$fieldDef) {
+                $type=$fieldDef['#type'];
+                if($type!='virtual'){
+                    $this->columns[$fieldDef['#columnId']]=&$fieldDef;
+                }
+            }
+        };
+        return $this->columns;
+    }
+
     /** Routine that collects field names from queryDefs dataset
      * 
      * @param $queryDefs
@@ -39,6 +77,7 @@ abstract class Dataset
         }
     }
 
+    
     public static function getFieldByColumnId($findColumnId, &$queryDefs)
     {
         foreach ($queryDefs['@dataset']['@fields'] as $i=>&$field) {

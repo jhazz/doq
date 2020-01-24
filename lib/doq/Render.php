@@ -23,6 +23,15 @@ class Render
         $this->fragments=[];
     }
 
+    /**
+     * 
+     */
+    public function build(&$datanode, &$template)
+    {
+        list($ok, $scopeStack)=\doq\data\ScopeStack::create($datanode, $datanode->name.':');
+        return $this->fromTemplate($scopeStack, $template, $template->rootBlock);
+    }
+
     public function addStyle($styleSelector, $style)
     {
         if (isset($this->cssStyles[$styleSelector])) {
@@ -54,12 +63,6 @@ class Render
             $result[]=$cssSelector;
         }
         return $result;
-    }
-
-    public function build(&$datanode, &$template)
-    {
-        list($ok, $scopeStack)=\doq\data\ScopeStack::create($datanode, $datanode->name.':');
-        return $this->fromTemplate($scopeStack, $template, $template->rootBlock);
     }
 
     public function fromTemplate(&$scopeStack, &$template, &$block)

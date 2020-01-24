@@ -3,11 +3,11 @@ namespace doq\data\mysql;
 
 class Dataset extends \doq\data\Dataset
 {
-#    public $params;
     public $connection;
     public $tuples;
     public $indexes;
     public static $useFetchAll;
+
 
     public function __construct(&$queryDefs, $newDatasetName)
     {
