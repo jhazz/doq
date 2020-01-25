@@ -8,12 +8,12 @@ class Field {
     } else $path='';
 
     if($path!=='') {
-      $scopeStack->push($path);
+      $scopeStack->open($path);
     }
     $scope=$scopeStack->top;
     $render->out[]='<input type="text" value="'.$scope->value().'"><br/><span style="font-size:10px;">{'.$scope->path.'}</span>';
     if($path!=='') {
-      $scopeStack->pop();
+      $scopeStack->close();
     }
 
     return true;
