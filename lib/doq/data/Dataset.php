@@ -47,32 +47,28 @@ abstract class Dataset
      * Sometime useful to make tupleFields list inside Dataset
      */
     public function &getColumns(){
-        if(isset($this->columns)){
-            return $this->columns;
-        } else {
-            $this->columns=[];
-            $fieldDefs=&$this->queryDefs['@dataset']['@fields'];
-            foreach ($fieldDefs as $fieldNo=>&$fieldDef) {
-                $type=$fieldDef['#type'];
-                if($type!='virtual'){
-                    $this->columns[$fieldDef['#columnId']]=&$fieldDef;
-                }
+        $columns=[];
+        $fieldDefs=&$this->queryDefs['@dataset']['@fields'];
+        foreach ($fieldDefs as $fieldNo=>&$fieldDef) {
+            $type=$fieldDef['#type'];
+            if($type!='virtual'){
+                $columns[$fieldDef['#columnId']]=&$fieldDef;
             }
-        };
-        return $this->columns;
+        }
+    return $columns;
     }
 
     /** Routine that collects field names from queryDefs dataset
      * 
      * @param $queryDefs
      * */
-    public static function collectFieldList(&$queryDefs, &$fieldList)
+    public static function collectFieldDefs(&$queryDefs, &$fieldDefsList)
     {
         $fields=&$queryDefs['@dataset']['@fields'];
         foreach ($fields as $i=>&$field) {
-            $fieldList[]=&$field;
+            $fieldDefsList[]=&$field;
             if (isset($field['@dataset'])) {
-                self::collectFieldList($field, $fieldList);
+                self::collectFieldDefs($field, $fieldDefsList);
             }
         }
     }

@@ -65,75 +65,79 @@ function main()
         
     // } while (!$scope->seek(\doq\data\Scope::TO_NEXT));
     // $scopeStack->close();
-    $fields=[];
-    \doq\data\Dataset::collectFieldList($datanode->dataset->queryDefs, $fields);
+    #$fields=[];
+    #\doq\data\Dataset::collectFieldList($datanode->dataset->queryDefs, $fields);
     #print '<pre>';
     #\doq\Logger::debug('app',$fields);
-    function extractNode(\doq\data\Datanode $node,$level=0){
-                if($level>10){
+    function extractNode(\doq\data\Datanode $node, $parentPath='', $level=0)
+    {
+        if($level>10){
             print 'Reach maximum level 10<br>';
             return;
         }
-        ([\doq\data\Datanode::NT_COLUMN=>function($aNode,$level){
-            print '[COLUMN:'.$aNode->name.']<br>';
-        },
-        \doq\data\Datanode::NT_SUBCOLUMNS=>function ($aNode){
-            print '[SUBCOLUMNS:'.$aNode->name.']<br>';
-            extractNode($childNode,$level+1);
-        },
-        \doq\data\Datanode::NT_DATASET=>function ($aNode,$level){
-            $s='';
-            for ($i=$level;$i>0;$i--) {
-                $s.='&nbsp;&nbsp;&nbsp;';
-            }
-            print $s.'"#datasetName:"'.$aNode->name."\",\n";
-            
-            $fieldsStr='';
-            // $fieldDefs=$aNode->dataset->queryDefs['@dataset']['@fields'];
-            $first=true;
-            $columns=$aNode->dataset->getColumns();
-            foreach ($columns as $columnId=>$fieldDef) {
-                
-                $type=$fieldDef['#type'];
-                 if (!$type) {
-                     throw new \Exception('Field '.$fieldDef['#field'].' has no type! JSON could be invalid');
-                 }
+        
+        
+        if($node->type!==\doq\data\Datanode::NT_DATASET){
+            throw new \Exception('Not a dataset!');
+        }
+        $parentPath.='/'.$node->name;
+        $s='';
+        for ($i=$level;$i>0;$i--) {
+            $s.='&nbsp;&nbsp;&nbsp;';
+        }
+        print $s.'"#nodeName:"'.$node->name."\",\n";
+        // IS EQUAL print $s.'"#detailName:"'.$node->dataset->queryDefs['#detailDatasetName']."\",\n";
+        print $s.'"#dataset:"'.$node->dataset->queryDefs['@dataset']['#datasetName']."\",\n";
+        $fieldsStr='';
+        // $fieldDefs=$node->dataset->queryDefs['@dataset']['@fields'];
+        $first=true;
+        $fieldDefs=[];    //=$node->dataset->getColumns();
+        \doq\data\Dataset::collectFieldDefs($node->dataset->queryDefs, $fieldDefs);
+        foreach ($fieldDefs as $fieldPath=>&$fieldDef) {
+            $type=$fieldDef['#type']; 
+            $kind=$fieldDef['#kind']; 
+            if (!$type) {
+                    throw new \Exception('Field '.$fieldDef['#field'].' has no type! JSON could be invalid');
+                }
 
-                if ($type!='virtual') {
-                    if (!$first) {
-                        $fieldsStr.=',  ';
-                    }
-                    $fieldsStr.='"'.$fieldDef['#field'].'":';
-                    $fieldsStr.='"'.$type.'"';
-                    $first=false;
-                }
-            
+            if (!$first) {
+                $fieldsStr.=',  ';
             }
-            print $s.'"@fields":['.$fieldsStr."],\n";
-            print $s."\"@data\":[";
-            
-            foreach($aNode->dataset->tuples as $rowNo=>&$tuple){
-                $rowStr='';
-                
-                foreach ($tuple as $tupleFieldNo=>&$value) {
-                    if ($rowStr) {
-                        $rowStr.=', ';
-                    }   
-                    $rowStr.='"'.$value.'"';
-                }
-                print $s.'['.$rowStr."],\n";
+            $fieldsStr.="\n".'"'.$parentPath.'/'.$fieldDef['#field'].'":{';
+            $fieldsStr.='"type":"'.$type.'"';
+            $first=false;
+            if(($kind=='aggregation')||($kind=='lookup')) { 
+                $fieldsStr.=', "#refSchema":"'.$fieldDef['#refSchema'].'"';
+                $fieldsStr.=', "#refDataset":"'.$fieldDef['#refDataset'].'"';
+                $fieldsStr.=', "#kind":"'.$kind.'"';
+                $fieldsStr.=', "#refType":"'.$fieldDef['#refType'].'"';
             }
-            print $s.']';
-            print "\n";
-            if(isset($aNode->childNodes)){
-                foreach($aNode->childNodes as $childNodeName=>&$childNode){
-                    if($childNode->type==\doq\data\Datanode::NT_DATASET){
-                        extractNode($childNode,$level+1);
-                    }
+            $fieldsStr.='}';
+        
+        }
+        print $s.'"@fields":['.$fieldsStr."],\n\n";
+        print $s."\"@data\":[";
+        
+        foreach($node->dataset->tuples as $rowNo=>&$tuple){
+            $rowStr='';
+            
+            foreach ($tuple as $tupleFieldNo=>&$value) {
+                if ($rowStr) {
+                    $rowStr.=', ';
+                }   
+                $rowStr.='"'.$value.'"';
+            }
+            print $s.'['.$rowStr."],\n";
+        }
+        print $s.']';
+        print "\n\n";
+        if(isset($node->childNodes)){
+            foreach($node->childNodes as $childNodeName=>&$childNode){
+                if($childNode->type==\doq\data\Datanode::NT_DATASET){
+                    extractNode($childNode, $parentPath, $level+1);
                 }
             }
         }
-        ])[$node->type]($node,$level);
     }
     print "<pre>";
     extractNode($datanode);
