@@ -54,96 +54,131 @@ function main()
         print "$s\n";
     }
 
-    print "<hr>";
+}
 
-    $datanode=$products;
-    
-    
-    // list($ok, $scopeStack)=\doq\data\ScopeStack::create($datanode, $datanode->name.':');
-    // list($ok, $scope)=$scopeStack->open('');
-    // do { 
-        
-    // } while (!$scope->seek(\doq\data\Scope::TO_NEXT));
-    // $scopeStack->close();
-    #$fields=[];
-    #\doq\data\Dataset::collectFieldList($datanode->dataset->queryDefs, $fields);
-    #print '<pre>';
-    #\doq\Logger::debug('app',$fields);
-    function extractNode(\doq\data\Datanode $node, $parentPath='', $level=0)
-    {
-        if($level>10){
-            print 'Reach maximum level 10<br>';
-            return;
-        }
-        
-        
-        if($node->type!==\doq\data\Datanode::NT_DATASET){
-            throw new \Exception('Not a dataset!');
-        }
-        $parentPath.='/'.$node->name;
-        $s='';
-        for ($i=$level;$i>0;$i--) {
-            $s.='&nbsp;&nbsp;&nbsp;';
-        }
-        print $s.'"#nodeName:"'.$node->name."\",\n";
-        // IS EQUAL print $s.'"#detailName:"'.$node->dataset->queryDefs['#detailDatasetName']."\",\n";
-        print $s.'"#dataset:"'.$node->dataset->queryDefs['@dataset']['#datasetName']."\",\n";
-        $fieldsStr='';
-        // $fieldDefs=$node->dataset->queryDefs['@dataset']['@fields'];
-        $first=true;
-        $fieldDefs=[];    //=$node->dataset->getColumns();
-        \doq\data\Dataset::collectFieldDefs($node->dataset->queryDefs, $fieldDefs);
-        foreach ($fieldDefs as $fieldPath=>&$fieldDef) {
-            $type=$fieldDef['#type']; 
-            $kind=$fieldDef['#kind']; 
-            if (!$type) {
-                    throw new \Exception('Field '.$fieldDef['#field'].' has no type! JSON could be invalid');
-                }
+function extractor(){
+    $schemaFile=$GLOBALS['doq']['env']['#commonPath'].'/schema.php';
+    $schemaFileTime=filemtime($schemaFile);
 
-            if (!$first) {
-                $fieldsStr.=',  ';
-            }
-            $fieldsStr.="\n".'"'.$parentPath.'/'.$fieldDef['#field'].'":{';
-            $fieldsStr.='"type":"'.$type.'"';
-            $first=false;
-            if(($kind=='aggregation')||($kind=='lookup')) { 
-                $fieldsStr.=', "#refSchema":"'.$fieldDef['#refSchema'].'"';
-                $fieldsStr.=', "#refDataset":"'.$fieldDef['#refDataset'].'"';
-                $fieldsStr.=', "#kind":"'.$kind.'"';
-                $fieldsStr.=', "#refType":"'.$fieldDef['#refType'].'"';
-            }
-            $fieldsStr.='}';
-        
+    if (isset($GLOBALS['doq']['env']['@caches']['querys'])) {
+        list($ok, $queryCache)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['querys']);
+        if ($ok) {
+            doq\data\View::setDefaultCache($queryCache);
         }
-        print $s.'"@fields":['.$fieldsStr."],\n\n";
-        print $s."\"@data\":[";
-        
-        foreach($node->dataset->tuples as $rowNo=>&$tuple){
-            $rowStr='';
-            
-            foreach ($tuple as $tupleFieldNo=>&$value) {
-                if ($rowStr) {
-                    $rowStr.=', ';
-                }   
-                $rowStr.='"'.$value.'"';
-            }
-            print $s.'['.$rowStr."],\n";
+    }
+
+    if (isset($GLOBALS['doq']['env']['@caches']['templates'])) {
+        list($ok, $templatesCache)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['templates']);
+        if ($ok) {
+            doq\Template::setDefaultCache($templatesCache);
         }
-        print $s.']';
-        print "\n\n";
-        if(isset($node->childNodes)){
-            foreach($node->childNodes as $childNodeName=>&$childNode){
-                if($childNode->type==\doq\data\Datanode::NT_DATASET){
-                    extractNode($childNode, $parentPath, $level+1);
+    }
+    doq\Template::setDefaultTemplatesPath($GLOBALS['doq']['env']['#templatesPath']);
+    doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
+
+    list($ok, $viewProducts)=doq\data\View::create(
+        $GLOBALS['doq']['schema'],
+        $GLOBALS['doq']['views']['Products'],
+        'Products1');
+    $viewProducts->prepare($schemaFileTime, true);
+    doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
+
+    $params=[];
+    list($ok, $products)=$viewProducts->read($params, 'VIEW1');
+
+
+    function walkOverFields($currentPath, &$fieldDefs, &$result){
+        $keyField=$fieldDefs['#keyField'];
+        foreach ($fieldDefs['@fields'] as $fieldNo=>&$fieldDef) {
+            $ref=isset($fieldDef['#ref'])?$fieldDef['#ref']:false; 
+            $kind=false;
+            if(isset($fieldDef['#kind'])){
+                $kind = $f['#kind'] = $fieldDef['#kind'];
+            }
+            $f=['#type'=>$fieldDef['#type']];
+            // if(isset($fieldDef['#refSchema'])){
+            //     $f['#refSchema']=$fieldDef['#refSchema'];
+            // }
+            if(isset($fieldDef['#label'])){
+                $f['#label'] = $fieldDef['#label'];
+            }
+            if($currentPath!='') {
+                $path=$currentPath.'/'.$fieldDef['#field'];
+            } else {
+                $path=$fieldDef['#field'];
+            }
+            if($path==$keyField){
+                $f['isKeyField']=1;
+            }
+            if(isset($fieldDef['#columnId'])){
+                $f['#columnId']=$fieldDef['#columnId'];
+            }
+            if(isset($fieldDef['#tupleFieldNo'])) {
+                $f['#tupleFieldNo']=intval($fieldDef['#tupleFieldNo']);
+            }
+
+            if(($kind=='lookup')||($kind=='aggregation')) {
+                // if(isset($fieldDef['#refDataset'])){
+                //     $f['#refDataset'] = $fieldDef['#refDataset'];
+                // }
+                // if(isset($fieldDef['#ref'])){
+                //     $f['#ref'] = $fieldDef['#ref'];
+                // }
+                $reftype=false;
+                if(isset($fieldDef['#refType'])) {
+                    $reftype= $f['#refType']=$fieldDef['#refType'];
                 }
+                $result[$path] = $f;
+
+                if ($reftype=='join') {
+                    walkOverFields($path, $fieldDef['@dataset'], $result);
+                }
+            } else {
+                $result[$path] = $f;
             }
         }
     }
-    print "<pre>";
-    extractNode($datanode);
 
-    #\doq\Logger::debug('app',$datanode->childNodes);
+    function toPlainArray(\doq\data\Datanode $node, &$dstArray, $parentPath='',  $level=10){
+        if($level<0){
+            return;
+        }
+        if($node->type!==\doq\data\Datanode::NT_DATASET){
+            throw new \Exception('Not a dataset!');
+        }
+        $attrs=[
+            '#nodeName'=>$node->name,
+            '#dataSource'=>$node->dataset->queryDefs['#dataSource'],
+            '#schema'=>$node->dataset->queryDefs['@dataset']['#schema'],
+            '#dataset'=>$node->dataset->queryDefs['@dataset']['#datasetName'],
+            '#keyField'=>$node->dataset->queryDefs['@dataset']['#keyField']
+        ];
+        $dstArray[$node->name]=&$attrs;
+        walkOverFields($parentPath, $node->dataset->queryDefs['@dataset'], $r);
+        $attrs['@fields']=$r;
+        $rows=[];
+        foreach($node->dataset->tuples as $rowNo=>&$tuple){
+            $rows[]=$tuple;
+        }
+        $attrs['@tuples']=&$rows;
+        if(isset($node->childNodes)){
+            foreach($node->childNodes as $childNodeName=>&$childNode){
+                if($childNode->type==\doq\data\Datanode::NT_DATASET){
+                    toPlainArray($childNode, $dstArray, $parentPath, $level-1);
+                }
+            }
+        }
+        return $dstArray;
+    }
+
+    print "<pre>";
+    $dstArray=[];
+    toPlainArray($products, $dstArray);
+    print json_encode($dstArray, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+
 }
-  
-main();
+
+extractor();
+
+#main();
 ?>
