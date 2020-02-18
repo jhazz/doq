@@ -11,7 +11,7 @@ class ScopeStack
         $scopeStack=new ScopeStack();
         $scope=$datanode->dataset->makeScope($datanode, $path, $indexName, $indexKey);
         $scopeStack->pushScope($scope);
-        return [true,$scopeStack];
+        return [$scopeStack, null];
     }
 
     private function pushScope(Scope $scope)
@@ -30,7 +30,7 @@ class ScopeStack
         if (($apathLen>1) && ($apath[0]=='') && ($scopeStackLen)) {
             $rootScope=$this->stack[0];
             $this->pushScope($rootScope);
-            return [true,$rootScope];
+            return [$rootScope,null];
         }
 
         $scope=$this->top;
@@ -40,7 +40,7 @@ class ScopeStack
         $path=$scope->path;
         if ($addPath=='') {
             $this->stack[]=$scope;
-            return [true,$scope];
+            return [$scope, null];
         }
 
 
@@ -96,7 +96,7 @@ class ScopeStack
         }
 
         $this->pushScope($scope);
-        return [true,$scope];
+        return [$scope, null];
     }
 
     

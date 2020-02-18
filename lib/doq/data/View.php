@@ -20,7 +20,7 @@ class View
     public static function create(&$cfgSchema, &$cfgView, $viewId=false)
     {
         $r=new View($cfgSchema, $cfgView, $viewId);
-        return[true,&$r];
+        return[&$r,null];
     }
 
     public function __construct(&$cfgSchema, &$cfgView, $viewId=false)
@@ -81,8 +81,8 @@ class View
                 $this->cache->put($configMtime, $this->viewId, $this->queryDefs);
             }
         } else {
-            list($ok, $data)=$this->cache->get($configMtime, $this->viewId);
-            if ($ok) {
+            list($data, $err)=$this->cache->get($configMtime, $this->viewId);
+            if ($err===null) {
                 if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
                     \doq\Logger::debug('view', 'Reuse queryDefs from cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
                 }
@@ -102,14 +102,16 @@ class View
     * Executes queryDefs that reads data from a database to datasets
     * @param array $params any paramaters to a queryDefs, i.e. @filters
     * @param string $newDatasetName any string identifies creating Dataset 
-    * @return array (boolean status, \doq\data\Datanode node)
+    * @return array (\doq\data\Datanode node, err)
     */
     public function read(&$params, $newDatasetName)
     {
         $datanode=new \doq\data\Datanode(\doq\data\Datanode::NT_DATASET, $newDatasetName);
         if ($this->readQuery($this->queryDefs, $datanode, $params, $newDatasetName)) {
-            return [true,$datanode];
-        }        
+            return [$datanode,null];
+        } else {
+            return [false,'No readQuery'];
+        }
     }
 
     
@@ -120,14 +122,16 @@ class View
     private function readQuery(&$queryDefs, \doq\data\Datanode $datanode, &$params, $newDatasetName)
     {
         $providerName=$queryDefs['#dataProvider'];
-        list($ok, $dataset)=\doq\data\Dataset::create($providerName, $queryDefs, $newDatasetName);
-        if (!$ok) {
-            throw new \Exception($dataset);
+        list($dataset, $err)=\doq\data\Dataset::create($providerName, $queryDefs, $newDatasetName);
+        if ($err!==null) {
+            throw new \Exception($err);
         }
         $datanode->dataset=$dataset;
-        if ($dataset->connect()) {
-            $dataset->read($params);
+        list($connection,$err)=$dataset->connect();
+        if($err!==null) {
+            throw new \Exception($err);
         }
+        $dataset->read($params);
         $datanode->wrap($queryDefs, $dataset);
         if (isset($queryDefs['@subQuery'])) {
             foreach ($queryDefs['@subQuery'] as $i=>&$subQuery) {
@@ -135,9 +139,9 @@ class View
                     $detailDatasetName=$subQuery['#detailDatasetName'];
                     $masterFieldNo=$subQuery['#masterFieldNo'];
                     $masterTupleFieldNo=$dataset->queryDefs['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
-                    list($ok, $parentValueSet)=$dataset->getTupleFieldValues($masterTupleFieldNo);
-                    if (!$ok) {
-                        return false;
+                    list($parentValueSet, $err)=$dataset->getTupleFieldValues($masterTupleFieldNo);
+                    if ($err!==null) {
+                        return $err;
                     }
                     $newParams=[];
                     # detailToMasterField STILL NOT KNOWN ! Will be evaluated later
@@ -236,7 +240,7 @@ class View
             $cfgDatasource=&$this->cfgSchema['@datasources'][$datasourceName];
             $dataConnectionName=$cfgDatasource['#dataConnection'];
             $queryDefs['#dataConnection']=$dataConnectionName;
-            list($ok, $connection) = \doq\data\Connections::getConnection($dataConnectionName);
+            list($connection,$err) = \doq\data\Connections::getConnection($dataConnectionName);
             $providerName=$connection->provider;
             $queryDefs['#dataProvider']=$providerName;
         } else {

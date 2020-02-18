@@ -10,7 +10,7 @@ class Render
 
     public static function create()
     {
-        return [true, new Render()];
+        return [new Render(), null];
     }
 
     public function __construct()
@@ -28,7 +28,7 @@ class Render
      */
     public function build(&$datanode, &$template)
     {
-        list($ok, $scopeStack)=\doq\data\ScopeStack::create($datanode, $datanode->name.':');
+        list($scopeStack, $err)=\doq\data\ScopeStack::create($datanode, $datanode->name.':');
         return $this->fromTemplate($scopeStack, $template, $template->rootBlock);
     }
 

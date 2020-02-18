@@ -37,8 +37,8 @@ class DataGrid
         } else {
             $path='';
         }
-        list($ok, $scope)=$scopeStack->open($path);
-        if (!$ok) {
+        list($scope, $err)=$scopeStack->open($path);
+        if ($err!==null) {
             return false;
         }
         $datanode=$scope->datanode;
@@ -84,8 +84,8 @@ class DataGrid
                 $rowScope=$scopeStack->top;
                 $key=$rowScope->curTupleKey;
                 $rowScope->path=$basePath.'['.$key.']';
-                list($ok, $cellScope)=$scopeStack->open($cellPath);
-                if ($ok) {
+                list($cellScope, $err)=$scopeStack->open($cellPath);
+                if ($err===null) {
                     if (isset($cellBlocks[$cellPath])) {
                         $render->fromTemplate($scopeStack, $template, $cellBlocks[$cellPath]);
                     } elseif (isset($cellBlocks['*'])) {

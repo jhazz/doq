@@ -38,7 +38,7 @@ class Template
         } else {
             $newTemplate=new self($templatesPath, false);
         }
-        return [true, $newTemplate];
+        return [$newTemplate, null];
     }
 
     /**
@@ -67,15 +67,18 @@ class Template
             $timeSource=filemtime($this->srcTemplateFilename);
         }
         
-        $cachePresents=false;
+        $err=null;
+        $doLoadTemplate=true;
         if ($this->isCacheable) {
-            list($cachePresents, $cachedData) = $this->cache->get($timeSource, $key);
+            list($cachedData, $err) = $this->cache->get($timeSource, $key);
+            if ($err===null) {
+                $this->rootBlock=unserialize($cachedData);
+                \doq\Logger::debug('template', "Reuse cached template parser data from {$filenameParsed}", __FILE__);
+                $doLoadTemplate=false;
+            }
         }
 
-        if ($cachePresents) {
-            $this->rootBlock=unserialize($cachedData);
-            \doq\Logger::debug('template', "Reuse cached template parser data from {$filenameParsed}", __FILE__);
-        } else {
+        if ($doLoadTemplate) {
             try {
                 $this->templateText=file_get_contents($this->srcTemplateFilename);
             } catch (Exception $e) {
@@ -84,11 +87,14 @@ class Template
             }
             $this->templateSplitted=preg_split('/\{\%(.*?)\%\}/', $this->templateText, -1, PREG_SPLIT_DELIM_CAPTURE);
             $this->rootBlock=array('tag'=>'root');
-            $this->parse(0, $this->rootBlock);
-            if ($this->isCacheable) {
-                $this->cache->put($timeSource, $key, $this->rootBlock);
-            }
         }
+
+
+        $this->parse(0, $this->rootBlock);
+        if ($this->isCacheable) {
+            $this->cache->put($timeSource, $key, $this->rootBlock);
+        }
+        
         return $this;
     }
 

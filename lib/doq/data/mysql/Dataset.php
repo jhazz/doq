@@ -23,11 +23,10 @@ class Dataset extends \doq\data\Dataset
     public function connect()
     {
         $r=\doq\data\Connections::getConnection($this->queryDefs['#dataConnection']);
-        if ($r[0]) {
-            $this->connection=$r[1];
-            return true;
+        if($r[1]===null){
+            $this->connection=$r[0];
         }
-        return false;
+        return $r;
     }
 
 
@@ -59,7 +58,7 @@ class Dataset extends \doq\data\Dataset
             \doq\Logger::debugDataQuery($this->name,$s,__FILE__,__LINE__);
         }
         
-        $this->mysqlresult=$this->connection->mysqli->query($s);
+        $this->mysqlresult = $this->connection->mysqli->query($s);
         if ($this->mysqlresult!==false) {
             if (self::$useFetchAll) {
                 $this->tuples=$this->mysqlresult->fetch_all(MYSQLI_NUM);
@@ -153,9 +152,9 @@ class Dataset extends \doq\data\Dataset
                     $valueSet[$v]=1;
                 }
             }
-            return [true,array_keys($valueSet)];
+            return [array_keys($valueSet), null];
         } else {
-            return [false,null];
+            return [false,'Has no tuples data'];
         }
     }
 

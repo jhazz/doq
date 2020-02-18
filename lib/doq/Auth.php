@@ -6,11 +6,11 @@ require_once 'Session.php';
 class Auth {
   public static function getDatabase() {
     $dataConnection=$GLOBALS['doq']['env']['@session']['#sessionDataConnection'];
-    list($ok,$mysql)=\doq\data\Connection::getDataConnection($dataConnection);
-    if(!$ok){
-      return ['error'=>'No database connection'];
+    list($mysql, $err)=\doq\data\Connection::getDataConnection($dataConnection);
+    if($err!==null){
+      return [false, $err];
     }
-    return ['mysql'=>$mysql];
+    return [$mysql, null];
   }
 
   public static function getFormNonce() {

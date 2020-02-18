@@ -55,9 +55,9 @@ class SerialFileCache extends \doq\Cache
         $fileName=$this->cacheFolder.'/'.$this->filePrefix.$key.$this->fileSuffix;
         if (file_exists($fileName) && (filemtime($fileName)===$prevModifyTime)) {
             $data=unserialize(file_get_contents($fileName));
-            return [true,&$data];
+            return [&$data,null];
         } else {
-            return [false,null];
+            return [false,'Cache missed'];
         }
     }
   

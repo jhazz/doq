@@ -24,7 +24,7 @@ abstract class Cache
         $cacheType=$cacheParams['#type'];
         switch ($cacheType) {
             case 'serialfile':
-                return [true, new cache\SerialFileCache($cacheParams)];
+                return [new cache\SerialFileCache($cacheParams), null];
                 /*
             case 'jsonfile':
                 return [true,new JSONFileCache($cacheParams)];
@@ -32,8 +32,9 @@ abstract class Cache
                 return new MemoryСache($cacheParams);
                 */
             default:
-                trigger_error(\doq\tr('doq','Unknown cache type "%s"', $cacheType), E_USER_ERROR);
-                return false;
+                $err=\doq\tr('doq', 'Unknown cache type "%s"', $cacheType);
+                trigger_error($err, E_USER_ERROR);
+                return [false, $err];
             end;
             }
     }

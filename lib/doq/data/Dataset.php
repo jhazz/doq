@@ -15,7 +15,7 @@ abstract class Dataset
     {
         switch ($providerName) {
         case 'mysql':
-            return [true,new mysql\Dataset($queryDefs, $newDatasetName)];
+            return [new mysql\Dataset($queryDefs, $newDatasetName),null];
         default:
             return [false,'Unknown provider '.$providerName];
         }

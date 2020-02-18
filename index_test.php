@@ -35,13 +35,13 @@ function main() {
   if($viewQueryCacher===false) {
     return;
   }
-  list($ok,$viewProducts)=doq\data\View::create($GLOBALS['doq']['model'],$GLOBALS['doq']['views']['Products'],$GLOBALS['doq']['env']['@dataConnections'],'Products');
+  list($$viewProducts,$err)=doq\data\View::create($GLOBALS['doq']['model'],$GLOBALS['doq']['views']['Products'],$GLOBALS['doq']['env']['@dataConnections'],'Products');
 
   $viewProducts->prepare($configMTime,true);
   doq\data\Scripter::dumpQuery($viewProducts->query);
 
   $params=[];
-  list($ok,$products)=$viewProducts->read($params,'products');
+  list($products, $err)=$viewProducts->read($params,'products');
 
   print $products->dataset->dumpData();
 
@@ -50,7 +50,7 @@ function main() {
   $template->setCachePath($GLOBALS['doq']['env']['#parsedTemplatesCachePath']);
   if ($template->load('page1')){
     print '<meta http-equiv="content-type" content="text/html; charset=utf-8" /><pre>';
-    $page1=doq\Render::create();
+    list($page1,$err) =doq\Render::create();
     $page1->build($products,$template);
     foreach ($page1->out as $i=>&$s) {
       print "{$s}\n";  

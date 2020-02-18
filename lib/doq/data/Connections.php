@@ -19,12 +19,13 @@ class Connections
 	public static function getConnection($connectionName)
 	{
 		if (!isset(self::$config[$connectionName])) {
-			trigger_error(\doq\tr('doq','Unknown connection name %s',$connectionName),E_USER_ERROR);
-			return [false,NULL];
+            $err=\doq\tr('doq', 'Unknown connection name %s', $connectionName);
+			trigger_error($err,E_USER_ERROR);
+			return [false,$err];
 		}
 
 		if (isset(self::$items[$connectionName])) {
-			return [true,&self::$items[$connectionName]];
+			return [&self::$items[$connectionName],null];
 		} else {
 			$cfgConnection=&self::$config[$connectionName];
 			if (isset($cfgConnection['@environments'])) {
@@ -37,16 +38,18 @@ class Connections
 						if (isset($dataEnvironments['*'])) {
 							$cfgConnection=&$dataEnvironments['*'];
 						} else {
-							trigger_error(\doq\tr('doq','Environment variable DOQ_ENVIRONMENT has value "%s" that not found in configuration. You may use "*" as default connection configuration',$currentEnvironment),E_USER_ERROR);
-							return [false,NULL];
+                            $err=\doq\tr('doq', 'Environment variable DOQ_ENVIRONMENT has value "%s" that not found in configuration. You may use "*" as default connection configuration', $currentEnvironment);
+							trigger_error($err,E_USER_ERROR);
+							return [false,$err];
 						}
 					}
 				} else {
 					if (isset($dataEnvironments['*'])) {
 						$cfgConnection=&$dataEnvironments['*'];
 					} else {
-						trigger_error(\doq\tr('doq','Environment variable DOQ_ENVIRONMENT is undefined and "*" environment is absent in connection configuration'),E_USER_ERROR);
-						return [false,NULL];
+                        $err=\doq\tr('doq', 'Environment variable DOQ_ENVIRONMENT is undefined and "*" environment is absent in connection configuration');
+						trigger_error($err,E_USER_ERROR);
+						return [false,$err];
 					}
 				}
 			
@@ -57,10 +60,11 @@ class Connections
 				case 'mysql':
 					$connection=new \doq\data\mysql\Connection($connectionName,$cfgConnection);
 					self::$items[$connectionName]=&$connection;
-					return [true,&$connection];
-				default:
-					trigger_error(\doq\t('Unknown data provider name %s',$providerName),E_USER_ERROR);
-					return [false,NULL];
+					return [&$connection,null];
+                default:
+                    $err=\doq\t('Unknown data provider name %s', $providerName);
+					trigger_error($err,E_USER_ERROR);
+					return [false,$err];
 			}
 		}
 	}

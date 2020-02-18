@@ -1,28 +1,28 @@
 <?php
 require_once '../autorun.php';
 
-function main()
+function htmlRenderer()
 {
     $schemaFile=$GLOBALS['doq']['env']['#commonPath'].'/schema.php';
     $schemaFileTime=filemtime($schemaFile);
 
     if (isset($GLOBALS['doq']['env']['@caches']['querys'])) {
-        list($ok, $queryCache)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['querys']);
-        if ($ok) {
+        list($queryCache,$err)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['querys']);
+        if ($err===null) {
             doq\data\View::setDefaultCache($queryCache);
         }
     }
 
     if (isset($GLOBALS['doq']['env']['@caches']['templates'])) {
-        list($ok, $templatesCache)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['templates']);
-        if ($ok) {
+        list($templatesCache, $err)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['templates']);
+        if ($err===null) {
             doq\Template::setDefaultCache($templatesCache);
         }
     }
     doq\Template::setDefaultTemplatesPath($GLOBALS['doq']['env']['#templatesPath']);
     doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
 
-    list($ok, $viewProducts)=doq\data\View::create(
+    list($viewProducts,$err)=doq\data\View::create(
         $GLOBALS['doq']['schema'],
         $GLOBALS['doq']['views']['Products'],
         'Products1');
@@ -30,14 +30,14 @@ function main()
     doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
 
     $params=[];
-    list($ok, $products)=$viewProducts->read($params, 'VIEW1');
+    list($products, $err)=$viewProducts->read($params, 'VIEW1');
     //print $products->dataset->dataToHTML();
    
-    list($ok,$template)=\doq\Template::create();
+    list($template, $err)=\doq\Template::create();
     $template->load('page1');
-    list($ok,$page1)=doq\Render::create();
+    list($page1, $err)=doq\Render::create();
     $page1->build($products, $template);
-    print "<html><head><meta charset='utf-8'>'\n";
+    print "<html><head><meta charset='utf-8'>";
     if(count($page1->cssStyles)>0){
         print "<style>";
         foreach($page1->cssStyles as $styleSelector=>&$style){
@@ -56,27 +56,27 @@ function main()
 
 }
 
-function extractor(){
+function jsonLoader(){
     $schemaFile=$GLOBALS['doq']['env']['#commonPath'].'/schema.php';
     $schemaFileTime=filemtime($schemaFile);
 
     if (isset($GLOBALS['doq']['env']['@caches']['querys'])) {
-        list($ok, $queryCache)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['querys']);
-        if ($ok) {
+        list($queryCache, $err)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['querys']);
+        if ($err===null) {
             doq\data\View::setDefaultCache($queryCache);
         }
     }
 
     if (isset($GLOBALS['doq']['env']['@caches']['templates'])) {
-        list($ok, $templatesCache)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['templates']);
-        if ($ok) {
+        list($templatesCache, $err)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['templates']);
+        if ($err===null) {
             doq\Template::setDefaultCache($templatesCache);
         }
     }
     doq\Template::setDefaultTemplatesPath($GLOBALS['doq']['env']['#templatesPath']);
     doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
 
-    list($ok, $viewProducts)=doq\data\View::create(
+    list($viewProducts,$err)=doq\data\View::create(
         $GLOBALS['doq']['schema'],
         $GLOBALS['doq']['views']['Products'],
         'Products1');
@@ -84,7 +84,7 @@ function extractor(){
     doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
 
     $params=[];
-    list($ok, $products)=$viewProducts->read($params, 'VIEW1');
+    list($products, $err)=$viewProducts->read($params, 'VIEW1');
 
 
     function walkOverFields($currentPath, &$fieldDefs, &$result){
@@ -96,9 +96,7 @@ function extractor(){
                 $kind = $f['#kind'] = $fieldDef['#kind'];
             }
             $f=['#type'=>$fieldDef['#type']];
-            // if(isset($fieldDef['#refSchema'])){
-            //     $f['#refSchema']=$fieldDef['#refSchema'];
-            // }
+            // if(isset($fieldDef['#refSchema'])){$f['#refSchema']=$fieldDef['#refSchema'];}
             if(isset($fieldDef['#label'])){
                 $f['#label'] = $fieldDef['#label'];
             }
@@ -118,12 +116,8 @@ function extractor(){
             }
 
             if(($kind=='lookup')||($kind=='aggregation')) {
-                // if(isset($fieldDef['#refDataset'])){
-                //     $f['#refDataset'] = $fieldDef['#refDataset'];
-                // }
-                // if(isset($fieldDef['#ref'])){
-                //     $f['#ref'] = $fieldDef['#ref'];
-                // }
+                // if(isset($fieldDef['#refDataset'])){$f['#refDataset'] = $fieldDef['#refDataset'];}
+                // if(isset($fieldDef['#ref'])){$f['#ref'] = $fieldDef['#ref'];}
                 $reftype=false;
                 if(isset($fieldDef['#refType'])) {
                     $reftype= $f['#refType']=$fieldDef['#refType'];
@@ -178,7 +172,16 @@ function extractor(){
 
 }
 
-extractor();
+print '<a href="?method=json">JSON reader</a> | <a href="?method=html">HTML render</a>';
+switch($_GET['method']){
+    case 'json': 
+        jsonLoader();
+        break;
+    case 'html':
+        htmlRenderer();
+        break;
 
-#main();
+
+}
+
 ?>
