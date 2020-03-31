@@ -7,14 +7,17 @@ return [
 	'#commonPath'=>$ROOT_PATH.'/common',
     '#cachesPath'=>$ROOT_PATH.'/runtime/caches',
     '#templatesPath'=>$ROOT_PATH.'/frontend/templates',
+	'#wwwURL'=>'../../www',
     '@lang'=>[
         '#sourceLang'=>'en',
         '#langBasePath'=>$ROOT_PATH.'/lang'
     ],
     '@log'=>[
-        '#targetType'=>'html_end',
-#        '#targetType'=>'file',
+#        '#targetType'=>'html_end',
+        '#targetType'=>'file',
         '#logMode'=>255,
+        '#clientTokenName'=>'DOQ_CLIENT_TOKEN',
+        '#pageTokenName'=>'DOQ_PAGE_TOKEN',
         '#logsPath'=>$ROOT_PATH.'/runtime/logs'
     ],
 	'@modules'=>[

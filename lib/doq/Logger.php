@@ -64,6 +64,8 @@ abstract class Logger
     const LE_DEBUG_DATAQUERY=128;
     const LE_DEBUG_ALL=32767;
 
+    const TIMEOUT_CLIENT=31536000; # one year
+    
     /** @const Log targets */
     const LT_NONE=0;
     const LT_FILE='file';
@@ -97,12 +99,35 @@ abstract class Logger
         if (isset($env['#targetType'])) {
             $targetType=$env['#targetType'];
         }
+
+        $clientTokenName=$env['#clientTokenName'];
+        if(!$clientTokenName){
+            $clientTokenName='DOQ_CLIENT_TOKEN';
+        }
+        if(!isset($_COOKIE[$clientTokenName])) {
+            $clientToken=substr(md5(random_int (0,PHP_INT_MAX)),0,10);
+            setcookie($clientTokenName, $clientToken, time()+self::TIMEOUT_CLIENT);
+        } else {
+            $clientToken=$_COOKIE[$clientTokenName];
+        }
+
+        $pageTokenName=$env['#pageTokenName'];
+        if(!$pageTokenName){
+            $pageTokenName='DOQ_PAGE_TOKEN';
+        }
+        if (!isset($_COOKIE[$pageTokenName])) {
+            $pageToken=date('ymd_His').'_'.substr(md5(random_int (0,PHP_INT_MAX)),0,6);
+            setcookie($pageTokenName, $pageToken,time()+10);
+        } else {
+            $pageToken=$_COOKIE[$pageTokenName];
+        }
         
+
         switch($targetType){
             case self::LT_FILE:
-                $r=FileLogger::create($env);
-                if ($r[0]) {
-                    self::$loggerInstance=&$r[1];
+                $r=FileLogger::create($env, $clientToken, $pageToken);
+                if ($r[1]===null) {
+                    self::$loggerInstance=&$r[0];
                 } else {
                     self::$loggerInstance=new HTMLEndLogger();
                 }
@@ -357,6 +382,11 @@ abstract class Logger
         return $row1.$row2;
     }
     
+    public static function initJSLoggerMenu()
+    {    
+        print '<script src="'.$GLOBALS['doq']['env']['#wwwURL'].'/doq/router.js"></script>';
+        print '<script src="'.$GLOBALS['doq']['env']['#wwwURL'].'/doq/logger.js"></script>';
+    }
 }
 
 
@@ -369,6 +399,7 @@ class HTMLEndLogger extends Logger {
         $this->logArray=[];
         $this->dataLogArray=[];
     }
+
 
     public function pushMessageToLog($entryType,$data)
     {
@@ -496,12 +527,13 @@ class FileLogger extends Logger
     private $dataLogFileHandle;
     private $targetEnvLogFileHandle;
     private $MessagesWasPushed;
+    private $clientToken;
 
-    public static function create(&$env){
+    
+    public static function create(&$env,$clientToken, $pageToken){
         if(!isset($env['#logsPath'])){
             return [false,'Undefined enviroment parameter #logsPath. Cannot logging to a files'];
         }
-
         $targetLogDir=$env['#logsPath'];
         
         if(!is_dir($targetLogDir)){
@@ -511,24 +543,25 @@ class FileLogger extends Logger
                 return [false,$s];
             }
         }
-        return [true,new self($env)];
+        return [new self($env, $clientToken, $pageToken), null];
     }
 
-    public function __construct (&$env)
+    public function __construct (&$env, $clientToken, $pageToken)
     {
         $this->targetLogDir=$env['#logsPath'];
-        $d=$this->targetLogDir.'/'.$_SERVER['REMOTE_ADDR'].'/'.date('y-m-d__H.i.s');
+        $d=$this->targetLogDir.'/'.$clientToken.'/'.$pageToken.'/'.date('y-m-d__H.i.s');
         if (\mkdir($d, 0777, true)) {
             $this->targetLogFile=$d.'/log.json';
             $this->targetDataLogFile=$d.'/datalog.json';
             $this->targetEnvLogFile=$d.'/env.json';
-
             $this->logFileHandle=fopen($this->targetLogFile, 'w');
             $this->MessagesWasPushed=false;
             $this->dataLogFileHandle=fopen($this->targetDataLogFile, 'w');
             $this->targetEnvLogFileHandle=fopen($this->targetEnvLogFile, 'w');
+            fputs($this->targetEnvLogFileHandle , json_encode(['_SERVER'=>$_SERVER,'env'=>$GLOBALS['doq']['env']] , JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));
         }
     }
+
 
     public function pushMessageToLog($entryType,$data)
     {

@@ -47,7 +47,24 @@ class Dataset extends \doq\data\Dataset
                     $scriptField=$fieldDef['#scriptField'];
                     $where[]=$scriptField.' IN ('.implode($param['@values'], ',').')';
                      break;
-                }
+                case 'LIKE':
+                    $columnId=$param['#columnId'];
+                    $res=self::getFieldByColumnId($columnId, $this->queryDefs);
+                    if (!$res[0]) {
+                        trigger_error(\doq\t('Column with id=%d not found in %s', $columnId, 'dataset'), E_USER_ERROR);
+                    }
+                    $fieldDef=&$res[1];
+                    $scriptField=$fieldDef['#scriptField'];
+                    $where[]='(';
+                    foreach ($param['@values'] as $j=>$v){
+                        if($j>0){
+                            $where[]=' OR ';
+                        }
+                        $where[]='('.$scriptField.' LIKE "%'.$v.'%")';
+                    }
+                    $where[]=')';
+                    break;
+                    }
             }
         }
         if (count($where)) {
@@ -135,7 +152,7 @@ class Dataset extends \doq\data\Dataset
                 \doq\Logger::info('Сейчас буду индексировать ВСЕ');
             }
         } else {
-            $this->tuples=false;
+            $this->tuples=null;
         }
     }
 

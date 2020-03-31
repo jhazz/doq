@@ -22,10 +22,7 @@ function htmlRenderer()
     doq\Template::setDefaultTemplatesPath($GLOBALS['doq']['env']['#templatesPath']);
     doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
 
-    list($viewProducts,$err)=doq\data\View::create(
-        $GLOBALS['doq']['schema'],
-        $GLOBALS['doq']['views']['Products'],
-        'Products1');
+    list($viewProducts,$err)=doq\data\View::create($GLOBALS['doq']['schema'],$GLOBALS['doq']['views']['Products'],'Products1');
     $viewProducts->prepare($schemaFileTime, true);
     doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
 
@@ -56,7 +53,7 @@ function htmlRenderer()
 
 }
 
-function jsonLoader(){
+function jsonLoader($options){
     $schemaFile=$GLOBALS['doq']['env']['#commonPath'].'/schema.php';
     $schemaFileTime=filemtime($schemaFile);
 
@@ -67,6 +64,7 @@ function jsonLoader(){
         }
     }
 
+    /*
     if (isset($GLOBALS['doq']['env']['@caches']['templates'])) {
         list($templatesCache, $err)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['templates']);
         if ($err===null) {
@@ -74,6 +72,7 @@ function jsonLoader(){
         }
     }
     doq\Template::setDefaultTemplatesPath($GLOBALS['doq']['env']['#templatesPath']);
+    */
     doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
 
     list($viewProducts,$err)=doq\data\View::create(
@@ -81,10 +80,18 @@ function jsonLoader(){
         $GLOBALS['doq']['views']['Products'],
         'Products1');
     $viewProducts->prepare($schemaFileTime, true);
-    doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
+    #doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
 
-    $params=[];
-    list($products, $err)=$viewProducts->read($params, 'VIEW1');
+    if($options['@params']) {
+        $params=$options['@params'];
+    } else {
+        $params=[];
+    }
+    $viewId='VIEW1';
+    if(isset($options['#viewId'])){
+        $viewId=$options['#viewId'];
+    }
+    list($products, $err)=$viewProducts->read($params, $viewId);
 
 
     function walkOverFields($currentPath, &$fieldDefs, &$result){
@@ -150,11 +157,13 @@ function jsonLoader(){
         $dstArray[$node->name]=&$attrs;
         walkOverFields($parentPath, $node->dataset->queryDefs['@dataset'], $r);
         $attrs['@fields']=$r;
-        $rows=[];
-        foreach($node->dataset->tuples as $rowNo=>&$tuple){
-            $rows[]=$tuple;
+        if ($node->dataset->tuples!==null) {
+            $rows=[];
+            foreach ($node->dataset->tuples as $rowNo=>&$tuple) {
+                $rows[]=$tuple;
+            }
+            $attrs['@tuples']=&$rows;
         }
-        $attrs['@tuples']=&$rows;
         if(isset($node->childNodes)){
             foreach($node->childNodes as $childNodeName=>&$childNode){
                 if($childNode->type==\doq\data\Datanode::NT_DATASET){
@@ -164,23 +173,154 @@ function jsonLoader(){
         }
         return $dstArray;
     }
-
-    print "<pre>";
     $dstArray=[];
     toPlainArray($products, $dstArray);
     print json_encode($dstArray, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
-
 }
 
-print '<a href="?method=json">JSON reader</a> | <a href="?method=html">HTML render</a>';
-switch($_GET['method']){
+function showJSONParams(){
+?><br><br>
+    <script>
+
+    function onRequestTabsRoute(params){
+        switch(params.do){
+            case 'showRequest':
+                document.getElementById("layer_request").style.display="block"
+                document.getElementById("layer_response").style.display="none"
+                document.getElementById("m2_0").checked=true
+                break
+            case 'showResponse':
+                document.getElementById("layer_request").style.display="none"
+                document.getElementById("layer_response").style.display="block"
+                document.getElementById("m2_1").checked=true
+                break
+        }
+    }
+
+    window.doq.modules.router.registerRouteHandler('#requestTabs',onRequestTabsRoute)
+
+    function sendRequestForText(){
+        location.href='#requestTabs?do=showResponse'
+        document.getElementById("response_area").innerText="Please wait";
+        var xhr=postJSON('?a=json_demo1_post',document.getElementById("request_area").innerText,function(){
+            document.getElementById("response_area").innerText=this.response;
+        })
+    }
+    
+    function postJSON(url,json,onload, responseType){
+        if (!responseType){
+            responseType='text'
+        }
+        let xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        xhr.responseType = responseType;
+        xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');            
+        xhr.send(json);
+        xhr.onload=onload;
+        return xhr;
+    }
+
+    function makeTabs(menuName, tabs){
+        var s='',i,d;
+        for (i in tabs){
+            d=tabs[i]
+            s+='<input type="radio" id="'+menuName+'_'+i+'" name="'+menuName+'" '+((i==0)?'checked':'')+
+            ' /><label onclick="location.href=\''+d.href+'\'" for="'+menuName+'_'+i+'">'+d.label+'</label>&nbsp;'
+        }
+        return s
+    }
+
+
+
+    </script>
+
+    
+<div class="menu-tabs">
+<script>
+document.write(makeTabs('m2',[
+    {href:'#requestTabs?do=showRequest',label:'Request data form'}, 
+    {href:'#requestTabs?do=showResponse',label:'Response received'}
+] ));
+</script>
+</div>
+
+<div id="layer_request" style="display:block" class="layer_form">
+    <h4>This is a request parameters:</h4>
+    <textarea cols="100" rows="20"  id="request_area">
+{
+    "#viewId":"VIEW1",
+    "@params":{
+        "@filter":
+            [
+                {"#columnId":"SKU", "#operand":"LIKE", "@values":["ОР-Д2-4.0"]}
+            ],
+        "#pageSize":10,
+        "#pageNo":1
+    }
+}
+    </textarea><br>
+    <button onclick="sendRequestForText()">Execute and get text</button>
+    <button onclick="sendRequestForJSON()">Execute and get JSON</button>
+</div>
+<div id="layer_response" style="display:none" class="layer_form">
+    <h4>Response from server:</h4>
+    <pre id="response_area" style='width:100%; border:solid #000000 1px; height:400px; overflow:auto'></pre>
+</div>
+    <?php
+}
+
+function showTopMenu(){
+    \doq\Logger::initJSLoggerMenu();
+
+    ?>
+
+<style>
+body{margin:0;padding:0; height:100%;}
+html{margin:0;padding:0; height:100%;}
+.menu-top{background:#111111; padding:10px; color:#8888ff;}
+.menu-top a{color:white;}
+.menu-tabs {background:#aaaaaa; padding:10px 0 5px 20;}
+.menu-tabs label {border-radius: 10px 10px 0 0; padding:5px; background:#555555; color:white;}
+.menu-tabs label:hover {color:#ff2222; cursor:pointer;}
+.menu-tabs input {display:none;}
+.menu-tabs input:checked + label {background:#ffffff; color:#0022aa;}
+.tree-list-item {background:#ffffff; }
+.tree-list-item:hover {background:#eeeeff; }
+.layer_form {padding:20px;}
+</style>
+<div class="menu-top">
+<a href="?a=json">JSON reader</a> | <a href="?a=html">HTML render</a> | <a href="?a=json_demo1">JSON request demo</a> |
+<a href="#logger?do=showPanel"'>Logger panel</a>
+</div>
+<?php
+}
+
+$action='json_demo1';
+if(isset($_GET['a'])){
+    $action=$_GET['a'];
+}
+switch($action){
     case 'json': 
-        jsonLoader();
+        showTopMenu();
+        jsonLoader([]);
         break;
     case 'html':
+        showTopMenu();
         htmlRenderer();
         break;
-
+    case 'json_demo1_post': 
+        $headers = getallheaders();
+        if (stripos($headers["Content-type"],"application/json")!==false) {
+            $s=file_get_contents("php://input");
+            $r=json_decode($s, true) ?: [];
+            jsonLoader($r);
+        }
+      break;
+    case 'json_demo1': 
+        showTopMenu();
+        showJSONParams();
+    break;
+    
 
 }
 
