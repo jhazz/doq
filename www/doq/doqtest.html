@@ -1,0 +1,23 @@
+<html>
+<meta charset="utf-8">
+    <head>
+
+        <script src="doq.js"></script>
+        <script>
+
+            /*console.log("Start----")
+
+            doq.bind("doq/modules/logger","loaded", doq.C.EV_UPDATE,"home/logger","loaded",
+                function(params){
+                    
+                    console.log('Bind test done: '+this.pubPath+'=>'+this.subPath,params)
+            })
+
+            doq.postEmit('doq/modules/logger','loaded',doq.C.EV_UPDATE)
+*/
+            doq.loadModule('data',function(){console.log('Ok data is loaded')})
+            doq.loadModule('evaluate')
+
+        </script>
+    </head>
+</html>
