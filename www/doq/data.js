@@ -1,15 +1,13 @@
-doq.module('data', ['evaluate'], function data(){
-    console.log('Module data: executed')
-    
+doq.module('doq.data', ['doq.evaluate'], function(){
     var CONST_1='123'
 
-/**
- * Класс узла данных
- * @constructor
- * @param {string} path путь к узлу
- * @param {Datanode} parentNode родительский узел
- */
-function Datanode(path, parentNode) {
+    /**
+    * Класс узла данных
+    * @constructor
+    * @param {string} path путь к узлу
+    * @param {Datanode} parentNode родительский узел
+    */
+    function Datanode(path, parentNode) {
         doq.log('Module data: expression constructor is called')
         var s=this
         s.path = path

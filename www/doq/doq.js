@@ -7,7 +7,7 @@ doq={
         EV_CHANGE: 'change',
         EV_UPDATE: 'update',
         EV_PULL: 'pull',
-        MODULES_ROOT: '.',
+        MODULES_ROOT: '..',
         EVT_INSERTITEM: 'INSERTITEM',
         EVT_DELITEM: 'DELITEM',
         EVT_APPENDITEM: 'APPENDITEM',
@@ -230,15 +230,25 @@ doq.C.TYPE_MAP = {
                     targetNS[i]=e
                 }
             }
+            if(!!defs.init){
+                targetNS.init=defs.init // init function may have different name
+            }
             if(!!defs.css)
                 registerCSSSelector(aloader.moduleName, defs.css)
         }
         
         
         function _initModule(aloader){
+            // НАДО СДЕЛАТЬ ИНИЦИАЛИЗАЦИЮ МОДУЛЯ ЕСЛИ ЕСТЬ ФУНКЦИЯ init()
+            
+            
+            
+            
+            
             aloader.inited=1
             console.log('Module '+aloader.moduleName+': init')
             applyCSSByOwnerId(aloader.moduleName)
+            
             if(!!aloader.onSuccess)
                 aloader.onSuccess.call(aloader)
         }

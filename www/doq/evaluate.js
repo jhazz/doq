@@ -1,4 +1,4 @@
-doq.module('evaluate',function evaluate(){
+doq.module('doq.evaluate',function evaluate(){
     console.log('Module evaluate: executed')
 /**
  * Класс вычислителя

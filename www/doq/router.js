@@ -1,12 +1,7 @@
 /* jshint asi:true, -W100, forin:false, sub:true */
-(function(_global,moduleName)
-{
-if(!_global.doq)
-    _global.doq={modules:{}}
-if(!(moduleName in _global.doq.modules)){
-    _global.doq.modules[moduleName]={}
-}
-var exports=_global.doq.modules[moduleName]
+
+doq.module('doq.router', [], function(){
+
 var routeHandlers={}
 
 function executeHashHandlers(){
@@ -42,29 +37,34 @@ function executeHashHandlers(){
     } while(p1!=-1)
 }
 
-function onload(){
+function onLoad(){
     executeHashHandlers(window.location.hash)
 }
 
-function onhashchange(){
+function onHashChange(){
     executeHashHandlers(window.location.hash)
 }
 
-function registerRouteHandler (routeHashElement,callback){
+function addRouteHandler (routeHashElement,callback){
     routeHandlers[routeHashElement]=callback
 }
 
-function unregisterRouteHandler (routeHashElement){
+function removeRouteHandler (routeHashElement){
     if (routeHashElement in routeHandlers) {
         delete routeHandlers[routeHashElement]
     }
 }
 
-window.addEventListener("load", onload)
-window.addEventListener("hashchange", onhashchange)
+function init(){
+    console.log('router.init')
+    window.addEventListener("load", onLoad)
+    window.addEventListener("hashchange", onHashChange)
+}
 
-exports.onhashchange=onhashchange
-exports.registerRouteHandler=registerRouteHandler
-exports.unregisterRouteHandler=unregisterRouteHandler
-})(window,'router')
+
+return {
+    functions:[onHashChange, addRouteHandler, removeRouteHandler],
+    init:init
+}
+})
 
