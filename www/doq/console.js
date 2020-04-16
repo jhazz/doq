@@ -1,14 +1,14 @@
 /* jshint asi:true, -W100, forin:false, sub:true */
-doq.module('doq.logger', ['doq.router'], function(){
+doq.module('doq.console', ['doq.router'], function(){
 
-    function hideLoggerPanel(){
+    function hideConsole(){
         var d=document.getElementById("debug_console"),s;
         if (d){
             d.style.display='none';
         }
     }
 
-    function showLoggerPanel(){
+    function showConsole(){
         var d=document.getElementById("logger_console"),s;
         if(!d) {
             d=document.createElement('div')
@@ -70,37 +70,38 @@ doq.module('doq.logger', ['doq.router'], function(){
     function showTab(tabName){
         switch(tabName){
             case 'errors':
-                showLoggerPanel()
+                showConsole()
                 document.getElementById("m1_0").checked=true;
                 break;
             case 'info':
-                showLoggerPanel()
+                showConsole()
                 document.getElementById("m1_1").checked=true;
                 
                 break;
             case 'hide':
-                hideLoggerPanel()
+                hideConsole()
             }
     }
 
-    function onroute(params){
+    function onRoute(params){
         if('tab' in params){
             showTab(params.tab)
         }
         if('do' in params){
             switch(params.do){
-                case 'showPanel':showLoggerPanel(); break;
-                case 'hidePanel':hideLoggerPanel(); break;
+                case 'showPanel':showConsole(); break;
+                case 'hidePanel':hideConsole(); break;
             }
         }
     }
 
     function init(){
-        doq.router.addRouteHandler('#logger',onroute)
+        console.log('CONSOLE ADDED')
+        doq.router.addRouteHandler('#console',onRoute)
     }
 
     return {
-        functions:[hideLoggerPanel,showLoggerPanel],
+        functions:[hideConsole,showConsole],
         init:init
     }
 })

@@ -1,3 +1,4 @@
+/* jshint asi:true, -W100, forin:false, sub:true */
 doq={
     css:{activeTheme:'light', themes:{"light":{vars:{'@inputColor':'cyan'}}}, selectors:{}, usage:{}, vars:{}},
     datasources: {},
@@ -91,8 +92,7 @@ doq.C.TYPE_MAP = {
         window.onerror=globalErrorHandler
     }
 
-
-    function loadModule(moduleName, onSuccess) {
+    function loadModule(moduleName, onAfterInit) {
         if (moduleName in moduleLoaders) {
             return moduleLoaders[moduleName]
         }
@@ -102,9 +102,9 @@ doq.C.TYPE_MAP = {
             loader
 
         jsElement.type = 'text/javascript';
-        jsElement.onerror=function(e,msg){
+        jsElement.onerror=function(e){
             loader.loading = 0
-            loader.error=1
+            loader.error=e
             this.onreadystatechange = this.onload = undefined
             var errStr='Unable to load module '+moduleName+' from "'+jsPath+'".  Modules are halted by the lost module: ['+ getDependentModulesList(moduleName).join(',')+'].'
             throw errStr
@@ -133,7 +133,7 @@ doq.C.TYPE_MAP = {
             loading: 1,
             loaded: 0,
             inited: 0,
-            onSuccess: onSuccess
+            onAfterInit: onAfterInit
         }
         return loader
     }
@@ -249,15 +249,15 @@ doq.C.TYPE_MAP = {
             console.log('Module '+aloader.moduleName+': init')
             applyCSSByOwnerId(aloader.moduleName)
             
-            if(!!aloader.onSuccess)
-                aloader.onSuccess.call(aloader)
+            if(aloader.onAfterInit!==undefined)
+                aloader.onAfterInit.call(aloader)
         }
         
     }
 
     function applyCSSByOwnerId(ownerId,doOverwrite){
         var i,applyingStyleText,ss,sset,sels, rule, l, ruleSelector, 
-            targetSheet=undefined,overlaps={},activeTheme,val, varEntry
+            targetSheet,overlaps={},activeTheme,val, varEntry
             
             
         console.log('-----apply css defined by "'+ownerId+'" ------')
@@ -298,7 +298,6 @@ doq.C.TYPE_MAP = {
                     }
                 }
                 applyingStyleText=v[ownerId].replace(/@\w+/g,function(varName){
-                    var varEntry, val
                     if(varName in doq.css.vars){
                         varEntry=doq.css.vars[varName]
                         if('value' in varEntry){
@@ -384,6 +383,8 @@ doq.C.TYPE_MAP = {
     
     function globalErrorHandler(errorMsg, url, lineNumber, col, eobj){
         console.error('doq.error: '+errorMsg +' in ' +url +':'+ lineNumber+':'+col)
+        if(oldErrorHandler!==undefined)
+            oldErrorHandler(errorMsg, url, lineNumber, col, eobj)
         return true
     }
 
@@ -391,7 +392,7 @@ doq.C.TYPE_MAP = {
         if (!responseType){
             responseType='text'
         }
-        let xhr = new XMLHttpRequest();
+        var xhr = new XMLHttpRequest();
         xhr.open('POST', url);
         xhr.responseType = responseType;
         xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');            
