@@ -76,7 +76,7 @@ doq.C.TYPE_MAP = {
 };
 
 
-(function(){
+(function(_global){
     var lang= { DATE_SEPARATOR: '.' },
         bindery ={ byPub: { '#': 0 }, bySub: { '#': 0 } },
         nextUID=1,
@@ -86,7 +86,10 @@ doq.C.TYPE_MAP = {
         taskDoneCallbacks=[],
         moduleLoaders={},
         oldErrorHandler
-        
+    if(_global==undefined) {
+        _global=window
+    }
+
     function initErrorHadnler(){
         oldErrorHandler=window.onerror
         window.onerror=globalErrorHandler
@@ -209,7 +212,7 @@ doq.C.TYPE_MAP = {
         }
 
         function _regLoadedModule(aloader){
-            var i,e,t,targetNS=doq
+            var i,e,t,targetNS=_global
             try{
                 defs=aloader.moduleFunction()
             } catch(e) {
@@ -217,7 +220,8 @@ doq.C.TYPE_MAP = {
                 return
             }
             if (aloader.moduleName)
-                targetNS=doq[aloader.moduleName]={}
+                targetNS=_global[aloader.moduleName]={}
+            aloader.targetNS=targetNS
             if(!!defs.functions){
                 for (i in defs.functions){
                     e=defs.functions[i]
@@ -230,21 +234,15 @@ doq.C.TYPE_MAP = {
                     targetNS[i]=e
                 }
             }
-            if(!!defs.init){
-                targetNS.init=defs.init // init function may have different name
-            }
             if(!!defs.css)
                 registerCSSSelector(aloader.moduleName, defs.css)
         }
         
         
         function _initModule(aloader){
-            // НАДО СДЕЛАТЬ ИНИЦИАЛИЗАЦИЮ МОДУЛЯ ЕСЛИ ЕСТЬ ФУНКЦИЯ init()
-            
-            
-            
-            
-            
+            if (aloader.targetNS.init!==undefined){
+                aloader.targetNS.init.call(aloader)
+            }
             aloader.inited=1
             console.log('Module '+aloader.moduleName+': init')
             applyCSSByOwnerId(aloader.moduleName)
@@ -555,5 +553,5 @@ doq.C.TYPE_MAP = {
         
     initErrorHadnler()
     
-})()
+})(window)
 

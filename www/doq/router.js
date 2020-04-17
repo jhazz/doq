@@ -1,6 +1,5 @@
-/* jshint asi:true, -W100, forin:false, sub:true */
-
 doq.module('doq.router', [], function(){
+/* jshint asi:true, -W100, forin:false, sub:true */
 
 var routeHandlers={}
 
@@ -63,8 +62,7 @@ function init(){
 
 
 return {
-    functions:[onHashChange, addRouteHandler, removeRouteHandler],
-    init:init
+    functions:[onHashChange, addRouteHandler, removeRouteHandler, init],
 }
 })
 
