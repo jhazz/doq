@@ -15,9 +15,9 @@
 
             doq.postEmit('doq/modules/logger','loaded',doq.C.EV_UPDATE)
 */
-            doq.loadModule('doq.data',function(){console.log('Ok data is ready')})
-            doq.loadModule('doq.console',function(){console.log('Ok console is ready')})
-            //doq.loadModule('doq.evaluate')
+            doq.require('doq.data',function(){console.log('Ok data is ready')})
+            doq.require('doq.console',function(){console.log('Ok console is ready')})
+            
 
         </script>
     </head>

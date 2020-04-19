@@ -382,10 +382,10 @@ abstract class Logger
         return $row1.$row2;
     }
     
-    public static function initJSLoggerMenu()
+    public static function initJS()
     {    
-        print '<script src="'.$GLOBALS['doq']['env']['#wwwURL'].'/doq/router.js"></script>';
-        print '<script src="'.$GLOBALS['doq']['env']['#wwwURL'].'/doq/logger.js"></script>';
+        $wwwURL=$GLOBALS['doq']['env']['#wwwURL'];
+        print '<script src="'.$wwwURL.'/doq/doq.js"></script><script>doq.cfg.jsModulesRoot="'.$wwwURL.'";</script>';
     }
 }
 
@@ -559,6 +559,9 @@ class FileLogger extends Logger
             $this->dataLogFileHandle=fopen($this->targetDataLogFile, 'w');
             $this->targetEnvLogFileHandle=fopen($this->targetEnvLogFile, 'w');
             fputs($this->targetEnvLogFileHandle , json_encode(['_SERVER'=>$_SERVER,'env'=>$GLOBALS['doq']['env']] , JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));
+        } else {
+            print "\nFATAL: Unable to create directory for logs ".$d."\n<br>";
+            exit(1);
         }
     }
 

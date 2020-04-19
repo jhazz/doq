@@ -9,7 +9,11 @@ doq.module('doq.console', ['doq.router'], function(){
     }
 
     function showConsole(){
-        var d=document.getElementById("logger_console"),s;
+        var d=document.getElementById("logger_console"),
+           apiLoggerURL='../../api/doq/logger.php?action=browse',
+            s
+            
+        
         if(!d) {
             d=document.createElement('div')
             d.id="logger_console"
@@ -39,14 +43,14 @@ doq.module('doq.console', ['doq.router'], function(){
 
             // Производим первое чтение
 
-            // 
-            postJSON('../../api/doq/logger.php?action=browse',{},function(e){
+            
+            doq.log('doq.console', "Читаем логи из "+apiLoggerURL)
+            postJSON(apiLoggerURL, {}, function(e){
                 var r,lrw=document.getElementById('logger_right_window'),llw=document.getElementById('logger_left_window')
-                //lrw.innerText=
                 r=e.target.response;
                 var de;
                 if(!r){
-                    console.log("Не прочиталось")
+                    doq.log('doq.console', "Не прочиталось")
                     return
                 }
                 for (var pageTokenNames in r['pageTokens']){

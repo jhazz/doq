@@ -82,7 +82,7 @@ function jsonLoader($options){
     $viewProducts->prepare($schemaFileTime, true);
     #doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
 
-    if($options['@params']) {
+    if(isset($options['@params'])) {
         $params=$options['@params'];
     } else {
         $params=[];
@@ -196,18 +196,22 @@ function showJSONParams(){
                 break
         }
     }
-
-    window.doq.modules.router.registerRouteHandler('#requestTabs',onRequestTabsRoute)
-
+    
+    doq.require('doq.router',function(){
+        doq.log('router added')
+        doq.router.addRouteHandler('#requestTabs',onRequestTabsRoute)
+        
+    })
+    
     function sendRequestForText(){
         location.href='#requestTabs?do=showResponse'
         document.getElementById("response_area").innerText="Please wait";
-        var xhr=postJSON('?a=json_demo1_post',document.getElementById("request_area").innerText,function(){
+        var xhr=doq.postJSON('?a=json_demo1_post',document.getElementById("request_area").innerText,function(){
             document.getElementById("response_area").innerText=this.response;
         })
     }
     
-    function postJSON(url,json,onload, responseType){
+    /*function postJSON(url,json,onload, responseType){
         if (!responseType){
             responseType='text'
         }
@@ -218,7 +222,7 @@ function showJSONParams(){
         xhr.send(json);
         xhr.onload=onload;
         return xhr;
-    }
+    }*/
 
     function makeTabs(menuName, tabs){
         var s='',i,d;
@@ -266,39 +270,41 @@ document.write(makeTabs('m2',[
     <h4>Response from server:</h4>
     <pre id="response_area" style='width:100%; border:solid #000000 1px; height:400px; overflow:auto'></pre>
 </div>
-    <?php
+    
+<?php
 }
 
 function showTopMenu(){
-    \doq\Logger::initJSLoggerMenu();
-
+    \doq\Logger::initJS();
     ?>
 
-<style>
-body{margin:0;padding:0; height:100%;}
-html{margin:0;padding:0; height:100%;}
-.menu-top{background:#111111; padding:10px; color:#8888ff;}
-.menu-top a{color:white;}
-.menu-tabs {background:#aaaaaa; padding:10px 0 5px 20;}
-.menu-tabs label {border-radius: 10px 10px 0 0; padding:5px; background:#555555; color:white;}
-.menu-tabs label:hover {color:#ff2222; cursor:pointer;}
-.menu-tabs input {display:none;}
-.menu-tabs input:checked + label {background:#ffffff; color:#0022aa;}
-.tree-list-item {background:#ffffff; }
-.tree-list-item:hover {background:#eeeeff; }
-.layer_form {padding:20px;}
-</style>
-<div class="menu-top">
-<a href="?a=json">JSON reader</a> | <a href="?a=html">HTML render</a> | <a href="?a=json_demo1">JSON request demo</a> |
-<a href="#logger?do=showPanel"'>Logger panel</a>
-</div>
+    <style>
+        body{margin:0;padding:0; height:100%;}
+        html{margin:0;padding:0; height:100%;}
+        .menu-top{background:#111111; padding:10px; color:#8888ff;}
+        .menu-top a{color:white;}
+        .menu-tabs {background:#aaaaaa; padding:10px 0 5px 20;}
+        .menu-tabs label {border-radius: 10px 10px 0 0; padding:5px; background:#555555; color:white;}
+        .menu-tabs label:hover {color:#ff2222; cursor:pointer;}
+        .menu-tabs input {display:none;}
+        .menu-tabs input:checked + label {background:#ffffff; color:#0022aa;}
+        .tree-list-item {background:#ffffff; }
+        .tree-list-item:hover {background:#eeeeff; }
+        .layer_form {padding:20px;}
+    </style>
+    <div class="menu-top">
+    <a href="?a=json">JSON reader</a> | <a href="?a=html">HTML render</a> | <a href="?a=json_demo1">JSON request demo</a> |
+    <a href="#logger?do=showPanel"'>Logger panel</a>
+    </div>
 <?php
 }
+
 
 $action='json_demo1';
 if(isset($_GET['a'])){
     $action=$_GET['a'];
 }
+
 switch($action){
     case 'json': 
         showTopMenu();
@@ -320,8 +326,6 @@ switch($action){
         showTopMenu();
         showJSONParams();
     break;
-    
-
 }
 
 ?>

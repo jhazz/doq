@@ -30,8 +30,9 @@ class Connections
 			$cfgConnection=&self::$config[$connectionName];
 			if (isset($cfgConnection['@environments'])) {
 				$dataEnvironments=&$cfgConnection['@environments'];
-				if (isset($_SERVER['DOQ_ENVIRONMENT'])) {
-					$currentEnvironment=$_SERVER['DOQ_ENVIRONMENT'];
+				$currentEnvironment=getenv('DOQ_ENVIRONMENT');
+				
+				if (!!$currentEnvironment) {
 					if (isset($dataEnvironments[$currentEnvironment])) {
 						$cfgConnection=&$dataEnvironments[$currentEnvironment];
 					} else {

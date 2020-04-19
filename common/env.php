@@ -49,6 +49,17 @@ return [
 	'@dataConnections'=>[
 		'MYSQL0'=>[
 			'@environments'=>[
+				'DEVELOPMENT_PI'=>[
+                    '#provider'=>'mysql',
+                    '#debugLevel'=>'1',
+					'@params'=>[
+						'host'=>'127.0.0.1',
+						'port'=>'3306',
+						'dbase'=>'test',
+						'login'=>'vlad',
+						'password'=>'raptor14'
+					]
+				],
 				'DEVELOPMENT'=>[
                     '#provider'=>'mysql',
                     '#debugLevel'=>'1',
@@ -70,7 +81,7 @@ return [
 						'password'=>'LEULMM8KEiKwbfhX'
 					]
 				]
-			]
+            ]
 		],
 		'MYSQL1'=>[
 			'#provider'=>'mysql',

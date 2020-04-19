@@ -61,7 +61,11 @@ doq={
         E_OPENFUNC: 'OFN',
         E_OPENEVAL: 'OEV',
         E_CALLFUNC: 'FN',
-        defaultRowsPerPage: 10
+        L_ERROR:1,
+        L_INFO:2,
+        L_DEBUG:4,
+        LOG_TO_BROWSER: true,
+        LOG_TYPE_FILTER:7,
     }
 }
 
@@ -73,8 +77,15 @@ doq.C.TYPE_MAP = {
     'formula': doq.C.BT_FORMULA,
     'bindIn': doq.C.BT_BIND_IN,
     'bindInOut': doq.C.BT_BIND_INOUT
-};
+}
 
+doq.cfg={
+    logTypeFilter: doq.C.L_ERROR | doq.C.L_DEBUG | doq.C.L_INFO,
+    logToBrowser: 1,
+    logMaxSize: 1000,
+    logSourcePosition:1,
+    defaultRowsPerPage: 10
+};
 
 (function(_global){
     var lang= { DATE_SEPARATOR: '.' },
@@ -85,7 +96,11 @@ doq.C.TYPE_MAP = {
         taskQueueInterval=0,
         taskDoneCallbacks=[],
         moduleLoaders={},
-        oldErrorHandler
+        oldErrorHandler,
+        logTargetIndex,
+        logArray=[],
+        stringify=JSON.stringify
+        
     if(_global==undefined) {
         _global=window
     }
@@ -95,12 +110,19 @@ doq.C.TYPE_MAP = {
         window.onerror=globalErrorHandler
     }
 
-    function loadModule(moduleName, onAfterInit) {
+    function require(moduleName, onAfterInit) {
         if (moduleName in moduleLoaders) {
-            return moduleLoaders[moduleName]
+            loader=moduleLoaders[moduleName]
+            if(loader.inited){
+                onAfterInit()
+                return moduleLoaders[moduleName]
+            } else {
+                loader.onAfterInit.push(onAfterInit)
+            }
         }
+
         var modulePath=moduleName.replace(/\./g, '/'),
-            jsPath=doq.C.MODULES_ROOT+'/'+modulePath+'.js',
+            jsPath=doq.cfg.jsModulesRoot+'/'+modulePath+'.js',
             jsElement = document.createElement("script"),
             loader
 
@@ -118,9 +140,9 @@ doq.C.TYPE_MAP = {
                     this.onreadystatechange = this.onload = undefined
                     loader.loading = 0
                     loader.loaded = 1
-                    console.log('Module file "'+modulePath+'" is loaded')
+                    log('doq.require', 'Module file "'+modulePath+'" is loaded',doq.C.L_DEBUG)
                 } else {
-                    console.log('Module file "'+modulePath+'" readyState= '+this.readyState)
+                    log('doq.require', 'Module file "'+modulePath+'" readyState= '+this.readyState, doq.C.L_DEBUG)
                 }
             }
         };
@@ -136,7 +158,7 @@ doq.C.TYPE_MAP = {
             loading: 1,
             loaded: 0,
             inited: 0,
-            onAfterInit: onAfterInit
+            onAfterInit: [onAfterInit]
         }
         return loader
     }
@@ -162,7 +184,7 @@ doq.C.TYPE_MAP = {
         var i, ml, deep, useMeIndex, hasInit
         loader=moduleLoaders[moduleName]
         if(!loader){
-            console.error('Initing module '+moduleName+' is absent in loaders')
+            log('doq', 'Initing module '+moduleName+' is absent in loaders')
             return
         }
         if(typeof(requires)=='function'){
@@ -200,7 +222,7 @@ doq.C.TYPE_MAP = {
             for (i in arequires){
                 iModuleName=arequires[i]
                 if(!(iModuleName in moduleLoaders)){
-                    loadModule(iModuleName)
+                    require(iModuleName)
                     isReady=false
                 } else {
                     im=moduleLoaders[iModuleName]
@@ -212,15 +234,27 @@ doq.C.TYPE_MAP = {
         }
 
         function _regLoadedModule(aloader){
-            var i,e,t,targetNS=_global
+            var i,e,t,targetNS=_global,moduleNames,n
             try{
                 defs=aloader.moduleFunction()
             } catch(e) {
                 console.error(e)
                 return
             }
-            if (aloader.moduleName)
-                targetNS=_global[aloader.moduleName]={}
+            if (aloader.moduleName){
+                moduleNames=aloader.moduleName.split('.')
+                targetNS=_global
+                for(i in moduleNames){
+                    n=moduleNames[i]
+                    if(n in targetNS)
+                        targetNS=targetNS[n]
+                    else {
+                        targetNS=(targetNS[n]={})
+                    }
+                        
+                }
+                //targetNS=_global[aloader.moduleName]={}
+            }
             aloader.targetNS=targetNS
             if(!!defs.functions){
                 for (i in defs.functions){
@@ -240,15 +274,18 @@ doq.C.TYPE_MAP = {
         
         
         function _initModule(aloader){
+            var i
             if (aloader.targetNS.init!==undefined){
                 aloader.targetNS.init.call(aloader)
             }
             aloader.inited=1
-            console.log('Module '+aloader.moduleName+': init')
+            log('doq.module', 'Module '+aloader.moduleName+': init')
             applyCSSByOwnerId(aloader.moduleName)
             
             if(aloader.onAfterInit!==undefined)
-                aloader.onAfterInit.call(aloader)
+                for(i in aloader.onAfterInit){
+                    aloader.onAfterInit[i].call(aloader)
+                }
         }
         
     }
@@ -257,8 +294,7 @@ doq.C.TYPE_MAP = {
         var i,applyingStyleText,ss,sset,sels, rule, l, ruleSelector, 
             targetSheet,overlaps={},activeTheme,val, varEntry
             
-            
-        console.log('-----apply css defined by "'+ownerId+'" ------')
+        log('doq.css','-----apply css defined by "'+ownerId+'" ------')
         if((!!doq.css.activeTheme)&&(doq.css.activeTheme in doq.css.themes))
             activeTheme=doq.css.themes[doq.css.activeTheme]
             
@@ -371,17 +407,63 @@ doq.C.TYPE_MAP = {
         }
     }
     
-    function log(msg){
-        console.log(msg)
+    
+    function log(category, data, type, url, lineNumber, col){
+        var logEntry, msg,s,stack,last
+        if(type==undefined)
+            type=doq.C.L_DEBUG
+        
+        if(!(doq.cfg.logTypeFilter & type))
+            return
+        
+        if(data===undefined)
+            data=category, category='(No category)'
+        
+        msg=(typeof (data)=='object')?stringify(data):''+data
+        
+        if (url===undefined){
+            if(doq.cfg.logSourcePosition){
+                stack=(function(){try { throw Error() } catch(err) {return err;}})().stack.split('\n')
+                if(stack.length && stack.length>1){
+                    last=stack.pop()
+                    if(!last)
+                        last=stack.pop()
+                    url=last.trim()
+                }
+            }
+        } else {
+            if(lineNumber!==undefined)
+                url+=':'+lineNumber
+            if(col!==undefined)
+                url+=':'+col
+        }
+        
+        logEntry=[(new Date()).getTime(), category, msg, type, url]
+        if(logTargetIndex===undefined)
+            logArray.push(logEntry)
+        else
+            logArray[logTargetIndex++]=logEntry
+        
+        if(logArray.length>doq.cfg.logMaxSize)
+            logTargetIndex=0
+        
+        if(doq.cfg.logToBrowser){
+            s=category+ ': '+msg
+            if(url!==undefined)
+                s+=' ' +url
+            if(type==doq.C.L_ERROR)
+                console.error(s)
+            else if (type==doq.C.L_INFO)
+                console.info(s)
+                else console.log(s)
+        }
     }
     
-    function error(msg){
-        console.error(msg)
-    }
-    
+
     function globalErrorHandler(errorMsg, url, lineNumber, col, eobj){
-        console.error('doq.error: '+errorMsg +' in ' +url +':'+ lineNumber+':'+col)
-        if(oldErrorHandler!==undefined)
+        //console.error('doq.error: '+errorMsg +' in ' +url +':'+ lineNumber+':'+col)
+        log('doq.fail',errorMsg, doq.C.L_ERROR, url,lineNumber, col)
+        if(!!oldErrorHandler)
             oldErrorHandler(errorMsg, url, lineNumber, col, eobj)
         return true
     }
@@ -496,7 +578,7 @@ doq.C.TYPE_MAP = {
                 s += ((s !== '') ? ',' : '') + "'" + subPath + "'"
             }
         }
-        log("Сообытие доставлено '" + eventType + "' от атрибута '" + pubPath + '#' + pubAttr + "'=>[" + s + ']' + pp, '#80ff80')
+        log('doq.emit', "Сообытие доставлено '" + eventType + "' от атрибута '" + pubPath + '#' + pubAttr + "'=>[" + s + ']' + pp, '#80ff80')
         return [result]
     }
 
@@ -528,14 +610,14 @@ doq.C.TYPE_MAP = {
                     m[2].apply(m[1], m[3])
                 else
                     if (m[2] in m[1]) {
-                        log('--Executing' + m[2] + '--')
+                        log('doq.taskRunner', '--Executing' + m[2] + '--')
                         m[1][m[2]].apply(m[1], m[3])
                     }
             }
             if (!taskListSize) break
-            log('-----loop ' + loopTime + '------', '#008000')
+                log('doq.taskRunner', '-----loop ' + loopTime + '------')
         }
-        log('-----tasks over ----', '#00a000')
+        log('doq.taskRunner', '-----tasks over ----')
         if (!!taskDoneCallbacks) {
             while (!!(callback = taskDoneCallbacks.pop())) {
                 (callback)()
@@ -547,7 +629,7 @@ doq.C.TYPE_MAP = {
         doLaterOnce(pubPath + '#' + pubAttr + '!' + eventType, doq, emit, [pubPath, pubAttr, eventType, params])
     }
 
-    var i,f,fs=[module, loadModule, log, emit, postEmit, doLaterOnce, taskRunner, bind, postJSON]
+    var i,f,fs=[module, require, log, emit, postEmit, doLaterOnce, taskRunner, bind, postJSON]
     for(i in fs) 
         f=fs[i],doq[f.name]=f
         
