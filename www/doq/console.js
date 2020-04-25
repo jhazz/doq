@@ -3,7 +3,26 @@ doq.module('doq.console', ['doq.router'], function(){
     var buttonShown=false,
         clientSelector,
         pageSelector,
+        tabMenus={},
+        resizeTimeout,
+        panelVisible=false,
+        consoleDesk,
+        panel1,
+        panel2,
+        panel1menu,
+        panel1content,
+        panel1Size=300,
+        deskHeight=480,
+        deskBorderSize=3,
+        splitterBorder=1,
+        splitterHandleSize=5,
+        startDragX,
+        dragStartPageX,
+        dragStartX,
+        dragMode,
+        splitter1,
         apiLoggerURL='../../api/doq/logger.php'
+        
         
     
     
@@ -101,91 +120,168 @@ doq.module('doq.console', ['doq.router'], function(){
         if (d){
             d.style.display='none';
         }
+        panelVisible=false
     }
     
-    function makeConsoleMenu(name, tabs, parentElement){
-        var s='',i,mi,radio,label;
-        for (i in tabs){
-            mi=tabs[i]
-            radio=document.createElement('input')
-            radio.id=name+'@'+i+'_r'
-            radio.setAttribute('type','radio')
-            radio.setAttribute('name',name)
-            if(!i) 
-                radio.setAttribute('checked','1')
-            parentElement.appendChild(radio)
-            
-            label=document.createElement('label')
-            label.id=name+'@'+i
-            label.innerText=mi.label;
-            
-            (function(menuItem){
-            label.addEventListener('click',function(){
-                var r=document.getElementById(this.id+'_r')
-                r.checked=true
-                if(!!menuItem.onclick){
-                    menuItem.onclick(menuItem, this)
-                }
-                console.log(this.innerText+' '+menuItem.label)
-            })
-            })(mi)
-            parentElement.appendChild(label)
+    function makeConsoleMenu(name, items, parentElement, istabs){
+        var i,mi,radio,label,tabMenu,menuLine=document.createElement('div'), active
+        if(istabs) tabMenu=tabMenus[name]={}
+        menuLine.className='doq-console-menu'
+        for (i in items){
+            mi=items[i]
+            label=document.createElement('div')
+            label.style.display='inline-block'
+            label.className='doq-console-item-unselected'
+            label.innerText=mi.label
+            void(function(menuItem,tm){
+                label.addEventListener('click',function(){
+                    if(!!menuItem.onclick){
+                        if(menuItem.onclick(menuItem, this)===false)
+                            return
+                    }
+                    if(tm!==undefined){
+                        if(tm.active){
+                            tm.active.className='doq-console-item-unselected'
+                        }
+                        tm.active=this
+                    }
+                    this.className='doq-console-item-selected'
+                })
+            })(mi,tabMenu)
+            menuLine.appendChild(label)
         }
-        return s
+        parentElement.appendChild(menuLine)
+        return menuLine
     }
+    
+    function arrange(){
+        if (!panelVisible) return
+
+        var docHeight=document.body.clientHeight, 
+            docWidth=document.body.clientWidth
+            w=docWidth-deskBorderSize*2,
+            h=deskHeight-deskBorderSize*2
+        
+        if(consoleDesk.offsetHeight!=deskHeight){
+           consoleDesk.style.height=deskHeight+'px'
+        }
+        panel1.style.width=panel1Size+'px'
+        panel2.style.width=(w-panel1Size-splitterBorder)+'px'
+        panel2.style.transform='translateX('+(panel1Size+splitterBorder)+'px)'
+        splitter1.style.height=panel2.style.height=panel1.style.height=h+'px'
+        splitter1.style.transform='translateX('+(panel1Size+splitterBorder-(splitterHandleSize-1)/2)+'px)'
+        var h1=panel1menu.offsetHeight
+        panel1content.style.height=(h-h1)+'px'
+    }
+    
     
     function show(){
-        var s, d=document.getElementById("logger_console"), llw
-        if(!d) {
-            d=document.createElement('div')
-            d.id='doq-console-desk'
-            document.body.appendChild(d);
-            
-            var dt=document.createElement('div');
-            dt.innerHTML='<table width="100%" height="100%" cellspacing=0 cellpadding=0 border=1>'+
-            '<tr valign="top"><td width="200px">'+
-            '<div class="doq-console-menu" id="doq-console-menu1"></div><div id="doq-console-selectors"></div></td>'+
-            '<td><div>Right panel'+
-            '<span style="color:white; float:right; padding:0px 10px;cursor:pointer" onclick="location.href=\'#logger?do=hidePanel\'">X</span></div>'+
-            '<div id="logger_right_window" style="box-sizing: border-box; display:block; float:right; padding:2px; background:#eeeeee; overflow:auto; height:250px; width:80%">'+
-            '<div style="border:solid #222222 2px; height:1000px;">kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk1<br>kjkljlk2<br></div>'+
-            '</div></td></tr></table>'
-            
-            d.appendChild(dt);
-            var pe=document.getElementById('doq-console-menu1')
-            
-            makeConsoleMenu('console-left',[
-                {label:'Clients',onclick:function(mi, el){alert(mi.label) }},
-                {label:'Loads',onclick:function(){}},
-                {label:'Pages',onclick:function(){}},
-                ],pe)
-
-            llw=document.getElementById('doq-console-selectors')
-            clientSelector=document.createElement('select')
-            clientSelector.style.width='100%'
-            llw.appendChild(clientSelector)
-            
-            pageloadsSelector=document.createElement('select')
-            pageloadsSelector.style.width='100%'
-            llw.appendChild(pageloadsSelector)
-            
-            pageSelector=document.createElement('select')
-            pageSelector.style.width='100%'
-            pageSelector.setAttribute('size',6)
-            
-            pageSelector.style.height='100%'
-            llw.appendChild(pageSelector)
-
-            // Производим первое чтение
-            upClientsList()
-            upPageloadsSelector()
-            upPageSelector()
-
-        } else {
-            d.style.display='block'
+        var s, llw, dt
+        if(!!consoleDesk) {
+            consoleDesk.style.display='block'
+            return
         }
+        window.addEventListener('resize',function onWindowResize(){
+            if(resizeTimeout) 
+                window.clearTimeout(resizeTimeout)
+            resizeTimeout=window.setTimeout(arrange,66)
+        })
+        consoleDesk=document.createElement('div')
+        consoleDesk.id='doq-console-desk'
+        consoleDesk.style.overflow='auto'
+        
+        panel1=document.createElement('div')
+        s=panel1.style
+        s.position='absolute'
+        
+        panel2=document.createElement('div')
+        s=panel2.style
+        s.position='absolute'
+        s.background='white'
+        consoleDesk.appendChild(panel1)
+        consoleDesk.appendChild(panel2)
+        panel1menu=makeConsoleMenu('console-left',[
+            {label:'Clients',onclick:putClientSelector},
+            {label:'Loads',onclick:putPageloadsSelector},
+            {label:'Pages',onclick:putPageSelector},
+            ],panel1,true)
+        panel1content=document.createElement('div')
+        panel1content.innerText='ABC'
+        s=panel1content.style
+        s.background=doq.css.vars['@console-bgcolor']
+        s.overflow='auto'
+        panel1.appendChild(panel1content)
+        
+        splitter1=document.createElement('div')
+        s=splitter1.style
+        s.width=splitterHandleSize+'px'
+        s.position='absolute'
+        s.cursor='col-resize'
+        consoleDesk.appendChild(splitter1)
+        splitter1.addEventListener('mousedown',splitter1mousedown)
+        
+        document.body.appendChild(consoleDesk)
+        panelVisible=true
+        arrange()
     }
 
+    function putClientSelector(mi, el){
+        panel1content.innerHTML=''
+        clientSelector=document.createElement('select')
+        clientSelector.style.width='100%'
+        panel1content.appendChild(clientSelector)
+        upClientsList()
+        return true
+    }
+
+    function putPageloadsSelector(mi, el){
+        panel1content.innerHTML=''
+        pageloadsSelector=document.createElement('select')
+        pageloadsSelector.style.width='100%'
+        panel1content.appendChild(pageloadsSelector)
+        upPageloadsSelector()
+        return true
+    }
+
+    function putPageSelector(mi, el){
+        panel1content.innerHTML=''
+        pageSelector=document.createElement('select')
+        pageSelector.style.width='100%'
+        pageSelector.setAttribute('size',6)
+        panel1content.appendChild(pageSelector)
+        upPageSelector()
+        return true
+    }
+
+    function splitter1mousedown(e){
+        document.body.addEventListener('mousemove',splitter1mousemove)
+        document.body.addEventListener('mouseup',splitter1mouseup)
+        dragStartPageX=e.pageX
+        dragStartX=panel1Size
+        dragMode=1
+    }
+    
+    function splitter1mousemove(e){
+        var newPageX=e.pageX
+        if(dragMode==1){
+            if(Math.abs(newPageX-dragStartPageX)<5) 
+                return
+            dragMode=2
+        }
+        if(dragMode==2){
+            panel1Size=dragStartX+(newPageX-dragStartPageX)
+            if(panel1Size<50)panel1Size=50
+            if(panel1Size>400)panel1Size=400
+            arrange()
+        }
+    }
+    
+    function splitter1mouseup(e){
+        dragMode=0
+        document.body.removeEventListener('mousemove',splitter1mousemove)
+        document.body.removeEventListener('mouseup',splitter1mouseup)
+    }
+    
     function showTab(tabName){
         switch(tabName){
             case 'errors':
@@ -224,15 +320,8 @@ doq.module('doq.console', ['doq.router'], function(){
         
         buttonShown=true
         var b=document.createElement('button')
+        b.className='doq-console-openbutton'
         b.innerText="Console"
-        b.style.position='fixed'
-        b.style.bottom='30px'
-        b.style.right='30px'
-        b.style.backgroundColor='#2020ff'
-        b.style.borderRadius='5px'
-        b.style.padding='5px'
-        b.style.opacity='20%'
-        b.style.color='white'
         b.addEventListener('click',show)
         document.body.appendChild(b)
     }
@@ -240,14 +329,19 @@ doq.module('doq.console', ['doq.router'], function(){
         functions:[init, hide, show, showButton],
         css:{
             vars:{
-                    '@console-menu-bgcolor':'#666688',
+            '@console-menu-bgcolor':'#666666',
+            '@console-bgcolor':'#eeeeee',
+            '@console-text-size':'8pt',
+            '@console-text-color':'#555555',
+            '@console-text-inverse':'#eeeeee',
             },
-            '#doq-console-desk':'position:fixed; height:300px; bottom:0px; left:0px; background:#aaaaaa; border:solid black 1px; border-radius:3px; width:100%; padding:4px; box-sizing:border-box;',
-            '.doq-console-menu':'font-family:sans; font-size:9pt; color:#222222; background:@console-menu-bgcolor; ',
-            '.doq-console-menu label' : 'margin:0 2px 0 2px; border-radius: 2px 2px 0 0; padding:2px 5px 2px 5px; background:#555555; color:white; ',
-            '.doq-console-menu label:hover' : 'color:#ff2222; cursor:pointer;' ,
-            '.doq-console-menu input' : 'display:none;' ,
-            '.doq-console-menu input:checked + label ':'background:#ffffff; color:#0022aa;'
+            '#doq-console-desk':'position:fixed; height:300px; bottom:0px; left:0px; background:@console-bgcolor; border-radius:3px; width:100%; padding:3px; overflow:hidden; box-sizing:border-box;',
+            '.doq-console-menu':'font-family:sans; font-size:@console-text-size; background:@console-menu-bgcolor; white-space: nowrap; user-select: none;',
+            '.doq-console-menu > div':'padding:2pt 5pt',
+            '.doq-console-item-unselected':'color:@console-text-inverse',
+            '.doq-console-item-unselected:hover':'background:@console-text-color',
+            '.doq-console-item-selected':'background:@console-bgcolor; color:@console-text-color;',
+            '.doq-console-openbutton':'font-family:sans; font-size:7pt; position:fixed; bottom:20pt; right:20pt; background-color:#2020ff; border-radius:5px; padding:5px; opacity:20%; color:white;'
         }
     }
 })

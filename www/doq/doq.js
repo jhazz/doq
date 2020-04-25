@@ -335,11 +335,13 @@ doq.cfg={
                     }
                 }
                 applyingStyleText=v[ownerId].replace(/@[A-Za-z\-_]+/g,function(varName){
+                    var val
                     if(varName in doq.css.vars){
                         varEntry=doq.css.vars[varName]
                         if('value' in varEntry){
                             val=varEntry.value
                         }
+                        
                     }
                     if(val==undefined){
                         if((!!activeTheme)&&(varName in activeTheme.vars)){
