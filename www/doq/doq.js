@@ -334,7 +334,7 @@ doq.cfg={
                         continue
                     }
                 }
-                applyingStyleText=v[ownerId].replace(/@\w+/g,function(varName){
+                applyingStyleText=v[ownerId].replace(/@[A-Za-z\-_]+/g,function(varName){
                     if(varName in doq.css.vars){
                         varEntry=doq.css.vars[varName]
                         if('value' in varEntry){

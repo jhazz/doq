@@ -103,7 +103,7 @@ doq.module('doq.console', ['doq.router'], function(){
         }
     }
     
-    function makeMenu(name, tabs, parentElement){
+    function makeConsoleMenu(name, tabs, parentElement){
         var s='',i,mi,radio,label;
         for (i in tabs){
             mi=tabs[i]
@@ -117,12 +117,18 @@ doq.module('doq.console', ['doq.router'], function(){
             
             label=document.createElement('label')
             label.id=name+'@'+i
-            label.innerText=mi.label
-            label.addEventListener('click',function(label){
+            label.innerText=mi.label;
+            
+            (function(menuItem){
+            label.addEventListener('click',function(){
                 var r=document.getElementById(this.id+'_r')
                 r.checked=true
-                console.log(this.innerText)
+                if(!!menuItem.onclick){
+                    menuItem.onclick(menuItem, this)
+                }
+                console.log(this.innerText+' '+menuItem.label)
             })
+            })(mi)
             parentElement.appendChild(label)
         }
         return s
@@ -138,7 +144,7 @@ doq.module('doq.console', ['doq.router'], function(){
             var dt=document.createElement('div');
             dt.innerHTML='<table width="100%" height="100%" cellspacing=0 cellpadding=0 border=1>'+
             '<tr valign="top"><td width="200px">'+
-            '<div class="menu-tabs" id="doq-console-menu1"></div><div id="doq-console-selectors"></div></td>'+
+            '<div class="doq-console-menu" id="doq-console-menu1"></div><div id="doq-console-selectors"></div></td>'+
             '<td><div>Right panel'+
             '<span style="color:white; float:right; padding:0px 10px;cursor:pointer" onclick="location.href=\'#logger?do=hidePanel\'">X</span></div>'+
             '<div id="logger_right_window" style="box-sizing: border-box; display:block; float:right; padding:2px; background:#eeeeee; overflow:auto; height:250px; width:80%">'+
@@ -148,8 +154,8 @@ doq.module('doq.console', ['doq.router'], function(){
             d.appendChild(dt);
             var pe=document.getElementById('doq-console-menu1')
             
-            makeMenu('console-left',[
-                {label:'Clients',onclick:function(){}},
+            makeConsoleMenu('console-left',[
+                {label:'Clients',onclick:function(mi, el){alert(mi.label) }},
                 {label:'Loads',onclick:function(){}},
                 {label:'Pages',onclick:function(){}},
                 ],pe)
@@ -233,9 +239,15 @@ doq.module('doq.console', ['doq.router'], function(){
     return {
         functions:[init, hide, show, showButton],
         css:{
+            vars:{
+                    '@console-menu-bgcolor':'#666688',
+            },
             '#doq-console-desk':'position:fixed; height:300px; bottom:0px; left:0px; background:#aaaaaa; border:solid black 1px; border-radius:3px; width:100%; padding:4px; box-sizing:border-box;',
-           '.doq-console-menu':'font-family:sans; font-size:9pt; color:#222222;'
-            
+            '.doq-console-menu':'font-family:sans; font-size:9pt; color:#222222; background:@console-menu-bgcolor; ',
+            '.doq-console-menu label' : 'margin:0 2px 0 2px; border-radius: 2px 2px 0 0; padding:2px 5px 2px 5px; background:#555555; color:white; ',
+            '.doq-console-menu label:hover' : 'color:#ff2222; cursor:pointer;' ,
+            '.doq-console-menu input' : 'display:none;' ,
+            '.doq-console-menu input:checked + label ':'background:#ffffff; color:#0022aa;'
         }
     }
 })
