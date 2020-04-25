@@ -1,0 +1,3 @@
+[
+{"phpErrorType":8,"data":"Undefined index: clientToken","file":"/var/www/html/doq/api/doq/logger.php","line":41,"type":1,"typeName":"Errors log section","time":"2020-04-22 00:03:20"}
+]

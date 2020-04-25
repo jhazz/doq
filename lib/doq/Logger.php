@@ -63,6 +63,8 @@ abstract class Logger
     const LE_DEBUG_QUERY=64;
     const LE_DEBUG_DATAQUERY=128;
     const LE_DEBUG_ALL=32767;
+    const DOQ_CLIENT_TOKEN_NAME='DOQ_CLIENT_TOKEN';
+    const DOQ_PAGELOAD_TOKEN_NAME='DOQ_PAGELOAD_TOKEN';
 
     const TIMEOUT_CLIENT=31536000; # one year
     
@@ -72,7 +74,16 @@ abstract class Logger
     const LT_HTML_END='html_end';
     #const LT_HTML_INLINE='html_inline';
 
+    abstract public function pushMessageToLog($entryType,$data);
+   
     private static $loggerInstance;
+    public static $logMode;
+    private static $pageCSRF;
+    
+    private static $clientToken;
+    private static $pageloadToken;
+    
+    
     public static $entryTypeNames=[
         self::LE_ERROR=>'Errors log section',
         self::LE_WARNING=>'Warnings log section',
@@ -80,12 +91,26 @@ abstract class Logger
         self::LE_DEBUG_INFO=>'Debug information',
         self::LE_DEBUG_QUERY=>'Debugging data querys log section',
         self::LE_DEBUG_DATAQUERY=>'Debugging data query log section'];
-    public static $logMode;
 
-    abstract public function pushMessageToLog($entryType,$data);
 
+    public static function getCSRF(){
+        if(!self::$pageCSRF){
+            throw ('Page CSRF has not been initialized!');
+        }
+        return self::$pageCSRF;
+    }
+    public static function getClientToken(){
+        return self::$clientToken;
+    }
+    public static function getPageloadToken(){
+        return self::$pageloadToken;
+    }
+    
     public static function init(&$env=null)
     {
+        $CSRFsalt='salt='.rand();
+        self::$pageCSRF=$CSRFsalt.':'.md5($rand.$env['#secret'].$CSRFsalt);
+
         if (is_object(self::$loggerInstance)) {
             return;
         }
@@ -100,32 +125,39 @@ abstract class Logger
             $targetType=$env['#targetType'];
         }
 
+        
         $clientTokenName=$env['#clientTokenName'];
         if(!$clientTokenName){
-            $clientTokenName='DOQ_CLIENT_TOKEN';
+            $clientTokenName=self::DOQ_CLIENT_TOKEN_NAME;
         }
         if(!isset($_COOKIE[$clientTokenName])) {
             $clientToken=substr(md5(random_int (0,PHP_INT_MAX)),0,10);
-            setcookie($clientTokenName, $clientToken, time()+self::TIMEOUT_CLIENT);
         } else {
             $clientToken=$_COOKIE[$clientTokenName];
         }
-
-        $pageTokenName=$env['#pageTokenName'];
-        if(!$pageTokenName){
-            $pageTokenName='DOQ_PAGE_TOKEN';
-        }
-        if (!isset($_COOKIE[$pageTokenName])) {
-            $pageToken=date('ymd_His').'_'.substr(md5(random_int (0,PHP_INT_MAX)),0,6);
-            setcookie($pageTokenName, $pageToken,time()+10);
-        } else {
-            $pageToken=$_COOKIE[$pageTokenName];
-        }
         
+        $logCookiePath='/';
+        if (isset($env['#logCookiePath'])){
+            $targetCookiePath=$env['#logCookiePath'];
+        }
+        setcookie( $clientTokenName, $clientToken, time()+self::TIMEOUT_CLIENT, $logCookiePath);
+        self::$clientToken=$clientToken;
+        
+        $pageloadTokenName=$env['#pageloadTokenName'];
+        if(!$pageloadTokenName){
+            $pageloadTokenName=self::DOQ_PAGELOAD_TOKEN_NAME;
+        }
+        if (!isset($_COOKIE[$pageloadTokenName])) {
+            $pageloadToken=date('ymd_His').'_'.substr(md5(random_int (0,PHP_INT_MAX)),0,6);
+        } else {
+            $pageloadToken=$_COOKIE[$pageloadTokenName];
+        }
+        setcookie($pageloadTokenName, $pageloadToken,time()+10, $logCookiePath);
+        self::$pageloadToken=$pageloadToken;
 
         switch($targetType){
             case self::LT_FILE:
-                $r=FileLogger::create($env, $clientToken, $pageToken);
+                $r=FileLogger::create($env, $clientToken, $pageloadToken);
                 if ($r[1]===null) {
                     self::$loggerInstance=&$r[0];
                 } else {
@@ -382,10 +414,19 @@ abstract class Logger
         return $row1.$row2;
     }
     
-    public static function initJS()
+    public static function putJavascriptVars()
     {    
         $wwwURL=$GLOBALS['doq']['env']['#wwwURL'];
-        print '<script src="'.$wwwURL.'/doq/doq.js"></script><script>doq.cfg.jsModulesRoot="'.$wwwURL.'";</script>';
+        ?>
+        <script src="<?=$wwwURL?>/doq/doq.js"></script>
+        <script>
+        doq.cfg.jsModulesRoot="<?=$wwwURL?>"
+        doq.cfg.CSRF="<?=\doq\Logger::getCSRF()?>"
+        doq.cfg.clientToken="<?=\doq\Logger::getClientToken()?>"
+        doq.cfg.pageloadToken="<?=\doq\Logger::getPageloadToken()?>"
+        doq.require('doq.console')
+        </script>
+    <?php
     }
 }
 
@@ -549,18 +590,78 @@ class FileLogger extends Logger
     public function __construct (&$env, $clientToken, $pageToken)
     {
         $this->targetLogDir=$env['#logsPath'];
-        $d=$this->targetLogDir.'/'.$clientToken.'/'.$pageToken.'/'.date('y-m-d__H.i.s');
-        if (\mkdir($d, 0777, true)) {
-            $this->targetLogFile=$d.'/log.json';
-            $this->targetDataLogFile=$d.'/datalog.json';
-            $this->targetEnvLogFile=$d.'/env.json';
+        $doLogThePageloaderMeta=0;
+        $d=$this->targetLogDir.'/'.$clientToken.'/'.$pageToken;
+
+        // Create first directory for pageloader
+        if(!file_exists($d)){
+            if (\mkdir($d, 0777, true)) {
+                $doLogThePageloaderMeta=1;
+                $metaFile1=$d.'/mainmeta.json';
+                $mlog1=fopen($metaFile1,'w');
+                $script=$url=$_SERVER['REQUEST_URI'];
+                $a=[];
+                if (preg_match('/([^\/]+?)\?.+/', $url, $a)){
+                    $script=$a[0];
+                }
+                
+            }
+        }
+        
+        $pageLogNameWithMS=$pageLogName=date('y-m-d_H.i.s');
+        $prefix=$this->targetLogDir.'/'.$clientToken.'/'.$pageToken.'/';
+        $targetDir=$prefix.$pageLogName;
+        
+        if(file_exists($targetDir)){
+            for($i=0;$i<10;$i++){
+                $t=explode(' ',microtime());
+                $pageLogNameWithMS=$pageLogName.'.'.'u'.(round(floatval($t[0]),3)*1000);
+                $d=$prefix.$pageLogNameWithMS;
+                if(!file_exists($d)){
+                    $targetDir=$d;
+                    break;
+                }
+            }
+        }
+        
+        if (\mkdir($targetDir, 0777, true)) {
+            $metaFile2=$targetDir.'/meta.json';
+            $mlog2=fopen($metaFile2,'w');
+            $script=$url=$_SERVER['REQUEST_URI'];
+            $a=[];
+
+            if (preg_match('/([^\/]+?)\?.+/', $url, $a)){
+                $script=$a[0];
+            }
+            \fputs($mlog2, json_encode([
+                'url'=>$url,
+                'script'=>$script,
+                'timestamp'=>$_SERVER['REQUEST_TIME']
+            ], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));
+            
+            fclose($mlog2);
+            
+            if($doLogThePageloaderMeta){
+                \fputs($mlog1, json_encode([
+                    'url'=>$url,
+                    'script'=>$script,
+                    'timestamp'=>$_SERVER['REQUEST_TIME'],
+                    'firstPageToken'=>$pageLogNameWithMS
+                ], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));
+                fclose($mlog1);
+            }
+
+                    
+            $this->targetLogFile=$targetDir.'/log.json';
+            $this->targetDataLogFile=$targetDir.'/datalog.json';
+            $this->targetEnvLogFile=$targetDir.'/env.json';
             $this->logFileHandle=fopen($this->targetLogFile, 'w');
             $this->MessagesWasPushed=false;
             $this->dataLogFileHandle=fopen($this->targetDataLogFile, 'w');
             $this->targetEnvLogFileHandle=fopen($this->targetEnvLogFile, 'w');
             fputs($this->targetEnvLogFileHandle , json_encode(['_SERVER'=>$_SERVER,'env'=>$GLOBALS['doq']['env']] , JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));
         } else {
-            print "\nFATAL: Unable to create directory for logs ".$d."\n<br>";
+            print "\nFATAL: Unable to create directory for logs ".$targetDir."\n<br>";
             exit(1);
         }
     }
@@ -581,7 +682,7 @@ class FileLogger extends Logger
             $data['type']=$entryType;
             $data['typeName']=self::$entryTypeNames[$entryType];
             $data['time']=date('Y-m-d H:i:s');
-            fputs($this->logFileHandle, self::jsonSerialize($data));
+            \fputs($this->logFileHandle, self::jsonSerialize($data));
         }
     }
 
@@ -596,10 +697,9 @@ class FileLogger extends Logger
         }
         $data['type']=$entryType;
         $data['time']=date('Y-m-d H:i:s');
-        
-        fputs ($this->dataLogFileHandle, self::jsonSerialize($data));
-
+        \fputs ($this->dataLogFileHandle, self::jsonSerialize($data));
     }
+    
     public function pushToDataLog($data){
         if (!$this->dataLogFileHandle) {
             return;
@@ -607,14 +707,13 @@ class FileLogger extends Logger
         $data['type']='datalog';
         $data['time']=date('Y-m-d H:i:s');
         if (isset($data['queryString'])) {
-            fputs($this->dataLogFileHandle, "\n\n\nDataquery:\n");
-            fputs($this->dataLogFileHandle, self::jsonSerialize($data));
+            \fputs($this->dataLogFileHandle, "\n\n\nDataquery:\n");
+            \fputs($this->dataLogFileHandle, self::jsonSerialize($data));
         }
         if (isset($data['indexDump'])){
-            fputs($this->dataLogFileHandle, "\n\n\nIndexes:\n");
-            fputs($this->dataLogFileHandle, self::jsonSerialize($data));
+            \fputs($this->dataLogFileHandle, "\n\n\nIndexes:\n");
+            \fputs($this->dataLogFileHandle, self::jsonSerialize($data));
         }
-
     }
 
 

@@ -179,31 +179,33 @@ function jsonLoader($options){
 }
 
 function showJSONParams(){
-?><br><br>
+?>
+    <br><br>
     <script>
-
-    function onRequestTabsRoute(params){
-        switch(params.do){
-            case 'showRequest':
-                document.getElementById("layer_request").style.display="block"
-                document.getElementById("layer_response").style.display="none"
-                document.getElementById("m2_0").checked=true
-                break
-            case 'showResponse':
-                document.getElementById("layer_request").style.display="none"
-                document.getElementById("layer_response").style.display="block"
-                document.getElementById("m2_1").checked=true
-                break
-        }
-    }
     
     doq.require('doq.router',function(){
         doq.log('router added')
-        doq.router.addRouteHandler('#requestTabs',onRequestTabsRoute)
-        
+        doq.router.addRouteHandler('#requestTabs',
+        function onRequestTabsRoute(params){
+                switch(params.do){
+                    case 'showRequest':
+                        document.getElementById("layer_request").style.display="block"
+                        document.getElementById("layer_response").style.display="none"
+                        document.getElementById("m2_0").checked=true
+                        break
+                    case 'showResponse':
+                        document.getElementById("layer_request").style.display="none"
+                        document.getElementById("layer_response").style.display="block"
+                        document.getElementById("m2_1").checked=true
+                        break
+                }
+            }        
+        )
     })
     
+    
     function sendRequestForText(){
+    
         location.href='#requestTabs?do=showResponse'
         document.getElementById("response_area").innerText="Please wait";
         var xhr=doq.postJSON('?a=json_demo1_post',document.getElementById("request_area").innerText,function(){
@@ -233,51 +235,45 @@ function showJSONParams(){
         }
         return s
     }
-
-
-
     </script>
+        
+    <div class="menu-tabs">
+    <script>
+    document.write(makeTabs('m2',[
+        {href:'#requestTabs?do=showRequest',label:'Request data form'}, 
+        {href:'#requestTabs?do=showResponse',label:'Response received'}
+    ] ));
+    </script>
+    </div>
 
-    
-<div class="menu-tabs">
-<script>
-document.write(makeTabs('m2',[
-    {href:'#requestTabs?do=showRequest',label:'Request data form'}, 
-    {href:'#requestTabs?do=showResponse',label:'Response received'}
-] ));
-</script>
-</div>
-
-<div id="layer_request" style="display:block" class="layer_form">
-    <h4>This is a request parameters:</h4>
-    <textarea cols="100" rows="20"  id="request_area">
-{
-    "#viewId":"VIEW1",
-    "@params":{
-        "@filter":
-            [
-                {"#columnId":"SKU", "#operand":"LIKE", "@values":["ОР-Д2-4.0"]}
-            ],
-        "#pageSize":10,
-        "#pageNo":1
+    <div id="layer_request" style="display:block" class="layer_form">
+        <h4>This is a request parameters:</h4>
+        <textarea cols="100" rows="20"  id="request_area">
+    {
+        "#viewId":"VIEW1",
+        "@params":{
+            "@filter":
+                [
+                    {"#columnId":"SKU", "#operand":"LIKE", "@values":["ОР-Д2-4.0"]}
+                ],
+            "#pageSize":10,
+            "#pageNo":1
+        }
     }
-}
-    </textarea><br>
-    <button onclick="sendRequestForText()">Execute and get text</button>
-    <button onclick="sendRequestForJSON()">Execute and get JSON</button>
-</div>
-<div id="layer_response" style="display:none" class="layer_form">
-    <h4>Response from server:</h4>
-    <pre id="response_area" style='width:100%; border:solid #000000 1px; height:400px; overflow:auto'></pre>
-</div>
-    
+        </textarea><br>
+        <button onclick="sendRequestForText()">Execute and get text</button>
+        <button onclick="sendRequestForJSON()">Execute and get JSON</button>
+    </div>
+    <div id="layer_response" style="display:none" class="layer_form">
+        <h4>Response from server:</h4>
+        <pre id="response_area" style='width:100%; border:solid #000000 1px; height:400px; overflow:auto'></pre>
+    </div>
 <?php
 }
 
-function showTopMenu(){
-    \doq\Logger::initJS();
-    ?>
 
+function showTopMenu(){
+?>
     <style>
         body{margin:0;padding:0; height:100%;}
         html{margin:0;padding:0; height:100%;}
@@ -293,12 +289,14 @@ function showTopMenu(){
         .layer_form {padding:20px;}
     </style>
     <div class="menu-top">
-    <a href="?a=json">JSON reader</a> | <a href="?a=html">HTML render</a> | <a href="?a=json_demo1">JSON request demo</a> |
-    <a href="#logger?do=showPanel"'>Logger panel</a>
+    <a href="?a=json">JSON reader</a> | <a href="?a=html">HTML render</a> | <a href="?a=json_demo1">request demo</a>
     </div>
 <?php
 }
 
+
+
+########## BEGIN ####################
 
 $action='json_demo1';
 if(isset($_GET['a'])){
@@ -307,14 +305,22 @@ if(isset($_GET['a'])){
 
 switch($action){
     case 'json': 
+        doq\Logger::putJavascriptVars();
         showTopMenu();
         jsonLoader([]);
         break;
     case 'html':
+        doq\Logger::putJavascriptVars();
         showTopMenu();
         htmlRenderer();
         break;
-    case 'json_demo1_post': 
+    case 'json_demo1': 
+        doq\Logger::putJavascriptVars();
+        showTopMenu();
+        showJSONParams();
+    break;
+
+    case 'json_demo1_post': # это не страница, а голый запрос на JSON
         $headers = getallheaders();
         if (stripos($headers["Content-type"],"application/json")!==false) {
             $s=file_get_contents("php://input");
@@ -322,10 +328,6 @@ switch($action){
             jsonLoader($r);
         }
       break;
-    case 'json_demo1': 
-        showTopMenu();
-        showJSONParams();
-    break;
 }
 
 ?>

@@ -157,9 +157,12 @@ doq.cfg={
             jsPath: jsPath,
             loading: 1,
             loaded: 0,
-            inited: 0,
-            onAfterInit: [onAfterInit]
+            inited: 0
+            
         }
+        if(onAfterInit!==undefined)
+            loader.onAfterInit=[onAfterInit]
+            
         return loader
     }
 
@@ -279,7 +282,7 @@ doq.cfg={
                 aloader.targetNS.init.call(aloader)
             }
             aloader.inited=1
-            log('doq.module', 'Module '+aloader.moduleName+': init')
+            //log('doq.module', 'Module '+aloader.moduleName+': init')
             applyCSSByOwnerId(aloader.moduleName)
             
             if(aloader.onAfterInit!==undefined)
@@ -294,7 +297,7 @@ doq.cfg={
         var i,applyingStyleText,ss,sset,sels, rule, l, ruleSelector, 
             targetSheet,overlaps={},activeTheme,val, varEntry
             
-        log('doq.css','-----apply css defined by "'+ownerId+'" ------')
+        //log('doq.css','-----apply css defined by "'+ownerId+'" ------')
         if((!!doq.css.activeTheme)&&(doq.css.activeTheme in doq.css.themes))
             activeTheme=doq.css.themes[doq.css.activeTheme]
             

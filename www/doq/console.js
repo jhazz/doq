@@ -1,71 +1,180 @@
 /* jshint asi:true, -W100, forin:false, sub:true */
 doq.module('doq.console', ['doq.router'], function(){
-
-    function hideConsole(){
-        var d=document.getElementById("debug_console"),s;
+    var buttonShown=false,
+        clientSelector,
+        pageSelector,
+        apiLoggerURL='../../api/doq/logger.php'
+        
+    
+    
+    function upClientsList(){
+        var response, i,de,arr,n,
+            url= apiLoggerURL+'?action=clients'
+            
+        doq.log('doq.console', "Читаем список клиентов из "+url)
+        doq.postJSON(url, {}, function(e){
+            response=e.target.response, de, i, n
+            if(!response){
+                doq.log('doq.console', "Не прочитался список клиентов "+url)
+                return
+            }
+            clientSelector.innerHTML=''
+            if('clients' in response){
+                arr=response['clients']
+                for (i in arr){
+                    n=arr[i]
+                    de=document.createElement('option')
+                    de.className='tree-list-item'
+                    de.value=n
+                    de.innerText=n
+                    clientSelector.appendChild(de)
+                }
+            }
+        }, 'json');
+        
+    }
+    
+    function upPageloadsSelector(){
+        var response, i, de, arr, n,
+        url= apiLoggerURL+'?action=pageloads'
+        
+        doq.log('doq.console', "Читаем список загрузок страниц клиента  "+doq.cfg.clientToken+" из "+url)
+        doq.postJSON(url, {clientToken:doq.cfg.clientToken}, function(e){
+            response=e.target.response
+            
+            if(!response){
+                doq.log('doq.console', "Не прочитался список загрузок страниц из "+url)
+                return
+            }
+            pageloadsSelector.innerHTML=''
+            
+            de=document.createElement('option')
+            de.innerText='Выберите загрузку'
+            pageloadsSelector.appendChild(de)
+            
+            if('pageloadTokens' in response){
+                arr=response['pageloadTokens']
+                for (i in arr){
+                    v=arr[i]
+                    de=document.createElement('option')
+                    de.className='tree-list-item'
+                    de.value=i
+                    if(i==doq.cfg.pageloadToken){
+                        de.setAttribute('selected','selected')
+                    }
+                    de.innerText='('+v.time+') '+v.script
+                    pageloadsSelector.appendChild(de)
+                }
+            }
+        }, 'json');        
+    }
+    
+    function upPageSelector(){
+        var response, i, de, arr, n,
+            url= apiLoggerURL+'?action=pages'
+            
+            doq.log('doq.console', "Читаем список загрузок страниц в рамках "+doq.cfg.pageloadToken+" из "+url)
+            doq.postJSON(url, {pageloadToken:doq.cfg.pageloadToken}, function(e){
+            response=e.target.response
+            
+            if(!response){
+                doq.log('doq.console', "Не прочитался список страниц из "+url)
+                return
+            }
+            pageSelector.innerHTML=''
+            if('pages' in response){
+                arr=response['pages']
+                for (i in arr){
+                    v=arr[i]
+                    de=document.createElement('option')
+                    de.className='tree-list-item'
+                    de.value=i
+                    de.innerText=v.script
+                    pageSelector.appendChild(de)
+                }
+            }
+        }, 'json');        
+    }
+    
+    function hide(){
+        var d=document.getElementById("logger_console"),s;
         if (d){
             d.style.display='none';
         }
     }
-
-    function showConsole(){
-        var d=document.getElementById("logger_console"),
-           apiLoggerURL='../../api/doq/logger.php?action=browse',
-            s
+    
+    function makeMenu(name, tabs, parentElement){
+        var s='',i,mi,radio,label;
+        for (i in tabs){
+            mi=tabs[i]
+            radio=document.createElement('input')
+            radio.id=name+'@'+i+'_r'
+            radio.setAttribute('type','radio')
+            radio.setAttribute('name',name)
+            if(!i) 
+                radio.setAttribute('checked','1')
+            parentElement.appendChild(radio)
             
-        
+            label=document.createElement('label')
+            label.id=name+'@'+i
+            label.innerText=mi.label
+            label.addEventListener('click',function(label){
+                var r=document.getElementById(this.id+'_r')
+                r.checked=true
+                console.log(this.innerText)
+            })
+            parentElement.appendChild(label)
+        }
+        return s
+    }
+    
+    function show(){
+        var s, d=document.getElementById("logger_console"), llw
         if(!d) {
             d=document.createElement('div')
-            d.id="logger_console"
-            s=d.style
-            s.position='fixed'
-            s.height='300px'
-            s.bottom='0px'
-            s.left='0px'
-            s.background='#aaaaaa'
-            s.border='solid black 1px'
-            s.borderRadius='3px'
-            s.width='100%'
-            s.padding='4px'
-            s.boxSizing='border-box'
-
+            d.id='doq-console-desk'
             document.body.appendChild(d);
+            
             var dt=document.createElement('div');
             dt.innerHTML='<table width="100%" height="100%" cellspacing=0 cellpadding=0 border=1>'+
-            '<tr><td width="200px"><div id="logger_left_window" style="box-sizing: border-box;  background:#ff8080; float:right; width:20%; height:250px">Список</div></td>'+
-            '<td><div class="menu-tabs">'+
-            makeTabs('m1',[{href:'#logger?tab=errors',label:'Errors'}, {href:'#logger?tab=info',label:'Info'}] )+
+            '<tr valign="top"><td width="200px">'+
+            '<div class="menu-tabs" id="doq-console-menu1"></div><div id="doq-console-selectors"></div></td>'+
+            '<td><div>Right panel'+
             '<span style="color:white; float:right; padding:0px 10px;cursor:pointer" onclick="location.href=\'#logger?do=hidePanel\'">X</span></div>'+
             '<div id="logger_right_window" style="box-sizing: border-box; display:block; float:right; padding:2px; background:#eeeeee; overflow:auto; height:250px; width:80%">'+
             '<div style="border:solid #222222 2px; height:1000px;">kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk<br>kjkljlk1<br>kjkljlk2<br></div>'+
             '</div></td></tr></table>'
+            
             d.appendChild(dt);
+            var pe=document.getElementById('doq-console-menu1')
+            
+            makeMenu('console-left',[
+                {label:'Clients',onclick:function(){}},
+                {label:'Loads',onclick:function(){}},
+                {label:'Pages',onclick:function(){}},
+                ],pe)
+
+            llw=document.getElementById('doq-console-selectors')
+            clientSelector=document.createElement('select')
+            clientSelector.style.width='100%'
+            llw.appendChild(clientSelector)
+            
+            pageloadsSelector=document.createElement('select')
+            pageloadsSelector.style.width='100%'
+            llw.appendChild(pageloadsSelector)
+            
+            pageSelector=document.createElement('select')
+            pageSelector.style.width='100%'
+            pageSelector.setAttribute('size',6)
+            
+            pageSelector.style.height='100%'
+            llw.appendChild(pageSelector)
 
             // Производим первое чтение
+            upClientsList()
+            upPageloadsSelector()
+            upPageSelector()
 
-            
-            doq.log('doq.console', "Читаем логи из "+apiLoggerURL)
-            postJSON(apiLoggerURL, {}, function(e){
-                var r,lrw=document.getElementById('logger_right_window'),llw=document.getElementById('logger_left_window')
-                r=e.target.response;
-                var de;
-                if(!r){
-                    doq.log('doq.console', "Не прочиталось")
-                    return
-                }
-                for (var pageTokenNames in r['pageTokens']){
-                    de=document.createElement('div')
-                    de.className='tree-list-item'
-                    de.innerText=pageTokenNames
-                    llw.appendChild(de)
-                }
-            }, 'json');
-
-            /*
-            var dd=document.createElement('div');
-            d.appendChild(dd);
-            dd.style.border='solid #ffffff 2px';
-            dd.style.height='100%'*/
         } else {
             d.style.display='block'
         }
@@ -100,13 +209,34 @@ doq.module('doq.console', ['doq.router'], function(){
     }
 
     function init(){
-        console.log('CONSOLE ADDED')
-        doq.router.addRouteHandler('#console',onRoute)
+        showButton()
     }
 
+    function showButton(){
+        if(buttonShown)
+            return
+        
+        buttonShown=true
+        var b=document.createElement('button')
+        b.innerText="Console"
+        b.style.position='fixed'
+        b.style.bottom='30px'
+        b.style.right='30px'
+        b.style.backgroundColor='#2020ff'
+        b.style.borderRadius='5px'
+        b.style.padding='5px'
+        b.style.opacity='20%'
+        b.style.color='white'
+        b.addEventListener('click',show)
+        document.body.appendChild(b)
+    }
     return {
-        functions:[hideConsole,showConsole],
-        init:init
+        functions:[init, hide, show, showButton],
+        css:{
+            '#doq-console-desk':'position:fixed; height:300px; bottom:0px; left:0px; background:#aaaaaa; border:solid black 1px; border-radius:3px; width:100%; padding:4px; box-sizing:border-box;',
+           '.doq-console-menu':'font-family:sans; font-size:9pt; color:#222222;'
+            
+        }
     }
 })
 

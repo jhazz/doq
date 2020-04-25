@@ -3,3 +3,9 @@ runtime/
 *.tlp
 *.code-workspace
 .htaccess
+*.clpprj
+*.kdev4
+*.workspace
+*.phprj
+.codelite/
+.kdev4
