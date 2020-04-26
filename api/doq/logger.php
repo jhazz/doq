@@ -103,10 +103,12 @@ switch($_GET['action']){
                        
                         $x=file_get_contents($pageLogsPath.'/'.$pageDir.'/meta.json');
                         $meta=json_decode($x,true,10);
-                        $results[$pageDir]=['script'=>$meta['script'], 
+                        $results[$pageDir]=[
+                            'url'=>$meta['url'],
+                            'script'=>$meta['script'], 
                             'timestamp'=>$meta['timestamp'],
-                            'time'=>date('H_i_s',$meta['timestamp']),
-                            'date'=>date('Y_d_F',$meta['timestamp'])
+                            'time'=>date('H.i.s',$meta['timestamp']),
+                            'date'=>date('Y.d.F',$meta['timestamp'])
                         ];
                     }
                     closedir($dh1);

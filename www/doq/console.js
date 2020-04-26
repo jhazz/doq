@@ -4,6 +4,7 @@ doq.module('doq.console', ['doq.router'], function(){
         clientSelector,
         pageSelector,
         tabMenus={},
+        tables={},
         resizeTimeout,
         panelVisible=false,
         consoleDesk,
@@ -88,32 +89,7 @@ doq.module('doq.console', ['doq.router'], function(){
         }, 'json');        
     }
     
-    function upPageSelector(){
-        var response, i, de, arr, n,
-            url= apiLoggerURL+'?action=pages'
-            
-            doq.log('doq.console', "Читаем список загрузок страниц в рамках "+doq.cfg.pageloadToken+" из "+url)
-            doq.postJSON(url, {pageloadToken:doq.cfg.pageloadToken}, function(e){
-            response=e.target.response
-            
-            if(!response){
-                doq.log('doq.console', "Не прочитался список страниц из "+url)
-                return
-            }
-            pageSelector.innerHTML=''
-            if('pages' in response){
-                arr=response['pages']
-                for (i in arr){
-                    v=arr[i]
-                    de=document.createElement('option')
-                    de.className='tree-list-item'
-                    de.value=i
-                    de.innerText=v.script
-                    pageSelector.appendChild(de)
-                }
-            }
-        }, 'json');        
-    }
+
     
     function hide(){
         var d=document.getElementById("logger_console"),s;
@@ -123,7 +99,7 @@ doq.module('doq.console', ['doq.router'], function(){
         panelVisible=false
     }
     
-    function makeConsoleMenu(name, items, parentElement, istabs){
+    function makeConsoleMenu(parentElement, name, items, istabs){
         var i,mi,radio,label,tabMenu,menuLine=document.createElement('div'), active
         if(istabs) tabMenu=tabMenus[name]={}
         menuLine.className='doq-console-menu'
@@ -189,24 +165,21 @@ doq.module('doq.console', ['doq.router'], function(){
         consoleDesk=document.createElement('div')
         consoleDesk.id='doq-console-desk'
         consoleDesk.style.overflow='auto'
-        
         panel1=document.createElement('div')
         s=panel1.style
         s.position='absolute'
-        
         panel2=document.createElement('div')
         s=panel2.style
         s.position='absolute'
         s.background='white'
         consoleDesk.appendChild(panel1)
         consoleDesk.appendChild(panel2)
-        panel1menu=makeConsoleMenu('console-left',[
+        panel1menu=makeConsoleMenu(panel1, 'console-left',[
             {label:'Clients',onclick:putClientSelector},
             {label:'Loads',onclick:putPageloadsSelector},
             {label:'Pages',onclick:putPageSelector},
-            ],panel1,true)
+            ],true)
         panel1content=document.createElement('div')
-        panel1content.innerText='ABC'
         s=panel1content.style
         s.background=doq.css.vars['@console-bgcolor']
         s.overflow='auto'
@@ -219,6 +192,7 @@ doq.module('doq.console', ['doq.router'], function(){
         s.cursor='col-resize'
         consoleDesk.appendChild(splitter1)
         splitter1.addEventListener('mousedown',splitter1mousedown)
+        splitter1.addEventListener('selectstart',function(e){console.log('Select start'); e.preventDefault();} )
         
         document.body.appendChild(consoleDesk)
         panelVisible=true
@@ -245,17 +219,92 @@ doq.module('doq.console', ['doq.router'], function(){
 
     function putPageSelector(mi, el){
         panel1content.innerHTML=''
-        pageSelector=document.createElement('select')
-        pageSelector.style.width='100%'
-        pageSelector.setAttribute('size',6)
+        pageSelector=document.createElement('div')
         panel1content.appendChild(pageSelector)
         upPageSelector()
         return true
     }
 
+
+    function upPageSelector(){
+        var response, i, de, arr, n,
+            url= apiLoggerURL+'?action=pages'
+            
+        doq.log('doq.console', "Читаем список загрузок страниц в рамках "+doq.cfg.pageloadToken+" из "+url)
+        doq.postJSON(url, {pageloadToken:doq.cfg.pageloadToken}, function(e){
+            response=e.target.response
+            if(!response){
+                doq.log('doq.console', "Не прочитался список страниц из "+url)
+                return
+            }
+            var frag=document.createDocumentFragment(),p,
+            p=document.createElement('p')
+            p.className='doq-console-p'
+            p.innerText='Client:'+doq.cfg.clientToken
+            frag.appendChild(p)
+
+            p=document.createElement('p')
+            p.className='doq-console-p'
+            p.innerText='Pages under Pageload Token: '+doq.cfg.pageloadToken
+            frag.appendChild(p)
+            if('pages' in response){
+                makeTable(frag,'pageselector',response['pages'],[
+                    {header:'Script', size:'200', field:'script'},
+                    {header:'Time', size:'50', field:'time'},
+                    {header:'URL', size:'300', field:'url'},
+                ])
+            }
+            pageSelector.innerHTML=''
+            pageSelector.appendChild(frag)
+        }, 'json');
+    }
+
+    function makeTable(parentElement, name, items, columns){
+        var tableElement=document.createElement('table'),
+            thead = tableElement.createTHead(),
+            row = thead.insertRow(), i, cell, item, cnt,w, table
+        
+        tableElement.className='doq-console-table'
+        tableElement.setAttribute('cellspacing',1)
+        table=tables[name]={el:tableElement, items:items, columns:columns, parentElement:parentElement}
+        
+        for (i in columns) {
+            cell = document.createElement('th');
+            cell.innerText=columns[i].header
+            row.appendChild(cell);
+        }
+        for (i in items) {
+            item=items[i]
+            row=tableElement.insertRow();
+            (function(table){
+                row.addEventListener('click',function(e){
+                    if(!!table.selectedRowEl)
+                        table.selectedRowEl.classList.remove('doq-console-row-selected')
+                    this.classList.add('doq-console-row-selected')
+                    table.selectedRowEl=this
+            })
+            
+            })(table)
+            
+            for(j in columns){
+                cell=row.insertCell()
+                w=columns[j].size
+                if(!!w) cell.width=w
+                cnt=document.createElement('div')
+                cnt.style.width=w
+                cnt.style.overflow='hidden'
+                cnt.style.whiteSpace='nowrap'
+                cnt.innerText=item[columns[j].field]
+                cell.appendChild(cnt)
+            }
+        }
+        parentElement.appendChild(tableElement)
+    }
+
     function splitter1mousedown(e){
         document.body.addEventListener('mousemove',splitter1mousemove)
         document.body.addEventListener('mouseup',splitter1mouseup)
+        document.body.addEventListener('mouseleave',splitter1mouseup)
         dragStartPageX=e.pageX
         dragStartX=panel1Size
         dragMode=1
@@ -271,7 +320,7 @@ doq.module('doq.console', ['doq.router'], function(){
         if(dragMode==2){
             panel1Size=dragStartX+(newPageX-dragStartPageX)
             if(panel1Size<50)panel1Size=50
-            if(panel1Size>400)panel1Size=400
+            if(panel1Size>600)panel1Size=600
             arrange()
         }
     }
@@ -282,34 +331,6 @@ doq.module('doq.console', ['doq.router'], function(){
         document.body.removeEventListener('mouseup',splitter1mouseup)
     }
     
-    function showTab(tabName){
-        switch(tabName){
-            case 'errors':
-                showConsole()
-                document.getElementById("m1_0").checked=true;
-                break;
-            case 'info':
-                showConsole()
-                document.getElementById("m1_1").checked=true;
-                
-                break;
-            case 'hide':
-                hideConsole()
-            }
-    }
-
-    function onRoute(params){
-        if('tab' in params){
-            showTab(params.tab)
-        }
-        if('do' in params){
-            switch(params.do){
-                case 'showPanel':showConsole(); break;
-                case 'hidePanel':hideConsole(); break;
-            }
-        }
-    }
-
     function init(){
         showButton()
     }
@@ -325,23 +346,33 @@ doq.module('doq.console', ['doq.router'], function(){
         b.addEventListener('click',show)
         document.body.appendChild(b)
     }
+    
     return {
         functions:[init, hide, show, showButton],
         css:{
             vars:{
             '@console-menu-bgcolor':'#666666',
+            '@console-border-color':'#ddddee',
             '@console-bgcolor':'#eeeeee',
+            '@console-bgcolor-inverse':'#777777',
             '@console-text-size':'8pt',
             '@console-text-color':'#555555',
+            '@console-label-color':'#777777',
             '@console-text-inverse':'#eeeeee',
+            '@console-text-font':'sans'
             },
-            '#doq-console-desk':'position:fixed; height:300px; bottom:0px; left:0px; background:@console-bgcolor; border-radius:3px; width:100%; padding:3px; overflow:hidden; box-sizing:border-box;',
-            '.doq-console-menu':'font-family:sans; font-size:@console-text-size; background:@console-menu-bgcolor; white-space: nowrap; user-select: none;',
+            '#doq-console-desk':'font-family:@console-text-font; font-size:@console-text-size; position:fixed; height:300px; bottom:0px; left:0px; background:@console-bgcolor; border-radius:3px; width:100%; padding:3px; overflow:hidden; box-sizing:border-box;',
+            '.doq-console-menu':'background:@console-menu-bgcolor; white-space: nowrap; user-select: none;',
             '.doq-console-menu > div':'padding:2pt 5pt',
             '.doq-console-item-unselected':'color:@console-text-inverse',
             '.doq-console-item-unselected:hover':'background:@console-text-color',
             '.doq-console-item-selected':'background:@console-bgcolor; color:@console-text-color;',
-            '.doq-console-openbutton':'font-family:sans; font-size:7pt; position:fixed; bottom:20pt; right:20pt; background-color:#2020ff; border-radius:5px; padding:5px; opacity:20%; color:white;'
+            '.doq-console-table th': 'font-family: @console-text-font; font-size:@console-text-size; background:@console-border-color; font-weight:normal;',
+            '.doq-console-table td': 'font-family: @console-text-font; font-size:@console-text-size; border-bottom:solid 1px @console-border-color;',
+            
+            '.doq-console-openbutton':'font-family:sans; font-size:7pt; position:fixed; bottom:20pt; right:20pt; background-color:#2020ff; border-radius:5px; padding:5px; opacity:20%; color:white;',
+            '.doq-console-p':'color:@console-label-color; padding:3pt 3pt; margin:2pt 0pt; border-bottom:solid 1px @console-border-color;',
+            '.doq-console-row-selected':'background:@console-bgcolor-inverse; color:@console-text-inverse;'
         }
     }
 })
