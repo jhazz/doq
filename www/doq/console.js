@@ -4,7 +4,7 @@ doq.module('doq.console', ['doq.router'], function(){
         clientSelector,
         pageSelector,
         tabMenus={},
-        tables={},
+        components={},
         resizeTimeout,
         panelVisible=false,
         consoleDesk,
@@ -220,6 +220,7 @@ doq.module('doq.console', ['doq.router'], function(){
     function putPageSelector(mi, el){
         panel1content.innerHTML=''
         pageSelector=document.createElement('div')
+        pageSelector.id='pageSelector'
         panel1content.appendChild(pageSelector)
         upPageSelector()
         return true
@@ -237,42 +238,64 @@ doq.module('doq.console', ['doq.router'], function(){
                 doq.log('doq.console', "Не прочитался список страниц из "+url)
                 return
             }
-            var frag=document.createDocumentFragment(),p,
-            p=document.createElement('p')
-            p.className='doq-console-p'
-            p.innerText='Client:'+doq.cfg.clientToken
-            frag.appendChild(p)
-
-            p=document.createElement('p')
-            p.className='doq-console-p'
-            p.innerText='Pages under Pageload Token: '+doq.cfg.pageloadToken
-            frag.appendChild(p)
             if('pages' in response){
-                makeTable(frag,'pageselector',response['pages'],[
+                placeTable(pageSelector,
+                    'pageSelect',
+                    'Client:'+doq.cfg.clientToken+'Pages under Pageload Token: '+doq.cfg.pageloadToken, 
+                    response['pages'],
+                    [
                     {header:'Script', size:'200', field:'script'},
                     {header:'Time', size:'50', field:'time'},
                     {header:'URL', size:'300', field:'url'},
-                ])
+                    ]
+                )
             }
-            pageSelector.innerHTML=''
-            pageSelector.appendChild(frag)
         }, 'json');
     }
 
-    function makeTable(parentElement, name, items, columns){
+
+
+    function placeTable(panelEl, componentId, caption, items, columns){
+        var panelId=panelEl.id, i, cell, item, cnt,w, table, component
+        if(!panelId) {
+            console.error('console.placeTable to panel without id')
+            return
+        }
+        
+        if(componentId in components){
+            component=components[componentId]
+            if(!!component.clean){
+                component.clean.call(components[name])
+            }
+        }
+
         var tableElement=document.createElement('table'),
             thead = tableElement.createTHead(),
-            row = thead.insertRow(), i, cell, item, cnt,w, table
+            row = thead.insertRow()
         
         tableElement.className='doq-console-table'
         tableElement.setAttribute('cellspacing',1)
-        table=tables[name]={el:tableElement, items:items, columns:columns, parentElement:parentElement}
+        
+        table=components[componentId]={
+            el:tableElement,
+            componentId:componentId,
+            items:items,
+            columns:columns,
+            selectedRowEl:null,
+            panelEl:panelEl,
+            destroy:function(){
+                this.panelEl.removeChild(this.el)
+                delete this.items
+                delete this.columns
+            }
+        }
         
         for (i in columns) {
             cell = document.createElement('th');
             cell.innerText=columns[i].header
             row.appendChild(cell);
         }
+        
         for (i in items) {
             item=items[i]
             row=tableElement.insertRow();
@@ -298,7 +321,15 @@ doq.module('doq.console', ['doq.router'], function(){
                 cell.appendChild(cnt)
             }
         }
-        parentElement.appendChild(tableElement)
+        if(!!caption){
+            var p=document.createElement('p')
+            p.className='doq-console-p'
+            p.innerText=caption
+            panelEl.appendChild(p)
+        }
+
+        panelEl.appendChild(tableElement)
+        
     }
 
     function splitter1mousedown(e){
