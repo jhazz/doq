@@ -412,7 +412,7 @@ doq.cfg={
         }
     }
     
-    
+   
     function log(category, data, type, url, lineNumber, col){
         var logEntry, msg,s,stack,last
         if(type==undefined)
@@ -477,13 +477,16 @@ doq.cfg={
         if (!responseType){
             responseType='text'
         }
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', url);
-        xhr.responseType = responseType;
-        xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');            
-        xhr.send(json);
-        xhr.onload=onload;
-        return xhr;
+        var xhr = new XMLHttpRequest()
+        xhr.open('POST', url)
+        xhr.responseType = responseType
+        xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8')
+        if(typeof json=='string')
+            xhr.send(json)
+        else 
+            xhr.send(stringify(json))
+        xhr.onload=onload
+        return xhr
     }
     
     function bind(publisherNode, publisherAttr, eventType, subscriberNode, subscriberAttr, callback) {

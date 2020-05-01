@@ -74,12 +74,12 @@ abstract class Logger
     const LT_HTML_END='html_end';
     #const LT_HTML_INLINE='html_inline';
 
-    abstract public function pushMessageToLog($entryType,$data);
-   
-    private static $loggerInstance;
+    public static $isSystemRequest;
     public static $logMode;
-    private static $pageCSRF;
+    abstract public function pushMessageToLog($entryType,$data);
     
+    private static $pageCSRF;
+    private static $loggerInstance;
     private static $clientToken;
     private static $pageloadToken;
     
@@ -131,16 +131,16 @@ abstract class Logger
             $clientTokenName=self::DOQ_CLIENT_TOKEN_NAME;
         }
         if(!isset($_COOKIE[$clientTokenName])) {
-            $clientToken=substr(md5(random_int (0,PHP_INT_MAX)),0,10);
+            $clientToken=substr(md5(time().' '.random_int (0,PHP_INT_MAX)),0,10);
         } else {
             $clientToken=$_COOKIE[$clientTokenName];
         }
         
-        $logCookiePath='/';
+        $targetCookiePath='/';
         if (isset($env['#logCookiePath'])){
             $targetCookiePath=$env['#logCookiePath'];
         }
-        setcookie( $clientTokenName, $clientToken, time()+self::TIMEOUT_CLIENT, $logCookiePath);
+        setcookie( $clientTokenName, $clientToken, time()+self::TIMEOUT_CLIENT, $targetCookiePath);
         self::$clientToken=$clientToken;
         
         $pageloadTokenName=$env['#pageloadTokenName'];
@@ -152,7 +152,7 @@ abstract class Logger
         } else {
             $pageloadToken=$_COOKIE[$pageloadTokenName];
         }
-        setcookie($pageloadTokenName, $pageloadToken,time()+10, $logCookiePath);
+        setcookie($pageloadTokenName, $pageloadToken,time()+10, $targetCookiePath);
         self::$pageloadToken=$pageloadToken;
 
         switch($targetType){
@@ -592,19 +592,19 @@ class FileLogger extends Logger
         $this->targetLogDir=$env['#logsPath'];
         $doLogThePageloaderMeta=0;
         $d=$this->targetLogDir.'/'.$clientToken.'/'.$pageToken;
+        $script=$url=$_SERVER['REQUEST_URI'];
+        $a=[];
+        if (preg_match('/([^\/]+?)\?.+/', $url, $a)){
+            $script=$a[0];
+        }
+        $timestamp_float=(isset($_SERVER['REQUEST_TIME_FLOAT']))? $_SERVER['REQUEST_TIME_FLOAT'] : $_SERVER['REQUEST_TIME'];
 
-        // Create first directory for pageloader
+        // Create first directory for page loadings
         if(!file_exists($d)){
             if (\mkdir($d, 0777, true)) {
                 $doLogThePageloaderMeta=1;
                 $metaFile1=$d.'/mainmeta.json';
                 $mlog1=fopen($metaFile1,'w');
-                $script=$url=$_SERVER['REQUEST_URI'];
-                $a=[];
-                if (preg_match('/([^\/]+?)\?.+/', $url, $a)){
-                    $script=$a[0];
-                }
-                
             }
         }
         
@@ -627,31 +627,26 @@ class FileLogger extends Logger
         if (\mkdir($targetDir, 0777, true)) {
             $metaFile2=$targetDir.'/meta.json';
             $mlog2=fopen($metaFile2,'w');
-            $script=$url=$_SERVER['REQUEST_URI'];
-            $a=[];
 
-            if (preg_match('/([^\/]+?)\?.+/', $url, $a)){
-                $script=$a[0];
-            }
-            \fputs($mlog2, json_encode([
-                'url'=>$url,
-                'script'=>$script,
-                'timestamp'=>$_SERVER['REQUEST_TIME']
-            ], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));
-            
-            fclose($mlog2);
-            
             if($doLogThePageloaderMeta){
-                \fputs($mlog1, json_encode([
-                    'url'=>$url,
-                    'script'=>$script,
-                    'timestamp'=>$_SERVER['REQUEST_TIME'],
-                    'firstPageToken'=>$pageLogNameWithMS
-                ], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));
-                fclose($mlog1);
+                $pageloadData=['url'=>$url, 'script'=>$script, 
+                    'timestamp'=>$_SERVER['REQUEST_TIME'], 
+                    'firstPageToken'=>$pageLogNameWithMS, 
+                    'timestamp_float'=>$timestamp_float,
+                    'isSystemRequest'=>self::$isSystemRequest
+                ];
+                \fputs($mlog1, json_encode($pageloadData, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));
+                \fclose($mlog1);
             }
 
-                    
+            $pageData=['url'=>$url, 'script'=>$script, 
+                'timestamp'=>$_SERVER['REQUEST_TIME'], 
+                'timestamp_float'=>$timestamp_float,
+                'isSystemRequest'=>self::$isSystemRequest
+            ];
+            \fputs($mlog2, json_encode($pageData, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));
+            \fclose($mlog2);
+            
             $this->targetLogFile=$targetDir.'/log.json';
             $this->targetDataLogFile=$targetDir.'/datalog.json';
             $this->targetEnvLogFile=$targetDir.'/env.json';

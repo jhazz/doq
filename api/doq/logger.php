@@ -1,23 +1,30 @@
 <?php
 require_once '../autorun.php';
 $headers = getallheaders();
+
 if (stripos($headers["Content-type"], "application/json")!==false) {
-    $request=json_decode(file_get_contents("php://input"), true) ?: [];
+    $requestText=file_get_contents("php://input");
+    $request=json_decode($requestText, true) ?: [];
 }
 
 $envLog=$GLOBALS['doq']['env']['@log'];
-$clientTokenName=$envLog['#clientTokenName'];
-if(!$clientTokenName) {
+if(isset($envLog['#clientTokenName'])) {
+    $clientTokenName=$envLog['#clientTokenName'];
+} else {
     $clientTokenName=\doq\Logger::DOQ_CLIENT_TOKEN_NAME;
 }
-$pageloadTokenName=$envLog['#pageTokenName'];
-if(!$pageloadTokenName){
+
+if(isset($envLog['#pageTokenName'])){
+    $pageloadTokenName=$envLog['#pageTokenName'];
+} else {
     $pageloadTokenName=\doq\Logger::DOQ_PAGELOAD_TOKEN_NAME;
 }
 
-$clientToken=$_COOKIE[$clientTokenName];
-$pageloadToken=$_COOKIE[$pageloadTokenName];
+$clientToken=\doq\Logger::getClientToken();
+$pageloadToken=\doq\Logger::getPageloadToken();
+
 $logsPath=$envLog['#logsPath'];
+\doq\Logger::$isSystemRequest=1;
 
 switch($_GET['action']){
     case 'clients':
@@ -29,8 +36,14 @@ switch($_GET['action']){
                         continue;
                     }
                     $pageLogsPath=$logsPath.'/'.$dn;
-                    $results[$dn]=[date('F d Y H:i',filemtime($pageLogsPath))];
-                    //$results[]=$dn;
+                    $timestamp=filemtime($pageLogsPath);
+                    
+                    $results[]=[
+                        'clientToken'=>$dn,
+                        'timestamp'=>$timestamp,
+                        'date'=>date('Y-m-d H:i',$timestamp)
+                    ];
+                    
                 }
                 closedir($dh1);
             }
@@ -58,19 +71,21 @@ switch($_GET['action']){
                         }
                         $x=file_get_contents($pageloadsLogsPath.'/'.$pageDir.'/mainmeta.json');
                         $meta=json_decode($x,true,10);
-                        $results[$pageDir]=[
+                        $timestamp_float=isset($meta['timestamp_float'])?$meta['timestamp_float']:$meta['timestamp'];
+                        $results[]=[
+                            'pageloadToken'=>$pageDir,
                             'script'=>$meta['script'], 
                             'timestamp'=>$meta['timestamp'],
-                            'time'=>date('H_i_s',$meta['timestamp']),
-                            'date'=>date('Y_d_F',$meta['timestamp']),
+                            'timestamp_float'=>$timestamp_float,
+                            'date'=>date('Y-m-d H:i:s',$meta['timestamp'])
                         ];
                     }
                     closedir($dh1);
                     print json_encode([
                         'clientToken'=>$targetClientToken ,
                         'clientLogsPath'=>$pageloadsLogsPath,
-                        'pageloadTokens'=>$results],
-                        JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+                        'pageloadTokens'=>$results
+                        ],JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
                 }
             }
         }
@@ -93,22 +108,23 @@ switch($_GET['action']){
             $clientLogsPath=$logsPath.'/'.$targetClientToken;
             if (is_dir($clientLogsPath)) {
                 $pageLogsPath=$clientLogsPath.'/'.$targetPageloadToken;
-                
                 if ($dh1 = opendir($pageLogsPath)) {
                     $results=[];
                     while (($pageDir = readdir($dh1)) !== false) {
                         if(($pageDir=='.')||($pageDir=='..')||($pageDir=='mainmeta.json')) {
                             continue;
                         }
-                       
                         $x=file_get_contents($pageLogsPath.'/'.$pageDir.'/meta.json');
                         $meta=json_decode($x,true,10);
-                        $results[$pageDir]=[
+                        $timestamp_float=isset($meta['timestamp_float'])?$meta['timestamp_float']:$meta['timestamp'];
+                        $results[]=[
+                            'pageToken'=>$pageDir,
                             'url'=>$meta['url'],
                             'script'=>$meta['script'], 
                             'timestamp'=>$meta['timestamp'],
-                            'time'=>date('H.i.s',$meta['timestamp']),
-                            'date'=>date('Y.d.F',$meta['timestamp'])
+                            'timestamp_float'=>$timestamp_float,
+                            'time'=>date('H:i:s',$meta['timestamp']),
+                            'date'=>date('d.m.Y',$meta['timestamp']),
                         ];
                     }
                     closedir($dh1);
@@ -116,8 +132,8 @@ switch($_GET['action']){
                         'clientToken'=>$targetClientToken ,
                         'pageloadToken'=>$targetPageloadToken,
                         'pagesPath'=>$pageloadsPath,
-                        'pages'=>$results],
-                        JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+                        'pages'=>$results
+                        ],JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
                 }
             }
         }
