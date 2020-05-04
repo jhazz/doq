@@ -1,32 +1,25 @@
 <?php
 require_once '../autorun.php';
-$headers = getallheaders();
-
-if (stripos($headers["Content-type"], "application/json")!==false) {
-    $requestText=file_get_contents("php://input");
-    $request=json_decode($requestText, true) ?: [];
-}
+$requestText=file_get_contents("php://input");
+$request=json_decode($requestText, true) ?: [];
 
 $envLog=$GLOBALS['doq']['env']['@log'];
-if(isset($envLog['#clientTokenName'])) {
-    $clientTokenName=$envLog['#clientTokenName'];
-} else {
-    $clientTokenName=\doq\Logger::DOQ_CLIENT_TOKEN_NAME;
-}
-
-if(isset($envLog['#pageTokenName'])){
-    $pageloadTokenName=$envLog['#pageTokenName'];
-} else {
-    $pageloadTokenName=\doq\Logger::DOQ_PAGELOAD_TOKEN_NAME;
-}
-
+$logsPath=$envLog['#logsPath'];
 $clientToken=\doq\Logger::getClientToken();
 $pageloadToken=\doq\Logger::getPageloadToken();
-
-$logsPath=$envLog['#logsPath'];
 \doq\Logger::$isSystemRequest=1;
 
 switch($_GET['action']){
+    case 'phplogs':
+        $pageToken=$request['pageToken'];
+        $clientToken=$request['clientToken'];
+        $pageloadToken=$request['pageloadToken'];
+        $pageFileLogPath=$logsPath.'/'.$clientToken.'/'.$pageloadToken.'/'.$pageToken.'/log.json';
+        if(file_exists($pageFileLogPath)){
+            $data=file_get_contents($pageFileLogPath);
+            print json_encode(['entries'=>$data],JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+        }
+        break;
     case 'clients':
         if (is_dir($logsPath)) {
             if ($dh1 = opendir($logsPath)) {
@@ -131,7 +124,7 @@ switch($_GET['action']){
                     print json_encode([
                         'clientToken'=>$targetClientToken ,
                         'pageloadToken'=>$targetPageloadToken,
-                        'pagesPath'=>$pageloadsPath,
+                        'pageLogsPath'=>$pageLogsPath,
                         'pages'=>$results
                         ],JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
                 }

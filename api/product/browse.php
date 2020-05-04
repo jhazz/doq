@@ -34,7 +34,7 @@ function htmlRenderer()
     $template->load('page1');
     list($page1, $err)=doq\Render::create();
     $page1->build($products, $template);
-    print "<html><head><meta charset='utf-8'>";
+    print "<!DOCTYPE HTML><html><head><meta charset='utf-8'>";
     if(count($page1->cssStyles)>0){
         print "<style>";
         foreach($page1->cssStyles as $styleSelector=>&$style){
@@ -205,7 +205,6 @@ function showJSONParams(){
     
     
     function sendRequestForText(){
-    
         location.href='#requestTabs?do=showResponse'
         document.getElementById("response_area").innerText="Please wait";
         var xhr=doq.postJSON('?a=json_demo1_post',document.getElementById("request_area").innerText,function(){
@@ -213,19 +212,6 @@ function showJSONParams(){
         })
     }
     
-    /*function postJSON(url,json,onload, responseType){
-        if (!responseType){
-            responseType='text'
-        }
-        let xhr = new XMLHttpRequest();
-        xhr.open('POST', url);
-        xhr.responseType = responseType;
-        xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');            
-        xhr.send(json);
-        xhr.onload=onload;
-        return xhr;
-    }*/
-
     function makeTabs(menuName, tabs){
         var s='',i,d;
         for (i in tabs){

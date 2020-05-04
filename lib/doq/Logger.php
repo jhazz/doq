@@ -85,12 +85,12 @@ abstract class Logger
     
     
     public static $entryTypeNames=[
-        self::LE_ERROR=>'Errors log section',
-        self::LE_WARNING=>'Warnings log section',
-        self::LE_INFO=>'Information log section',
-        self::LE_DEBUG_INFO=>'Debug information',
-        self::LE_DEBUG_QUERY=>'Debugging data querys log section',
-        self::LE_DEBUG_DATAQUERY=>'Debugging data query log section'];
+        self::LE_ERROR=>'Error',
+        self::LE_WARNING=>'Warning',
+        self::LE_INFO=>'Info',
+        self::LE_DEBUG_INFO=>'Debug',
+        self::LE_DEBUG_QUERY=>'Query',
+        self::LE_DEBUG_DATAQUERY=>'Dataquery'];
 
 
     public static function getCSRF(){
@@ -207,9 +207,6 @@ abstract class Logger
                 print_r($data);
                 return;
             }
-            // if(is_array($data)){
-            //     $data=print_r($data, true);
-            // }
             self::$loggerInstance->pushMessageToLog(self::LE_DEBUG_INFO, ['category'=>$category,'data'=>&$data,'file'=>$file,'line'=>$line]);
         }
     }
@@ -449,7 +446,7 @@ class HTMLEndLogger extends Logger {
             $this->logArray[$logSection]=[];
         }
         $data['type']=$entryType;
-        $data['time']=date('Y-m-d H:i:s');
+        $data['utime']=microtime(); #date('Y-m-d H:i:s');
         array_push($this->logArray[$logSection], $data);
     }
 
@@ -676,7 +673,7 @@ class FileLogger extends Logger
             }
             $data['type']=$entryType;
             $data['typeName']=self::$entryTypeNames[$entryType];
-            $data['time']=date('Y-m-d H:i:s');
+            $data['utime']=microtime(); //date('Y-m-d H:i:s');
             \fputs($this->logFileHandle, self::jsonSerialize($data));
         }
     }
