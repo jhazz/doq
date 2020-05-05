@@ -24,7 +24,9 @@ function htmlRenderer()
 
     list($viewProducts,$err)=doq\data\View::create($GLOBALS['doq']['schema'],$GLOBALS['doq']['views']['Products'],'Products1');
     $viewProducts->prepare($schemaFileTime, true);
-    doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
+
+    
+    doq\Logger::debugQueryDefs($viewProducts->queryDefs, 'View products');
 
     $params=[];
     list($products, $err)=$viewProducts->read($params, 'VIEW1');
@@ -282,7 +284,8 @@ function showTopMenu(){
 
 
 
-########## BEGIN ####################
+########## BEEsEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEGIN ####################
+
 
 $action='json_demo1';
 if(isset($_GET['a'])){

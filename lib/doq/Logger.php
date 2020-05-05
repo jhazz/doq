@@ -105,7 +105,9 @@ abstract class Logger
     public static function getPageloadToken(){
         return self::$pageloadToken;
     }
-    
+    public static function getPageToken(){
+        return self::$loggerInstance->getCreatedPageToken();
+    }
     public static function init(&$env=null)
     {
         $CSRFsalt='salt='.rand();
@@ -211,28 +213,34 @@ abstract class Logger
         }
     }
 
-    public static function debugQuery (&$query, $id='', $file=null, $line=null)
+    public static function debugQueryDefs (&$queryDefs, $id='', $file=null, $line=null)
     {
         if (self::$logMode & self::LE_DEBUG_QUERY) {
-            if (!is_object(self::$loggerInstance)) {
+           /* if (!is_object(self::$loggerInstance)) {
                 print "<hr>DataLog not initialized. Bad try to dump query in (${file} @ ${line})<br>";
-                print_r($query);
+                print_r($queryDefs);
                 return;
             }
-
-            self::$loggerInstance->pushQuery([
+        self::$loggerInstance->pushQueryDefs(['id'=>$id,'query'=>&$queryDefs,'file'=>$file,'line'=>$line]);
+        */
+            self::$loggerInstance->pushToDataLog([
+                'type'=>'queryDefs',
                 'id'=>$id,
-                'query'=>&$query,
+                'queryDefs'=>&$queryDefs,
                 'file'=>$file,'line'=>$line]);
+
         }
 
     }
+    
     public static function debugDataQuery($id, $queryString,  $file = null, $line = null){
+        if (self::$logMode & self::LE_DEBUG_QUERY){
         self::$loggerInstance->pushToDataLog([
             'type'=>'queryString',
             'id'=>$id, 
             'queryString'=>$queryString,
             'file'=>$file,'line'=>$line]);
+        }
     }
 
     public static function debugDatasetIndexes($id, $indexDump,  $file = null, $line = null){
@@ -421,6 +429,7 @@ abstract class Logger
         doq.cfg.CSRF="<?=\doq\Logger::getCSRF()?>"
         doq.cfg.clientToken="<?=\doq\Logger::getClientToken()?>"
         doq.cfg.pageloadToken="<?=\doq\Logger::getPageloadToken()?>"
+        doq.cfg.pageToken="<?=\doq\Logger::getPageToken()?>"
         doq.require('doq.console')
         </script>
     <?php
@@ -454,7 +463,7 @@ class HTMLEndLogger extends Logger {
      * @param mixed $entryType
      * @param array $data ['queryName'=>$queryName,'query'=>&$query,'file'=>$file,'line'=>$line]
      */
-    public function pushQuery($data)
+    public function pushQueryDefs($data)
     {
         $logSection=self::LE_DEBUG_QUERY.'';
         if(!isset($this->logArray[$logSection])){
@@ -561,14 +570,18 @@ class FileLogger extends Logger
     public $targetLogFile;
     public $targetDataLogFile;
     public $targetEnvLogFile;
+    private $pageToken;
     private $logFileHandle;
     private $dataLogFileHandle;
     private $targetEnvLogFileHandle;
     private $MessagesWasPushed;
     private $clientToken;
-
     
-    public static function create(&$env,$clientToken, $pageToken){
+    public function getCreatedPageToken(){
+        return $this->pageToken;
+    }
+    
+    public static function create(&$env,$clientToken, $pageloadToken){
         if(!isset($env['#logsPath'])){
             return [false,'Undefined enviroment parameter #logsPath. Cannot logging to a files'];
         }
@@ -581,14 +594,14 @@ class FileLogger extends Logger
                 return [false,$s];
             }
         }
-        return [new self($env, $clientToken, $pageToken), null];
+        return [new self($env, $clientToken, $pageloadToken), null];
     }
 
-    public function __construct (&$env, $clientToken, $pageToken)
+    public function __construct (&$env, $clientToken, $pageloadToken)
     {
         $this->targetLogDir=$env['#logsPath'];
         $doLogThePageloaderMeta=0;
-        $d=$this->targetLogDir.'/'.$clientToken.'/'.$pageToken;
+        $d=$this->targetLogDir.'/'.$clientToken.'/'.$pageloadToken;
         $script=$url=$_SERVER['REQUEST_URI'];
         $a=[];
         if (preg_match('/([^\/]+?)\?.+/', $url, $a)){
@@ -606,7 +619,7 @@ class FileLogger extends Logger
         }
         
         $pageLogNameWithMS=$pageLogName=date('y-m-d_H.i.s');
-        $prefix=$this->targetLogDir.'/'.$clientToken.'/'.$pageToken.'/';
+        $prefix=$this->targetLogDir.'/'.$clientToken.'/'.$pageloadToken.'/';
         $targetDir=$prefix.$pageLogName;
         
         if(file_exists($targetDir)){
@@ -620,6 +633,8 @@ class FileLogger extends Logger
                 }
             }
         }
+        
+        $this->pageToken=$pageLogNameWithMS;
         
         if (\mkdir($targetDir, 0777, true)) {
             $metaFile2=$targetDir.'/meta.json';
@@ -645,11 +660,14 @@ class FileLogger extends Logger
             \fclose($mlog2);
             
             $this->targetLogFile=$targetDir.'/log.json';
-            $this->targetDataLogFile=$targetDir.'/datalog.json';
+            $this->targetDataLogFile=$targetDir.'/datalog.dat';
+            $this->targetDataLogIndexFile=$targetDir.'/datalogidx.json';
             $this->targetEnvLogFile=$targetDir.'/env.json';
             $this->logFileHandle=fopen($this->targetLogFile, 'w');
             $this->MessagesWasPushed=false;
             $this->dataLogFileHandle=fopen($this->targetDataLogFile, 'w');
+            $this->dataLogIndexFileHandle=fopen($this->targetDataLogIndexFile,'w');
+            
             $this->targetEnvLogFileHandle=fopen($this->targetEnvLogFile, 'w');
             fputs($this->targetEnvLogFileHandle , json_encode(['_SERVER'=>$_SERVER,'env'=>$GLOBALS['doq']['env']] , JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));
         } else {
@@ -662,10 +680,9 @@ class FileLogger extends Logger
     public function pushMessageToLog($entryType,$data)
     {
         if(!$this->MessagesWasPushed){
-            fputs($this->logFileHandle,"[\n");
             $this->MessagesWasPushed=true;
         } else {
-            fputs($this->logFileHandle,",\n\n");
+            fputs($this->logFileHandle,",\n");
         }
         if($entryType & (self::LE_INFO | self::LE_ERROR | self::LE_WARNING | self::LE_DEBUG_INFO)){
             if (!$this->logFileHandle) {
@@ -674,48 +691,46 @@ class FileLogger extends Logger
             $data['type']=$entryType;
             $data['typeName']=self::$entryTypeNames[$entryType];
             $data['utime']=microtime(); //date('Y-m-d H:i:s');
-            \fputs($this->logFileHandle, self::jsonSerialize($data));
+            \fputs($this->logFileHandle, self::jsonSerialize($data)."\n\n");
+            
         }
     }
 
-    /**
-     * @param int $entryType 
-     * @param array['queryName'=>$queryName,'query'=>&$data,'file'=>$file,'line'=>$line]
-     */
-    public function pushQuery($data)
-    {
-        if (!$this->dataLogFileHandle) {
-            return;
-        }
-        $data['type']=$entryType;
-        $data['time']=date('Y-m-d H:i:s');
-        \fputs ($this->dataLogFileHandle, self::jsonSerialize($data));
-    }
-    
     public function pushToDataLog($data){
-        if (!$this->dataLogFileHandle) {
+        if ((!$this->dataLogFileHandle)||(!$this->dataLogIndexFileHandle)) {
             return;
         }
-        $data['type']='datalog';
-        $data['time']=date('Y-m-d H:i:s');
-        if (isset($data['queryString'])) {
-            \fputs($this->dataLogFileHandle, "\n\n\nDataquery:\n");
-            \fputs($this->dataLogFileHandle, self::jsonSerialize($data));
+        \fputs($this->dataLogFileHandle, "\n\n/* === ".$data['type']." === */\n");
+        $start=\ftell($this->dataLogFileHandle);
+        \fputs($this->dataLogFileHandle, self::jsonSerialize($data));
+        $end=\ftell($this->dataLogFileHandle);
+        $idxRecord=['type'=>$data['type'],'start'=>$start,'len'=>($end-$start),'utime'=>microtime()];
+        if(isset($data['text'])){
+            $idxRecord['text']=$data['text'];
         }
-        if (isset($data['indexDump'])){
-            \fputs($this->dataLogFileHandle, "\n\n\nIndexes:\n");
-            \fputs($this->dataLogFileHandle, self::jsonSerialize($data));
+        if(isset($data['id'])){
+            $idxRecord['id']=$data['id'];
+            if(!isset($data['text'])){
+                $idxRecord['text']=$data['type'].':'.$data['id'];
+            }
         }
+        if(!$this->DatalogWasPushed){
+            $this->DatalogWasPushed=true;
+        } else {
+            \fputs($this->dataLogIndexFileHandle,",\n");
+        }
+        \fputs ($this->dataLogIndexFileHandle,self::jsonSerialize($idxRecord));
     }
 
 
     public function onHTTPEnd()
     {
-        if ($this->MessagesWasPushed) {
+        /*if ($this->MessagesWasPushed) {
             fputs($this->logFileHandle, "\n]");
-        }
+        }*/
         \fclose($this->logFileHandle);
         \fclose($this->dataLogFileHandle);
+        \fclose($this->dataLogIndexFileHandle);
         \fclose($this->targetEnvLogFileHandle);
     }
 
