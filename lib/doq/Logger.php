@@ -575,6 +575,7 @@ class FileLogger extends Logger
     private $dataLogFileHandle;
     private $targetEnvLogFileHandle;
     private $MessagesWasPushed;
+    private $DatalogWasPushed;
     private $clientToken;
     
     public function getCreatedPageToken(){
@@ -665,6 +666,7 @@ class FileLogger extends Logger
             $this->targetEnvLogFile=$targetDir.'/env.json';
             $this->logFileHandle=fopen($this->targetLogFile, 'w');
             $this->MessagesWasPushed=false;
+            $this->DatalogWasPushed=false;
             $this->dataLogFileHandle=fopen($this->targetDataLogFile, 'w');
             $this->dataLogIndexFileHandle=fopen($this->targetDataLogIndexFile,'w');
             
