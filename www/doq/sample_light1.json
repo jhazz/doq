@@ -1,0 +1,72 @@
+{
+  "type":"queryDefs",
+  
+  "queryDefs":{
+    "#queryId":1,
+    "#dataSource":"main",
+    "#dataConnection":"MYSQL0",
+    "#dataProvider":"mysql",
+    "@dataset":{
+      "#schema":"store",
+      "#datasetName":"PRODUCTS",
+      "@fields":{
+        "0":{
+          "#columnId":0,
+          "#field":"PRODUCT_ID",
+          "#fieldNo":0,
+          "#originField":"PRODUCT_ID",
+          "#type":"int64",
+          "#tupleFieldNo":0,
+          "#label":"Product Id",
+          "#scriptField":"ta1.PRODUCT_ID"
+        },
+        "1":{
+          "#columnId":1,
+          "#field":"SKU",
+          "#fieldNo":1,
+          "#originField":"SKU",
+          "#type":"string",
+          "#tupleFieldNo":1,
+          "#label":"SKU code",
+          "#scriptField":"ta1.SKU"
+        },
+        "2":{
+          "#columnId":2,
+          "#field":"TITLE",
+          "#fieldNo":2,
+          "#originField":"TITLE",
+          "#type":"string",
+          "#tupleFieldNo":2,
+          "#label":"Product title",
+          "#scriptField":"ta1.TITLE"
+        },
+        "3":{
+          "#columnId":3,
+          "#field":"PARAMETERS",
+          "#fieldNo":3,
+          "#originField":"PARAMETERS",
+          "#type":"virtual",
+          "#label":"Product parameters",
+          "#kind":"aggregation",
+          "#ref":"memdata:store/PRODUCT_PARAMETERS",
+          "#refSchema":"store",
+          "#refDataset":"PRODUCT_PARAMETERS",
+          "#refType":"linknext",
+          "#refDatasource":"memdata",
+          "#clusterIndex":"idx_agg_main:store/PRODUCTS^PRODUCT_ID",
+          "#scriptField":"ta1.PARAMETERS"
+        }
+      },
+      "#keyField":"PRODUCT_ID",
+      "#keyFieldScriptName":"ta1.PRODUCT_ID"
+    },
+    "@indexes":{
+      "*PRIMARY*":{
+        "#type":"unique",
+        "#name":"*PRIMARY*",
+        "#keyFieldName":"PRODUCT_ID",
+        "#keyTupleFieldNo":0
+      }
+    }
+  }
+}
