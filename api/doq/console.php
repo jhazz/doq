@@ -38,6 +38,39 @@ switch($_GET['action']){
             print ']}';
         }
         break;
+    case 'datalogentry_light':
+        $filePath='/var/www/html/doq/www/doq/sample_light1.json';
+        readfile($filePath);
+        
+        break;
+    case 'datalogentry':
+        $pageToken=$request['pageToken'];
+        $clientToken=$request['clientToken'];
+        $pageloadToken=$request['pageloadToken'];
+        $requstRowNo=intval($request['rowNo']);
+        $pageLogsPath=$logsPath.'/'.$clientToken.'/'.$pageloadToken.'/'.$pageToken;
+        $idxFile=$pageLogsPath.'/datalogidx.json';
+        if(file_exists($idxFile)){
+            $c=file_get_contents($idxFile);
+            $logEntriesIndex=json_decode('['.$c.']',true,10);
+            $row=&$logEntriesIndex[$requstRowNo];
+            $start=intval($row['start']);
+            $len=intval($row['len']);
+            
+            $datalogPath=$pageLogsPath.'/datalog.dat';
+            if(file_exists($datalogPath)){
+                $fl=fopen($datalogPath,'rb');
+                fseek($fl,$start);
+                $data=fread($fl,$len);
+                fclose($fl);
+                print $data;
+            } else {
+                print '{"error":"No file '. $datalogPath.'"}';
+            }
+        } else {
+            print '{"error":"No file '. $idxFile.'"}';
+        }
+        break;
     case 'clients':
         if (is_dir($logsPath)) {
             if ($dh1 = opendir($logsPath)) {

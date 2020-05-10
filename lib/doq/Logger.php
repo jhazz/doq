@@ -238,7 +238,7 @@ abstract class Logger
         self::$loggerInstance->pushToDataLog([
             'type'=>'queryString',
             'id'=>$id, 
-            'queryString'=>$queryString,
+            'queryString'=>str_replace("\n","\\n",$queryString),
             'file'=>$file,'line'=>$line]);
         }
     }
@@ -293,7 +293,7 @@ abstract class Logger
                 if (\is_numeric($v)) {
                     array_push($result, $v);
                 } elseif (\is_string($v)) {
-                    array_push($result, '"'.\addslashes($v).'"');
+                    array_push($result, '"'.\addcslashes($v,"\n\'\"").'"');
                 } elseif (\is_bool($v)){
                     array_push($result,$v?'true':'false');
                 }

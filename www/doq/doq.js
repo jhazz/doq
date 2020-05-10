@@ -294,7 +294,7 @@ doq.cfg={
     }
 
     function applyCSSByOwnerId(ownerId,doOverwrite){
-        var i,applyingStyleText,ss,sset,sels, rule, l, ruleSelector, 
+        var i,applyingStyleText,ss,sset,sels, rule, l, v, ruleSelector, 
             targetSheet,overlaps={},activeTheme,val, varEntry
             
         //log('doq.css','-----apply css defined by "'+ownerId+'" ------')

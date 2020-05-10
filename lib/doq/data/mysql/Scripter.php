@@ -27,7 +27,7 @@ class Scripter extends \doq\data\Scripter
         }
         $s='';
         foreach ($this->columnList as $icol=>&$col) {
-            $s.=(($s!=='')?',':'').$col[0].'.'.$col[1];
+            $s.=(($s!=='')?', ':'').$col[0].'.'.$col[1];
         }
         $s='SELECT '.$s." FROM \n";
         if (count($this->joins)) {
