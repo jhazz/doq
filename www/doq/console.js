@@ -163,7 +163,7 @@ doq.module('doq.console', ['doq.router'], function(){
             
             newRow=targetTable.insertRow()
             c1=document.createElement('th')
-            c1.innerText=recordsetName
+            c1.innerText=recordsetName+'[]'
             newRow.appendChild(c1)
             for(i=0;i<columns.cols.length;i++){
                 c1=document.createElement('th')
@@ -172,10 +172,12 @@ doq.module('doq.console', ['doq.router'], function(){
             }
             
             for(recordName in data){
+                c=recordName
                 record=data[recordName]
                 newRow=targetTable.insertRow()
-                c1=newRow.insertCell()
-                c1.innerText='['+recordName+']'
+                c1=document.createElement('th')
+                newRow.appendChild(c1)
+                c1.innerText=recordName
                 for(i=0;i<columns.cols.length;i++){
                     c1=newRow.insertCell()
                     v=record[columns.cols[i]]
@@ -184,8 +186,6 @@ doq.module('doq.console', ['doq.router'], function(){
                     c1.innerText=v
                 }
             }
-            
-            
             
         } else {
             doq.error('doq.console','Вызов renderDoqRecord без названия записи recordsetName')

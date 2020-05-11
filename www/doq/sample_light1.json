@@ -10,6 +10,8 @@
       "#schema":"store",
       "#datasetName":"PRODUCTS",
       "@fields":{
+      "#someParam":"This is a param value store",
+      "#someName":"This is a param value PRODUCTS",
         "0":{
           "#columnId":0,
           "#field":"PRODUCT_ID",
