@@ -38,12 +38,101 @@ function initHTML(){
 function getIndex(){
     initHTML();
     ?>
+    <style>
+    .droparea{border:dashed 3px green; height:100px; }
+    .droparea-allow{border-color:blue;}
+    .droparea-deny{border-color:red;}
+    </style>
     <div id="comparator"></div>
+
     <script>
     window.onload=function(){
         proctor.showTimeComparator(document.getElementById("comparator"))
+        proctor.dropArea1 = document.getElementById('droparea1')
+        proctor.disableDrop=false
+        var da=document.createElement('div')
+        da.className="droparea"
+        da.innerText="Перетяните видеофайл сюда (AVI или MP4)"
+        proctor.dropArea1.appendChild(da)
+
+        da.addEventListener('dragover', (event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            da.classList.add('droparea-allow')
+
+            var i,l,f,s='', parts
+            l=event.dataTransfer.items.length
+            proctor.disableDrop=false
+            for(i=0;i<l;i++){
+                f=event.dataTransfer.items[i]
+                parts=f.type.split('/')
+                if(parts[0]!='video'){
+                    proctor.disableDrop=true
+                }
+            }
+            da.innerText='Вы пытаетесь положить файл(ы) '+s
+            da.classList.remove('droparea-allow')
+            da.classList.remove('droparea-deny')
+            if(proctor.disableDrop){
+                da.classList.add('droparea-deny')
+                event.dataTransfer.dropEffect = 'none'
+            } else {
+                da.classList.add('droparea-allow')
+                event.dataTransfer.dropEffect = 'copy'
+            }
+            
+            console.log(event.dataTransfer)
+        });
+
+        da.addEventListener('dragleave', (event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            da.classList.remove('droparea-allow')
+            da.innerText="Перетяните видеофайл сюда (MP4)"
+            event.dataTransfer.dropEffect = 'copy';
+        });
+
+        da.addEventListener('drop', (event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            da.classList.remove('droparea-allow')
+            da.innerHTML='<p>Загрузка</p>'
+            var fsize,sizeName,e,s,i,l,f, fileList = event.dataTransfer.files;
+            l=fileList.length
+            
+            for(i=0;i<l;i++){
+                f=fileList[i]
+                parts=f.type.split('/')
+                if(parts[0]=='video'){
+                    e=document.createElement('div')
+                    fsize=f.size
+                    if(fsize>1024*1024){
+                        sizeName=Math.round(f.size/(1024*1024),2)+' Мегабайт'
+                    } else if (fsize>1024*1024*1024) {
+                        sizeName=Math.round(f.size/(1024*1024*1024),2)+' Гигабайт'
+                    } else {
+                        sizeName=fsize+' байт'
+                    }
+                    e.innerHTML='<p>Видео "'+f.name+'"</p>'
+                        +'<p><b>длина файла:</b>'+sizeName+'</p>'
+                        +'<p><b>дата изменения:</b>'
+                        +f.lastModifiedDate.getDate()+'.'+f.lastModifiedDate.getMonth()+'.'+f.lastModifiedDate.getFullYear()+' '
+                        +f.lastModifiedDate.getHours()+':'+f.lastModifiedDate.getMinutes()+':'+f.lastModifiedDate.getSeconds()+'</p> '
+                    da.appendChild(e)
+                    console.log ('Good!')
+                }
+                console.log(f);
+            }
+        });
     }
+
+
     </script>
+
+    <input type="file" id="file-selector" accept=".jpg, .jpeg, .png">
+    <table><tr><td id='droparea1'>
+    </td><td></td></tr></table>
+
     <?php     
 }
 
