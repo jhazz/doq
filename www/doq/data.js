@@ -31,8 +31,8 @@ doq.module('doq.data', ['doq.evaluate'], function(){
             '.btn': 'color:red; font-size:15pt;',
             '.inputs': {
             _ : 'color:@inputColor; font-size:10pt',
-                'a' : 'text-decoration:none; font-weight:bold; color:@okColor',
-                'a:hover': 'text-decoration:underline'
+            'a' : 'text-decoration:none; font-weight:bold; color:@okColor',
+            'a:hover': 'text-decoration:underline'
             }
         }
     }

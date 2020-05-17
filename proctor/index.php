@@ -1,28 +1,19 @@
 <?php
 
-
-
-function getJsonDateNow(){
-    //$requestText=file_get_contents("php://input");
-
-    //$request=json_decode($requestText, true) ?: [];
-
-    
-    list($usec, $sec) = explode(" ", microtime());
-    $timestamp=time();
-    $msec=round(floatval($usec)*1000);
-    
-    $now=explode(":",date("Y:n:j:H:i:s:Z",$timestamp));
-    $gnow=explode(":",gmdate("Y:n:j:H:i:s",$timestamp));
-    print json_encode ([
-        'year'=>$now[0], 'month'=>$now[1], 'day'=>$now[2], 
-        'h'=>intval($now[3]), 'm'=>intval($now[4]), 
-        's'=>intval($now[5]), 'z'=>intval($now[6]),
-        'gyear'=>$gnow[0], 'gmonth'=>$gnow[1], 'gday'=>$gnow[2], 
-        'gh'=>intval($gnow[3]), 'gm'=>intval($gnow[4]), 'gs'=>intval($gnow[5]), 
-        'ms'=>$msec
-    ]);
+$routes=[
+    'getJsonDateNow'=>'getJsonDateNow',
+    'uploadRegistration'=>'uploadRegistration',
+    'uploadFile'=>'uploadFile',
+    'echo'=>'getEcho',
+    '*'=>'pageIndex'
+];
+$action=(isset($_GET['a']))? $_GET['a']: '';
+if(isset($routes[$action])){
+    $routes[$action]();
+} else {
+    $routes['*']();
 }
+
 
 
 
@@ -30,122 +21,142 @@ function initHTML(){
     ?>
     <html><!DOCTYPE HTML>
     <head>
-    <script src='main.js'></script>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+    html,body {padding:0;margin:0; height:100%; width:100%;}
+    h1 {font-family:sans, arial; font-size:20pt; font-weight:normal;}
+    .tab {font-family:sans, arial; font-size:11pt;}
+    .tab td.step {background:red; padding:4pt; font-size:12pt; font-weight:bold; color:white; white-space:nowrap;}
+    .tab td {border-bottom:solid 1px #888888; padding:4pt;}
+    .tab td.bad {color:red;}
+    .tab td.good{color:green;}
+    #page-wrap {display:table; height:100%;width:100%;}
+    #main-container {display:table-cell; padding:10pt; box-sizing:border-box; text-align:center; vertical-align:middle;}
+    .place {display:inline-block; background:#fefeff; width:600px;}
+    #topmenu-title {display:table-cell; width:100%; height:50pt; background:#333355; color:white; font-family:sans; font-size:12pt; padding:6pt;}
+    #topmenu-info {float:right; width:25%; height:24pt; overflow:hidden; font-size:8pt;}
+    @media (max-width: 600px) {
+        .topmenu {background:#226644 !important; font-size:20pt !important; }
+    }
+    .topmenu {box-sizing:border-box;display:table-row; height:15pt; background:@menu-bgcolor; font-family:sans,arial; font-size:12pt; color:white; padding:10pt 0 0 20pt; margin:0;}
+    .topmenu label {padding:2pt 5pt; margin:2pt 5pt; background:#555555; color:white; white-space:nowrap; box-sizing:border-box;}
+    .topmenu label:hover {background-color:#ff2222; cursor:pointer;}
+    .topmenu input {display:none;}
+    .topmenu input:checked + label {background:#ffffff; color:#0022aa;}
+    p {text-align:left;}
+    </style>
+    
+    <script src='../www/doq/doq.js'></script>
     </head>
     <?php
 }
-
-function getIndex(){
+/*
+function pageUploading(){
     initHTML();
     ?>
-    <style>
-    .droparea{border:dashed 3px green; height:100px; }
-    .droparea-allow{border-color:blue;}
-    .droparea-deny{border-color:red;}
-    </style>
-    <div id="comparator"></div>
+    <form>
+        <input type="file" id="file-selector" accept=".jpg, .jpeg, .png">
+        <table width="100%" border=1>
+        <tr valign="top"><td>Перетяните в ячейку ваши видеофайлы записи хода испытания. MP4/AVI/WMV файлы</td><td>Перетяните сюда изображения результатов</td></tr>
+        <tr><td id='droparea1'></td><td></td></tr></table>
+    </form>
+    </div>
+    
+    <?php
+}
+*/
 
-    <script>
-    window.onload=function(){
-        proctor.showTimeComparator(document.getElementById("comparator"))
-        proctor.dropArea1 = document.getElementById('droparea1')
-        proctor.disableDrop=false
-        var da=document.createElement('div')
-        da.className="droparea"
-        da.innerText="Перетяните видеофайл сюда (AVI или MP4)"
-        proctor.dropArea1.appendChild(da)
-
-        da.addEventListener('dragover', (event) => {
-            event.stopPropagation();
-            event.preventDefault();
-            da.classList.add('droparea-allow')
-
-            var i,l,f,s='', parts
-            l=event.dataTransfer.items.length
-            proctor.disableDrop=false
-            for(i=0;i<l;i++){
-                f=event.dataTransfer.items[i]
-                parts=f.type.split('/')
-                if(parts[0]!='video'){
-                    proctor.disableDrop=true
-                }
-            }
-            da.innerText='Вы пытаетесь положить файл(ы) '+s
-            da.classList.remove('droparea-allow')
-            da.classList.remove('droparea-deny')
-            if(proctor.disableDrop){
-                da.classList.add('droparea-deny')
-                event.dataTransfer.dropEffect = 'none'
-            } else {
-                da.classList.add('droparea-allow')
-                event.dataTransfer.dropEffect = 'copy'
-            }
-            
-            console.log(event.dataTransfer)
-        });
-
-        da.addEventListener('dragleave', (event) => {
-            event.stopPropagation();
-            event.preventDefault();
-            da.classList.remove('droparea-allow')
-            da.innerText="Перетяните видеофайл сюда (MP4)"
-            event.dataTransfer.dropEffect = 'copy';
-        });
-
-        da.addEventListener('drop', (event) => {
-            event.stopPropagation();
-            event.preventDefault();
-            da.classList.remove('droparea-allow')
-            da.innerHTML='<p>Загрузка</p>'
-            var fsize,sizeName,e,s,i,l,f, fileList = event.dataTransfer.files;
-            l=fileList.length
-            
-            for(i=0;i<l;i++){
-                f=fileList[i]
-                parts=f.type.split('/')
-                if(parts[0]=='video'){
-                    e=document.createElement('div')
-                    fsize=f.size
-                    if(fsize>1024*1024){
-                        sizeName=Math.round(f.size/(1024*1024),2)+' Мегабайт'
-                    } else if (fsize>1024*1024*1024) {
-                        sizeName=Math.round(f.size/(1024*1024*1024),2)+' Гигабайт'
-                    } else {
-                        sizeName=fsize+' байт'
-                    }
-                    e.innerHTML='<p>Видео "'+f.name+'"</p>'
-                        +'<p><b>длина файла:</b>'+sizeName+'</p>'
-                        +'<p><b>дата изменения:</b>'
-                        +f.lastModifiedDate.getDate()+'.'+f.lastModifiedDate.getMonth()+'.'+f.lastModifiedDate.getFullYear()+' '
-                        +f.lastModifiedDate.getHours()+':'+f.lastModifiedDate.getMinutes()+':'+f.lastModifiedDate.getSeconds()+'</p> '
-                    da.appendChild(e)
-                    console.log ('Good!')
-                }
-                console.log(f);
-            }
-        });
+function initTop(){
+    ?>
+    <div id="page-wrap">
+        <div id="topmenu-title"><div>Система прокторинга НГУАДИ</div>
+            <div id='topmenu-info'>Вы зарегистрированы как antonov@gmail.com</div>
+        </div>
+    
+        <div class="topmenu" style="clear: both;">
+    <?php
+    function generateTopMenu($menuName, $elements) {
+        foreach ($elements as $i=>$d) {
+        print ' <input type="radio" id="' . $menuName . '_' . $i . '" name="' . $menuName 
+            . '" '.(($i==0)?'checked':''). ' /><label onclick="location.href=\''
+            . $d['href'] . '\'" for="' . $menuName . '_' . $i . '">' . $d['label'] . '</label>';
+        }
     }
+    
+    generateTopMenu('main',[
+        ['href'=>'',          'label'=>'Проверка'],
+        ['href'=>'#reg',      'label'=>'1. Регистрация'],
+        ['href'=>'#testing1', 'label'=>'2. Проба'],
+        ['href'=>'#testing2', 'label'=>'3. Испытания']
+    ] );
 
+    ?>
+    </div>
+    <?php
+}
 
+function pageIndex(){
+    initHTML();
+    initTop();
+    ?>
+    <script>
+        doq.cfg.jsModulesRoot='../www'
+        doq.require('proctor.main', function(){
+            doq.router.addRouteHandler('#reg',proctor.main.renderRegistrationForm)
+            doq.router.addRouteHandler('#testing1',function(){
+            })
+            proctor.main.startChecking()
+        })
     </script>
-
-    <input type="file" id="file-selector" accept=".jpg, .jpeg, .png">
-    <table><tr><td id='droparea1'>
-    </td><td></td></tr></table>
-
+    <div id="main-container">
+        <div class="place">
+            <h1>Проверка устройства</h1>
+            <noscript>
+            <h2 style='color:red'>Критическая ошибка!</h2>
+            <p>Ваш браузер не поддерживает JAVASCRIPT. Вам необходимо выяснить как включить в браузере JAVASCRIPT или установить другой браузер.</p>
+            <p>Если на устройстве невозможно установить браузер с JAVASCRIPT вам следует использовать другое устройство!</p>
+            <h3>Диагностическая информация</h3>
+            <p><b>Ваш браузер:</b></p><p><?=$_SERVER['HTTP_USER_AGENT']?></p>
+            <p><b>Время проверки (сервер):</b></p><p><?=date('r')?></p>
+            </noscript>
+            <div id="checkLog"></div>
+        </div>
+    </div>
     <?php     
 }
 
 
-$routes=[
-    'getJsonDateNow'=>'getJsonDateNow',
-    '*'=>'getIndex'
-];
-$action=(isset($_GET['a']))? $_GET['a']: '';
-if(isset($routes[$action])){
-    $routes[$action]();
-} else {
-    $routes['*']();
+function getJsonDateNow(){
+    list($usec, $sec) = explode(" ", microtime());
+    $timestamp=$sec;
+    $msec=round(floatval($usec)*1000);
+    $servertime=$sec*1000+$msec;
+
+    $requestText=file_get_contents("php://input");
+    $request=json_decode($requestText, true) ?: [];
+    
+    $now=explode(":",date("Y:n:j:H:i:s:Z",$timestamp));
+    $gnow=explode(":",gmdate("Y:n:j:H:i:s",$timestamp));
+    $c2slag=$servertime - $request['ctime'];
+    
+    print json_encode ([
+        'year'=>$now[0], 'month'=>$now[1], 'day'=>$now[2], 
+        'h'=>intval($now[3]), 'm'=>intval($now[4]), 
+        's'=>intval($now[5]), 'z'=>intval($now[6]),
+        'gyear'=>$gnow[0], 'gmonth'=>$gnow[1], 'gday'=>$gnow[2], 
+        'gh'=>intval($gnow[3]), 'gm'=>intval($gnow[4]), 'gs'=>intval($gnow[5]), 
+        'ms'=>$msec,'servertime'=>$servertime,  'c2slag'=>$c2slag
+    ]);
+}
+
+function getEcho(){
+    $requestText=file_get_contents("php://input");
+    $request=json_decode($requestText, true) ?: [];
+    
+}
+
+function uploadFile(){
+    
 }
 
 

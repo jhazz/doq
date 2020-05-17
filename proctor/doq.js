@@ -1,4 +1,7 @@
 /* jshint asi:true, -W100, forin:false, sub:true */
+/**
+ * DOQ module subsystem
+ **/
 doq={
     css:{activeTheme:'light', themes:{"light":{vars:{'@inputColor':'cyan'}}}, selectors:{}, usage:{}, vars:{}},
     datasources: {},
@@ -217,6 +220,9 @@ doq.cfg={
             }
         }
 
+
+        //// private hidden functions to control the module loading process
+
         function _checkRequires(arequires){
             var i, iModuleName, im, isReady=true
             for (i in arequires){
@@ -279,13 +285,15 @@ doq.cfg={
                 aloader.targetNS.init.call(aloader)
             }
             aloader.inited=1
+            //log('doq.module', 'Module '+aloader.moduleName+': init')
             applyCSSByOwnerId(aloader.moduleName)
-            if(aloader.onAfterInit!==undefined){
+            
+            if(aloader.onAfterInit!==undefined)
                 for(i in aloader.onAfterInit){
                     aloader.onAfterInit[i].call(aloader)
                 }
-            }
         }
+        
     }
 
     function applyCSSByOwnerId(ownerId,doOverwrite){
@@ -370,16 +378,16 @@ doq.cfg={
                         doqSelectors[prefix]={}
                         doqSelectors[prefix][ownerId]=v
                 } else {
-                    s=(prefix==undefined)? k : prefix+=' '+k
-                    if(!(s in doqSelectors)){
+                    s=(prefix==undefined)? k :prefix+=' '+k
+                    if(s in doqSelectors){
+                        doqSelectors[s][ownerId]=v
+                    } else {
                         doqSelectors[s]={}
+                        doqSelectors[s][ownerId]=v
                     }
-                    doqSelectors[s][ownerId]=v
                 }
             } else if (t=='object'){
-                if(k=='@media'){
-                    error("Cannot work with media conditions")
-                } else if(k=='uses'){
+                if(k=='uses'){
                     for(i in v){
                         u=v[i]
                         if(u in doqUsage)
@@ -407,10 +415,7 @@ doq.cfg={
         }
     }
     
-
-    function error(data, url, lineNumber, col){
-        log('Error',data,doq.C.L_ERROR, url, lineNumber, col)
-    }
+   
     function log(category, data, type, url, lineNumber, col){
         var logEntry, msg,s,stack,last
         if(type==undefined)
@@ -464,21 +469,19 @@ doq.cfg={
     
 
     function globalErrorHandler(errorMsg, url, lineNumber, col, eobj){
-        log('doq.globalError',errorMsg, doq.C.L_ERROR, url,lineNumber, col)
+        //console.error('doq.error: '+errorMsg +' in ' +url +':'+ lineNumber+':'+col)
+        log('doq.fail',errorMsg, doq.C.L_ERROR, url,lineNumber, col)
         if(!!oldErrorHandler)
             oldErrorHandler(errorMsg, url, lineNumber, col, eobj)
         return true
     }
 
-    function sendJSON(url, json, onload, responseType, method){
+    function postJSON(url,json,onload, responseType){
         if (!responseType){
-            responseType='json'
+            responseType='text'
         }
         var xhr = new XMLHttpRequest()
-        if(!method) {
-            method='POST'
-        }
-        xhr.open(method, url)
+        xhr.open('POST', url)
         xhr.responseType = responseType
         xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8')
         if(typeof json=='string')
@@ -637,7 +640,7 @@ doq.cfg={
         doLaterOnce(pubPath + '#' + pubAttr + '!' + eventType, doq, emit, [pubPath, pubAttr, eventType, params])
     }
 
-    var i,f,fs=[module, require, log, error, emit, postEmit, doLaterOnce, taskRunner, bind, sendJSON, stringify]
+    var i,f,fs=[module, require, log, emit, postEmit, doLaterOnce, taskRunner, bind, postJSON]
     for(i in fs) 
         f=fs[i],doq[f.name]=f
         

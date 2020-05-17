@@ -16,6 +16,7 @@
         return xhr
     }
     
+
     function extractLocalTime(localTime){
         return {
             gyear:localTime.getUTCFullYear(), gmonth:localTime.getUTCMonth()+1, gday:localTime.getUTCDate(),
