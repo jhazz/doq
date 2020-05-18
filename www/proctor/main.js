@@ -298,9 +298,13 @@ doq.module('proctor.main', ['doq.router'], function(){
                 })
             } else {
                 c3.className='bad'
-                c3.innerText='COOKIES ЗАБЛОКИРОВАНЫ'
-                c2.innerHTML+='<br><br>Для работы необходимо настроить в браузере "Разрешение сохранять cookie"'
+                c3.innerText='ПРОБЛЕМА С COOKIES'
+                c2.innerHTML+='<br><br>В памяти браузера не обнаружены cookie системы прокторинга. Возможно, на сервере неправильно настроена конфигурация cookie domain!'
             }
+        } else {
+            c3.className='bad'
+            c3.innerText='COOKIES ЗАБЛОКИРОВАНЫ'
+            c2.innerHTML+='<br><br>Для работы необходимо настроить в браузере "Разрешение сохранять cookie"'
         }
         
         row=tab.insertRow()
