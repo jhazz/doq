@@ -128,7 +128,6 @@ function pageIndex(){
 
 function getJsonDateNow(){
     list($usec, $timestamp) = explode(" ", microtime());
-    $timestamp+=30;// сервер спешит на 30 секунд
     $msec=round(floatval($usec)*1000);
     $servertime=$timestamp*1000+$msec;
     $requestText=file_get_contents("php://input");
