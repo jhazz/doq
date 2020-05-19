@@ -312,31 +312,29 @@ doq.module('proctor.main', ['doq.router'], function(){
         c5=row.insertCell(); c5.innerText='Проверка времени'
         c6=row.insertCell(); c6.innerText='ИДЕТ ПРОВЕРКА'
 
-        var reqtime = new Date()
+        var reqtime = new Date(), 
+            phase0=reqtime.getTime()
         
-        doq.sendJSON('?a=getJsonDateNow',{phase0:reqtime.getTime(), 
-            gmt:-reqtime.getTimezoneOffset()*60},function(e){
+        doq.sendJSON('echotime.php',{},function(e){
             if (!!e.target.response){
-                // phase2
                 var errStr='',
                     localTime=new Date(), 
                     local=extractLocalTime(localTime),
                     response=e.target.response,
-                    phase0=e.target.response.phase0,
-                    phase1=e.target.response.phase1,
+                    phase1=e.target.response.st,
                     phase2=localTime.getTime(),
                     diff=Math.round((phase2+phase0)/2 - phase1)/1000,
                     lsecs=Math.round((phase2-phase0)/2)/1000,lmins=Math.floor(lsecs/60),
                     diffstr,v,mins,secs,hours,lagstr
-                
-                //var gserverTime=new Date(response.gyear, response.gmonth, response.gday, response.gh, response.gm, response.gs, response.ms),
-                    //glocalTime =new Date(local.gyear, local.gmonth, local.gday, local.gh, local.gm, local.gs, local.ms),
+                //var glocalTime =new Date(local.gyear, local.gmonth, local.gday, local.gh, local.gm, local.gs, local.ms),
 
                 diffstr=(diff>0)?'спешат на ':'отстают на '
                 secs=Math.abs(diff)
+                Math.round(secs/10)*10
                 if(secs<60){
-                    diffstr+=secs +' секунд'
+                    diffstr+=Math.round(secs/10)*10 +' секунд'
                 } else if((secs>=60)&&(secs<3600)){
+                    secs=Math.ceil(secs)
                     mins=Math.floor(secs/60)
                     secs=secs-mins*60
                     diffstr+=mins+' минут и '+secs +' секунд'
