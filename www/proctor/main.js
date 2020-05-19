@@ -314,21 +314,26 @@ doq.module('proctor.main', ['doq.router'], function(){
 
         var reqtime = new Date()
         
-        doq.sendJSON('?a=getJsonDateNow',{ctime:reqtime.getTime(), gmt:-reqtime.getTimezoneOffset()*60},function(e){
+        doq.sendJSON('?a=getJsonDateNow',{phase0:reqtime.getTime(), 
+            gmt:-reqtime.getTimezoneOffset()*60},function(e){
             if (!!e.target.response){
-                var localTime=new Date(), local=extractLocalTime(localTime), c2slag, errStr=''
-                response=e.target.response
-                c2slag=response.c2slag
-                var gserverTime=new Date(response.gyear, response.gmonth, response.gday, response.gh, response.gm, response.gs, response.ms),
-                    glocalTime =new Date(local.gyear, local.gmonth, local.gday, local.gh, local.gm, local.gs, local.ms),
-                    timelag=(Math.abs(glocalTime-gserverTime)+Math.abs(c2slag))/2,  
-                    diff=glocalTime-gserverTime-c2slag,
-                    diffstr,v,mins,secs,hours,lagstr,lagsecs,lagmins
+                // phase2
+                var errStr='',
+                    localTime=new Date(), 
+                    local=extractLocalTime(localTime),
+                    response=e.target.response,
+                    phase0=e.target.response.phase0,
+                    phase1=e.target.response.phase1,
+                    phase2=localTime.getTime(),
+                    diff=Math.round((phase2+phase0)/2 - phase1)/1000,
+                    lsecs=Math.round((phase2-phase0)/2)/1000,lmins=Math.floor(lsecs/60),
+                    diffstr,v,mins,secs,hours,lagstr
                 
-                diffstr=(diff<0)?'спешат на ':'отстают на '
-                diff=Math.abs(diff)
-                
-                secs=diff/1000
+                //var gserverTime=new Date(response.gyear, response.gmonth, response.gday, response.gh, response.gm, response.gs, response.ms),
+                    //glocalTime =new Date(local.gyear, local.gmonth, local.gday, local.gh, local.gm, local.gs, local.ms),
+
+                diffstr=(diff>0)?'спешат на ':'отстают на '
+                secs=Math.abs(diff)
                 if(secs<60){
                     diffstr+=secs +' секунд'
                 } else if((secs>=60)&&(secs<3600)){
@@ -347,19 +352,23 @@ doq.module('proctor.main', ['doq.router'], function(){
                     diffstr+=hours+' часов '+mins+' минут и '+secs +' секунд'
                 }
                 
-                lagstr='', lsecs=timelag/1000
-                if(lsecs<60){
+                lagstr=''
+                if(lmins==0){
                     lagstr+=lsecs+ ' секунд'
+                    var high=Math.ceil(Math.abs(lsecs))
+                    if(high<9){
+                        lagstr+=', что меньше '+high+' секунд и является нормой'
+                    }
+                    
                 } else {
-                    mins=Math.floor(secs/60)
-                    secs=secs-mins*60
-                    lagstr+=mins+' минут и '+secs +' секунд. <span style="color:red">У вас очень медленное соединение!</span>'
+                    lsecs=lsecs-mins*60
+                    lagstr+=lmins+' минут и '+secs +' секунд. <span style="color:red">У вас очень медленное соединение!</span>'
                 }
 
                 c5.innerHTML+='<br>Ваш часовой пояс:+'+Math.floor(local.z/(60*60),1)
                     +'<br><br>Часы на компьютере '+local.h+':'+local.m+':'+local.s
                     +'<br>'+diffstr
-                    +'<br><br>Задержка соединения:<br>'+lagstr
+                    +'<br><br>Задержка соединения: '+lagstr
                 if(errStr){
                     c6.innerText=errStr
                     c6.className='bad'

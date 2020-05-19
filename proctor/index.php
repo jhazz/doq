@@ -127,25 +127,21 @@ function pageIndex(){
 
 
 function getJsonDateNow(){
-    list($usec, $sec) = explode(" ", microtime());
-    $timestamp=$sec;
+    list($usec, $timestamp) = explode(" ", microtime());
+    $timestamp+=30;// сервер спешит на 30 секунд
     $msec=round(floatval($usec)*1000);
-    $servertime=$sec*1000+$msec;
-
+    $servertime=$timestamp*1000+$msec;
     $requestText=file_get_contents("php://input");
     $request=json_decode($requestText, true) ?: [];
-    
     $now=explode(":",date("Y:n:j:H:i:s:Z",$timestamp));
     $gnow=explode(":",gmdate("Y:n:j:H:i:s",$timestamp));
-    $c2slag=$servertime - $request['ctime'];
-    
     print json_encode ([
         'year'=>$now[0], 'month'=>$now[1], 'day'=>$now[2], 
         'h'=>intval($now[3]), 'm'=>intval($now[4]), 
         's'=>intval($now[5]), 'z'=>intval($now[6]),
         'gyear'=>$gnow[0], 'gmonth'=>$gnow[1], 'gday'=>$gnow[2], 
         'gh'=>intval($gnow[3]), 'gm'=>intval($gnow[4]), 'gs'=>intval($gnow[5]), 
-        'ms'=>$msec,'servertime'=>$servertime,  'c2slag'=>$c2slag
+        'phase0'=>$request['phase0'], 'phase1'=>$servertime
     ]);
 }
 
