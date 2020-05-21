@@ -12,6 +12,7 @@ return [
     '#secret'=>'gJUYGo87fsghgO*sdfsGftu',
     '@lang'=>[
         '#sourceLang'=>'en',
+        '#defaultTarget'=>'ru-RU',
         '#langBasePath'=>$ROOT_PATH.'/lang'
     ],
     '@log'=>[

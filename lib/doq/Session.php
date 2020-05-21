@@ -1,9 +1,6 @@
 <?php
 namespace doq;
 
-require_once './doq/data/BaseProvider.php';
-
-
 class Session
 {
     public static $sessionId;

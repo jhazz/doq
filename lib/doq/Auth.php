@@ -4,27 +4,28 @@ namespace doq;
 require_once 'Session.php';
 
 class Auth {
-  public static function getDatabase() {
+  private static function getDatabase() {
     $dataConnection=$GLOBALS['doq']['env']['@session']['#sessionDataConnection'];
-    list($mysql, $err)=\doq\data\Connection::getDataConnection($dataConnection);
+    list($connection, $err)=\doq\data\Connection::getDataConnection($dataConnection);
     if($err!==null){
-      return [false, $err];
+      return [null, $err];
     }
-    return [$mysql, null];
+    return [$connection, null];
   }
 
-  public static function getFormNonce() {
-    $r=self::getDatabase();
-    if(isset($r['error'])) {return $r;}
-    $mysql=$r['mysql'];
-
+  public static function getFormNonce($request) {
+    list($connection, $err)=self::getDatabase();
+    if($err){
+        return [null,$err];
+    }
+    //$mysql=$r['mysql'];
     $salt=$GLOBALS['doq']['env']['@session']['#formNoncesSalt'];
     $serverSecret=md5(uniqid($salt));
     $nonce=sha1(mt_rand());
     $returningNonce=$nonce.':'.sha1($serverSecret.$nonce);
     $sessionKey=$_COOKIE['SESSION_KEY'];
 
-    $stmt1=$mysql->mysqli->prepare('DELETE FROM sys_form_nonces WHERE OPEN_TIME<(now()-INTERVAL 5 MINUTE)');
+    $stmt1=$connection->mysqli->prepare('DELETE FROM sys_form_nonces WHERE OPEN_TIME<(now()-INTERVAL 5 MINUTE)');
     if(!$stmt1) {
       trigger_error(\doq\t('Sessions cleanup request to the database is invalid'),E_USER_ERROR);
       return false;

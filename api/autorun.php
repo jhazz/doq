@@ -9,6 +9,6 @@ $GLOBALS['doq']['views']=require_once($GLOBALS['doq']['env']['#commonPath'].'/vi
 require_once($GLOBALS['doq']['env']['#libPath'].'/classloader.php');
 \doq\Logger::init($GLOBALS['doq']['env']['@log']);
 \doq\I18n::init($GLOBALS['doq']['env']['@lang']);
-\doq\I18n::target('ru-RU');
+\doq\I18n::target($GLOBALS['doq']['env']['@lang']['#defaultTarget']);
 
 ?>

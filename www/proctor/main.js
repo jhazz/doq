@@ -330,9 +330,9 @@ doq.module('proctor.main', ['doq.router'], function(){
 
                 diffstr=(diff>0)?'спешат на ':'отстают на '
                 secs=Math.abs(diff)
-                Math.round(secs/10)*10
+                
                 if(secs<60){
-                    diffstr+=Math.round(secs/10)*10 +' секунд'
+                    diffstr+=secs +' секунд'
                 } else if((secs>=60)&&(secs<3600)){
                     secs=Math.ceil(secs)
                     mins=Math.floor(secs/60)

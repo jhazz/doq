@@ -124,7 +124,7 @@ function pageIndex(){
     </div>
     <?php     
 }
-
+/*
 
 function getJsonDateNow(){
     list($usec, $timestamp) = explode(" ", microtime());
@@ -149,7 +149,7 @@ function getEcho(){
     $request=json_decode($requestText, true) ?: [];
     
 }
-
+*/
 function uploadFile(){
     
 }

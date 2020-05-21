@@ -1,15 +1,12 @@
 <?php
-#header('Content-Type: text/javascript; charset=utf-8');
-require_once './doq/Auth.php';
-require_once './doq/data/BaseProvider.php';
-require_once './doq/data/View.php';
-require_once './config.php';
-require_once './lang/lang_ru.php';
+require_once '../autorun.php';
+$requestText=file_get_contents("php://input");
+$request=json_decode($requestText, true) ?: [];
 
-doq\data\Connection::init($GLOBALS['doq']['env']['@dataConnections']);
+//doq\data\Connection::init($GLOBALS['doq']['env']['@dataConnections']);
 switch($_GET['action']) {
   case 'getNonce':
-    $nonce=Auth::getFormNonce();
+    list($snonce,$err)=\doq\Auth::getFormNonce();
     if ($nonce===false) {
       print json_encode (['error' => 'Could not acquire form nonce from database']);
     } else {
@@ -17,15 +14,15 @@ switch($_GET['action']) {
     }
     break;
   case 'signupNewUser':
-    $r=Auth::signupNewUser();
+    $r=\doq\Auth::signupNewUser($request);
     print json_encode ($r);
     break;
   case 'getLoginNonces':
-    $r=Auth::getLoginNonces();
+    $r=\doq\Auth::getLoginNonces($request);
     print json_encode ($r);
     break;
   case 'signIn':
-    $r=Auth::signIn();
+    $r=\doq\Auth::signIn($request);
     print json_encode ($r);
     break;
 }

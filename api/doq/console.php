@@ -63,6 +63,12 @@ switch($_GET['action']){
                 fseek($fl,$start);
                 $data=fread($fl,$len);
                 fclose($fl);
+                if ($row['type']=='queryDefs'){
+                    $jsonData=json_decode($data,true);
+                    print '{"type":"queryDefs","html":"'.addslashes(\doq\Logger::dumpQueryEntry($jsonData['queryDefs'])).'"}';
+                    return;
+                }
+                
                 print $data;
             } else {
                 print '{"error":"No file '. $datalogPath.'"}';

@@ -93,17 +93,19 @@ doq.module('doq.console', ['doq.router'], function(){
     
     
     function detailViewDatalog(el,rowData){
-        //var url= apiConsoleURL+'?action=datalogentry'
-        var url=apiConsoleURL+'?action=datalogentry_light'
+        var url= apiConsoleURL+'?action=datalogentry'
+        //var url=apiConsoleURL+'?action=datalogentry_light'
         
-        doq.postJSON(url, {
+        doq.sendJSON(url, {
                 clientToken:debugScope.clientToken, 
                 pageloadToken:debugScope.pageloadToken,
                 pageToken:debugScope.pageToken, 
                 rowNo:rowData.rowNo
                 }, function(e){
-            var response=e.target.response,
-                placeEl=drawer.panel3.place.el, 
+            var response=e.target.response
+            if(!response) 
+                return
+            var placeEl=drawer.panel3.place.el, 
                 f=document.createDocumentFragment(), 
                 c=document.createElement('div'),fc
             placeEl.style.height='90%'
@@ -122,8 +124,14 @@ doq.module('doq.console', ['doq.router'], function(){
                     var t=document.createElement('table')
                     t.className='doq-console-table'
                     c.appendChild(t)
-                    //debugger
-                    renderDoqRecords(t,response.queryDefs['@dataset']['@fields'], '@dataset')
+                    //renderDoqRecords(t,response.queryDefs['@dataset']['@fields'], '@dataset')
+                    t.innerHTML=response.html
+                    break;
+                case 'indexDump':
+                    var t=document.createElement('table')
+                    t.className='doq-console-table'
+                    c.appendChild(t)
+                    renderDoqIndex(t,response)
                     break
                 default:
                     c.innerHTML=response
@@ -138,12 +146,16 @@ doq.module('doq.console', ['doq.router'], function(){
     
     }
     
-    
+    function renderDoqIndex(targetTable, data){
+            var itemName,  c, c1, newRow
+            //newRow=targetTable.insertRow()
+            targetTable.innerHTML=data.indexDump
+    }
     
     // recordName - значит что data - это запись, recordName может быть :  "queryDefs", "0", "1", "idx_1"
     // recordsetName название узла с @ например такие: "@fields", "@dataset"
     function renderDoqRecords(targetTable, data, recordsetName){
-        var itemName, v, c, c1, newRow, record, recordName,i,v
+        var itemName, v, c, c1, newRow, record, recordName,i
         
         if(recordsetName!==undefined){
             columns={cols:[], colByAttr:{}, rows:{}}
@@ -270,7 +282,7 @@ doq.module('doq.console', ['doq.router'], function(){
             pageToken=debugScope.pageToken
         if (!pageToken) 
             return
-        doq.postJSON(url, {
+        doq.sendJSON(url, {
                 pageToken:debugScope.pageToken, 
                 clientToken:debugScope.clientToken, 
                 pageloadToken:debugScope.pageloadToken
@@ -340,7 +352,7 @@ doq.module('doq.console', ['doq.router'], function(){
         if (!pageToken) 
             return
         
-        doq.postJSON(url, {
+        doq.sendJSON(url, {
                 pageToken:debugScope.pageToken, 
                 clientToken:debugScope.clientToken, 
                 pageloadToken:debugScope.pageloadToken
@@ -396,7 +408,7 @@ doq.module('doq.console', ['doq.router'], function(){
             url= apiConsoleURL+'?action=clients'
             
         doq.log('doq.console', "Читаем список клиентов из "+url)
-        doq.postJSON(url, {}, function(e){
+        doq.sendJSON(url, {}, function(e){
             response=e.target.response, de, i, n
             if(!response){
                 doq.log('doq.console', "Не прочитался список клиентов "+url)
@@ -433,7 +445,7 @@ doq.module('doq.console', ['doq.router'], function(){
         url= apiConsoleURL+'?action=pageloads'
         
         doq.log('doq.console', "Читаем список загрузок клиента "+clientToken+" из "+url)
-        doq.postJSON(url, {clientToken:clientToken}, function(e){
+        doq.sendJSON(url, {clientToken:clientToken}, function(e){
             response=e.target.response
             if(!response){
                 doq.log('doq.console', "Не прочитался список загрузок из "+url, doq.C.L_ERROR)
@@ -479,7 +491,7 @@ doq.module('doq.console', ['doq.router'], function(){
         }
 
         doq.log('doq.console', "Читаем список страниц по загрузке "+pageloadToken+" из "+url)
-        doq.postJSON(url, {clientToken:clientToken, pageloadToken:pageloadToken}, function(e){
+        doq.sendJSON(url, {clientToken:clientToken, pageloadToken:pageloadToken}, function(e){
             response=e.target.response
             if(!response){
                 doq.log('doq.console', "Не прочитался список страниц из "+url)
