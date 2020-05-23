@@ -204,7 +204,7 @@ class Scope extends \doq\data\Scope
 
     public function value()
     {
-        if ($this->datanode->type===\doq\data\Datanode::NT_COLUMN) {
+        if ($this->datanode->type === \doq\data\Datanode::NT_COLUMN) {
             return $this->curTuple[$this->datanode->fieldDefs['#tupleFieldNo']];
         }
     }

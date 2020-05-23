@@ -90,26 +90,15 @@ abstract class Logger
         self::LE_INFO=>'Info',
         self::LE_DEBUG_INFO=>'Debug',
         self::LE_DEBUG_QUERY=>'Query',
-        self::LE_DEBUG_DATAQUERY=>'Dataquery'];
+        self::LE_DEBUG_DATAQUERY=>'Dataquery'
+    ];
 
 
-    public static function getCSRF(){
-        if(!self::$pageCSRF){
-            throw ('Page CSRF has not been initialized!');
-        }
-        return self::$pageCSRF;
-    }
-    public static function getClientToken(){
-        return self::$clientToken;
-    }
-    public static function getPageloadToken(){
-        return self::$pageloadToken;
-    }
-    public static function getPageToken(){
-        return self::$loggerInstance->getCreatedPageToken();
-    }
     public static function init(&$env=null)
     {
+        if($env==null){
+            $env=&$GLOBALS['doq']['env']['@log'];
+        }
         $CSRFsalt='salt='.rand();
         self::$pageCSRF=$CSRFsalt.':'.md5($rand.$env['#secret'].$CSRFsalt);
 
@@ -171,6 +160,24 @@ abstract class Logger
             break;
         }
     }
+
+    public static function getCSRF(){
+        if(!self::$pageCSRF){
+            throw ('Page CSRF has not been initialized!');
+        }
+        return self::$pageCSRF;
+    }
+    
+    public static function getClientToken(){
+        return self::$clientToken;
+    }
+    public static function getPageloadToken(){
+        return self::$pageloadToken;
+    }
+    public static function getPageToken(){
+        return self::$loggerInstance->getCreatedPageToken();
+    }
+    
 
     /**
      * @param mixed $data a copy of any user data as like as info message
@@ -419,20 +426,20 @@ abstract class Logger
         return $row1.$row2;
     }
     
-    public static function putJavascriptVars()
+    public static function placeConsole()
     {    
         $wwwURL=$GLOBALS['doq']['env']['#wwwURL'];
+        \doq\Html::head();
         ?>
-        <script src="<?=$wwwURL?>/doq/doq.js"></script>
-        <script>
-        doq.cfg.jsModulesRoot="<?=$wwwURL?>"
-        doq.cfg.CSRF="<?=\doq\Logger::getCSRF()?>"
-        doq.cfg.clientToken="<?=\doq\Logger::getClientToken()?>"
-        doq.cfg.pageloadToken="<?=\doq\Logger::getPageloadToken()?>"
-        doq.cfg.pageToken="<?=\doq\Logger::getPageToken()?>"
-        doq.require('doq.console')
-        </script>
-    <?php
+    <script src="<?=$wwwURL?>/doq/doq.js"></script>
+    <script>
+    doq.cfg.jsModulesRoot="<?=$wwwURL?>"
+    doq.cfg.CSRF="<?=\doq\Logger::getCSRF()?>"
+    doq.cfg.clientToken="<?=\doq\Logger::getClientToken()?>"
+    doq.cfg.pageloadToken="<?=\doq\Logger::getPageloadToken()?>"
+    doq.cfg.pageToken="<?=\doq\Logger::getPageToken()?>"
+    doq.require('doq.console')
+    </script><?php
     }
 }
 

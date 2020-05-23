@@ -29,7 +29,6 @@ class Dataset extends \doq\data\Dataset
         return $r;
     }
 
-
     public function read(&$params)
     {
         $s=$this->queryDefs['#readScript'];
@@ -37,6 +36,16 @@ class Dataset extends \doq\data\Dataset
         if (isset($params['@filter'])) {
             foreach ($params['@filter'] as $i=>&$param) {
                 switch ($param['#operand']) {
+                case '=':
+                    $columnId=$param['#columnId'];
+                    $res=self::getFieldByColumnId($columnId, $this->queryDefs);
+                    if (!$res[0]) {
+                        trigger_error(\doq\t('Column with id=%d not found in %s', $columnId, 'dataset'), E_USER_ERROR);
+                    }
+                    $fieldDef=&$res[1];
+                    $scriptField=$fieldDef['#scriptField'];
+                    $where[]=$scriptField.' = '.$param['@value'];
+                    break;
                 case 'IN':
                     $columnId=$param['#columnId'];
                     $res=self::getFieldByColumnId($columnId, $this->queryDefs);

@@ -3,16 +3,16 @@ namespace doq\data;
 
 /**
  * Datanode is an addressing data element that could be identifyied by a path.
- * Datanode creating by a View after Dataset had been successfully read a data inside.
- * Template addresses a Datanode via Scope address and put data from referred.
- * Dataset to the template controls
- */
+ * Datanode is creating by a View after Dataset had been successfully read a data inside its structores (i.e. tuples).
+ * \doq\Template addresses a Datanode via a traversal Scope and extract data to put to the html page.
+*/
 class Datanode
 {
     const NT_COLUMN='COLUMN';
     const NT_SUBCOLUMNS='SUBCOLUMNS';
     const NT_DATASET='DATASET';
 
+    /** @var NT_COLUMN/NT_SUBCOLUMNS/NT_DATASET  */
     public $type;
     /** @var Array */
     public $parameters;
@@ -20,8 +20,14 @@ class Datanode
     public $dataset;
     /** @var Array */
     public $childNodes;
+    /** @var address name */
     public $name;
 
+    /**
+     * @param string $type \Datanode::NT_COLUMN/NT_SUBCOLUMNS/NT_DATASET
+     * @param string $name Name of the addressing node
+     * @param \doq\data\Datanode $parendNode that owns this datanode
+     */
     public function __construct($type, $name, $parendNode=null)
     {
         if ($parendNode!==null) {

@@ -6,9 +6,12 @@ class Connections
 	private static $config;
 	private static $items;
 
-	public static function init(&$config)
+	public static function init(&$config=null)
 	{
 		self::$items=[];
+        if($config==null){
+            $config=&$GLOBALS['doq']['env']['@dataConnections'];
+        }
 		self::$config=&$config;
 	}
 

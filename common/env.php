@@ -5,11 +5,16 @@ return [
     '#rootPath'=>$ROOT_PATH,
     '#libPath'=>$ROOT_PATH.'/lib',
     '#commonPath'=>$ROOT_PATH.'/common',
+    '#schemaPath'=>$ROOT_PATH.'/common/schema',
     '#cachesPath'=>$ROOT_PATH.'/runtime/caches',
     '#templatesPath'=>$ROOT_PATH.'/frontend/templates',
     '#wwwURL'=>'../../www',
     '#cookiePath'=>'/',
     '#secret'=>'gJUYGo87fsghgO*sdfsGftu',
+    '@html'=>[
+        '#encoding'=>'utf-8',
+        '#title'=>'Proctor'
+    ],
     '@lang'=>[
         '#sourceLang'=>'en',
         '#defaultTarget'=>'ru-RU',

@@ -61,7 +61,7 @@ class SerialFileCache extends \doq\Cache
         }
     }
   
-    public function put($setModifyTime, $key, &$data)
+    public function put($setModifyTime, $key, &$data, $ttl=null)
     {
         $fileName=$this->cacheFolder.'/'.$this->filePrefix.$key.$this->fileSuffix;
         file_put_contents($fileName, serialize($data));

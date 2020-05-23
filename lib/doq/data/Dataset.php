@@ -10,7 +10,8 @@ abstract class Dataset
     abstract protected function makeScope(Datanode $datanode);
     abstract public function dataToHTML();
     abstract public function indexesToHTML();
-
+    abstract public function read(&$params);
+    
     public static function create($providerName, &$queryDefs, $newDatasetName)
     {
         switch ($providerName) {

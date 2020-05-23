@@ -1,6 +1,43 @@
 <?php
 require_once '../autorun.php';
 
+
+$action='json_demo1';
+if(isset($_GET['a'])){
+    $action=$_GET['a'];
+}
+
+switch($action){
+    case 'json': 
+        doq\Logger::showConsole();
+        showTopMenu();
+        print '<pre>';
+        jsonLoader([]);
+        break;
+    case 'html':
+        doq\Logger::showConsole();
+        showTopMenu();
+        htmlRenderer();
+        break;
+    case 'json_demo1': 
+        doq\Logger::showConsole();
+        showTopMenu();
+        showJSONParams();
+    break;
+
+    case 'json_demo1_post': # это не страница, а голый запрос на JSON
+        $headers = getallheaders();
+        if (stripos($headers["Content-type"],"application/json")!==false) {
+            $s=file_get_contents("php://input");
+            $r=json_decode($s, true) ?: [];
+            jsonLoader($r);
+        }
+      break;
+}
+
+
+
+
 function htmlRenderer()
 {
     $schemaFile=$GLOBALS['doq']['env']['#commonPath'].'/schema.php';
@@ -20,8 +57,10 @@ function htmlRenderer()
         }
     }
     doq\Template::setDefaultTemplatesPath($GLOBALS['doq']['env']['#templatesPath']);
+    list($template, $err)=\doq\Template::create();
+    $template->load('page1');
+    
     doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
-
     list($viewProducts,$err)=doq\data\View::create($GLOBALS['doq']['schema'],$GLOBALS['doq']['views']['Products'],'Products1');
     $viewProducts->prepare($schemaFileTime, true);
 
@@ -31,12 +70,10 @@ function htmlRenderer()
     $params=[];
     list($products, $err)=$viewProducts->read($params, 'VIEW1');
     //print $products->dataset->dataToHTML();
-   
-    list($template, $err)=\doq\Template::create();
-    $template->load('page1');
+
     list($page1, $err)=doq\Render::create();
     $page1->build($products, $template);
-    print "<!DOCTYPE HTML><html><head><meta charset='utf-8'>";
+
     if(count($page1->cssStyles)>0){
         print "<style>";
         foreach($page1->cssStyles as $styleSelector=>&$style){
@@ -66,23 +103,11 @@ function jsonLoader($options){
         }
     }
 
-    /*
-    if (isset($GLOBALS['doq']['env']['@caches']['templates'])) {
-        list($templatesCache, $err)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['templates']);
-        if ($err===null) {
-            doq\Template::setDefaultCache($templatesCache);
-        }
-    }
-    doq\Template::setDefaultTemplatesPath($GLOBALS['doq']['env']['#templatesPath']);
-    */
     doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
-
-    list($viewProducts,$err)=doq\data\View::create(
-        $GLOBALS['doq']['schema'],
-        $GLOBALS['doq']['views']['Products'],
-        'Products1');
+    list($viewProducts,$err)=doq\data\View::create($GLOBALS['doq']['schema'],$GLOBALS['doq']['views']['Products'],'Products1');
     $viewProducts->prepare($schemaFileTime, true);
-    #doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
+        
+        #doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
 
     if(isset($options['@params'])) {
         $params=$options['@params'];
@@ -94,91 +119,93 @@ function jsonLoader($options){
         $viewId=$options['#viewId'];
     }
     list($products, $err)=$viewProducts->read($params, $viewId);
-
-
-    function walkOverFields($currentPath, &$fieldDefs, &$result){
-        $keyField=$fieldDefs['#keyField'];
-        foreach ($fieldDefs['@fields'] as $fieldNo=>&$fieldDef) {
-            $ref=isset($fieldDef['#ref'])?$fieldDef['#ref']:false; 
-            $kind=false;
-            if(isset($fieldDef['#kind'])){
-                $kind = $f['#kind'] = $fieldDef['#kind'];
-            }
-            $f=['#type'=>$fieldDef['#type']];
-            // if(isset($fieldDef['#refSchema'])){$f['#refSchema']=$fieldDef['#refSchema'];}
-            if(isset($fieldDef['#label'])){
-                $f['#label'] = $fieldDef['#label'];
-            }
-            if($currentPath!='') {
-                $path=$currentPath.'/'.$fieldDef['#field'];
-            } else {
-                $path=$fieldDef['#field'];
-            }
-            if($path==$keyField){
-                $f['isKeyField']=1;
-            }
-            if(isset($fieldDef['#columnId'])){
-                $f['#columnId']=$fieldDef['#columnId'];
-            }
-            if(isset($fieldDef['#tupleFieldNo'])) {
-                $f['#tupleFieldNo']=intval($fieldDef['#tupleFieldNo']);
-            }
-
-            if(($kind=='lookup')||($kind=='aggregation')) {
-                // if(isset($fieldDef['#refDataset'])){$f['#refDataset'] = $fieldDef['#refDataset'];}
-                // if(isset($fieldDef['#ref'])){$f['#ref'] = $fieldDef['#ref'];}
-                $reftype=false;
-                if(isset($fieldDef['#refType'])) {
-                    $reftype= $f['#refType']=$fieldDef['#refType'];
-                }
-                $result[$path] = $f;
-
-                if ($reftype=='join') {
-                    walkOverFields($path, $fieldDef['@dataset'], $result);
-                }
-            } else {
-                $result[$path] = $f;
-            }
-        }
-    }
-
-    function toPlainArray(\doq\data\Datanode $node, &$dstArray, $parentPath='',  $level=10){
-        if($level<0){
-            return;
-        }
-        if($node->type!==\doq\data\Datanode::NT_DATASET){
-            throw new \Exception('Not a dataset!');
-        }
-        $attrs=[
-            '#nodeName'=>$node->name,
-            '#dataSource'=>$node->dataset->queryDefs['#dataSource'],
-            '#schema'=>$node->dataset->queryDefs['@dataset']['#schema'],
-            '#dataset'=>$node->dataset->queryDefs['@dataset']['#datasetName'],
-            '#keyField'=>$node->dataset->queryDefs['@dataset']['#keyField']
-        ];
-        $dstArray[$node->name]=&$attrs;
-        walkOverFields($parentPath, $node->dataset->queryDefs['@dataset'], $r);
-        $attrs['@fields']=$r;
-        if ($node->dataset->tuples!==null) {
-            $rows=[];
-            foreach ($node->dataset->tuples as $rowNo=>&$tuple) {
-                $rows[]=$tuple;
-            }
-            $attrs['@tuples']=&$rows;
-        }
-        if(isset($node->childNodes)){
-            foreach($node->childNodes as $childNodeName=>&$childNode){
-                if($childNode->type==\doq\data\Datanode::NT_DATASET){
-                    toPlainArray($childNode, $dstArray, $parentPath, $level-1);
-                }
-            }
-        }
-        return $dstArray;
-    }
+    
     $dstArray=[];
-    toPlainArray($products, $dstArray);
+    datanodeToArray($products, $dstArray);
     print json_encode($dstArray, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 }
+
+
+function collectFieldDefs($currentPath, &$fieldDefs, &$result){
+    $keyField=$fieldDefs['#keyField'];
+    foreach ($fieldDefs['@fields'] as $fieldNo=>&$fieldDef) {
+        $ref=isset($fieldDef['#ref'])?$fieldDef['#ref']:false; 
+        $kind=false;
+        if(isset($fieldDef['#kind'])){
+            $kind = $f['#kind'] = $fieldDef['#kind'];
+        }
+        $f=['#type'=>$fieldDef['#type']];
+        // if(isset($fieldDef['#refSchema'])){$f['#refSchema']=$fieldDef['#refSchema'];}
+        if(isset($fieldDef['#label'])){
+            $f['#label'] = $fieldDef['#label'];
+        }
+        if($currentPath!='') {
+            $path=$currentPath.'/'.$fieldDef['#field'];
+        } else {
+            $path=$fieldDef['#field'];
+        }
+        if($path==$keyField){
+            $f['isKeyField']=1;
+        }
+        if(isset($fieldDef['#columnId'])){
+            $f['#columnId']=$fieldDef['#columnId'];
+        }
+        if(isset($fieldDef['#tupleFieldNo'])) {
+            $f['#tupleFieldNo']=intval($fieldDef['#tupleFieldNo']);
+        }
+
+        if(($kind=='lookup')||($kind=='aggregation')) {
+            // if(isset($fieldDef['#refDataset'])){$f['#refDataset'] = $fieldDef['#refDataset'];}
+            // if(isset($fieldDef['#ref'])){$f['#ref'] = $fieldDef['#ref'];}
+            $reftype=false;
+            if(isset($fieldDef['#refType'])) {
+                $reftype= $f['#refType']=$fieldDef['#refType'];
+            }
+            $result[$path] = $f;
+
+            if ($reftype=='join') {
+                collectFieldDefs($path, $fieldDef['@dataset'], $result);
+            }
+        } else {
+            $result[$path] = $f;
+        }
+    }
+}
+
+function datanodeToArray(\doq\data\Datanode $node, &$dstArray, $parentPath='',  $level=10){
+    if($level<0){
+        return;
+    }
+    if($node->type!==\doq\data\Datanode::NT_DATASET){
+        throw new \Exception('Not a dataset!');
+    }
+    $attrs=[
+        '#nodeName'=>$node->name,
+        '#dataSource'=>$node->dataset->queryDefs['#dataSource'],
+        '#schema'=>$node->dataset->queryDefs['@dataset']['#schema'],
+        '#dataset'=>$node->dataset->queryDefs['@dataset']['#datasetName'],
+        '#keyField'=>$node->dataset->queryDefs['@dataset']['#keyField']
+    ];
+    $dstArray[$node->name]=&$attrs;
+    collectFieldDefs($parentPath, $node->dataset->queryDefs['@dataset'], $r);
+    $attrs['@fields']=$r;
+    if ($node->dataset->tuples!==null) {
+        $rows=[];
+        foreach ($node->dataset->tuples as $rowNo=>&$tuple) {
+            $rows[]=$tuple;
+        }
+        $attrs['@tuples']=&$rows;
+    }
+    if(isset($node->childNodes)){
+        foreach($node->childNodes as $childNodeName=>&$childNode){
+            if($childNode->type==\doq\data\Datanode::NT_DATASET){
+                datanodeToArray($childNode, $dstArray, $parentPath, $level-1);
+            }
+        }
+    }
+    return $dstArray;
+}
+
 
 function showJSONParams(){
 ?>
@@ -209,9 +236,9 @@ function showJSONParams(){
     function sendRequestForText(){
         location.href='#requestTabs?do=showResponse'
         document.getElementById("response_area").innerText="Please wait";
-        var xhr=doq.postJSON('?a=json_demo1_post',document.getElementById("request_area").innerText,function(){
+        var xhr=doq.sendJSON('?a=json_demo1_post',document.getElementById("request_area").innerText,function(){
             document.getElementById("response_area").innerText=this.response;
-        })
+        },'text')
     }
     
     function makeTabs(menuName, tabs){
@@ -284,39 +311,5 @@ function showTopMenu(){
 
 
 
-########## BEEsEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEGIN ####################
-
-
-$action='json_demo1';
-if(isset($_GET['a'])){
-    $action=$_GET['a'];
-}
-
-switch($action){
-    case 'json': 
-        doq\Logger::putJavascriptVars();
-        showTopMenu();
-        jsonLoader([]);
-        break;
-    case 'html':
-        doq\Logger::putJavascriptVars();
-        showTopMenu();
-        htmlRenderer();
-        break;
-    case 'json_demo1': 
-        doq\Logger::putJavascriptVars();
-        showTopMenu();
-        showJSONParams();
-    break;
-
-    case 'json_demo1_post': # это не страница, а голый запрос на JSON
-        $headers = getallheaders();
-        if (stripos($headers["Content-type"],"application/json")!==false) {
-            $s=file_get_contents("php://input");
-            $r=json_decode($s, true) ?: [];
-            jsonLoader($r);
-        }
-      break;
-}
 
 ?>

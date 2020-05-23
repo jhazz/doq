@@ -3,6 +3,7 @@ namespace doq;
 
 class Session
 {
+    public static $config;
     public static $sessionId;
     public static $refreshTime;
     public static $databaseHandler;
@@ -21,67 +22,7 @@ class Session
 
     const TIMEOUT_CLIENT=31536000; # one year
 
-    public static function set($name, $value)
-    {
-        if (!self::$inited) {
-            trigger_error(\doq\t('Session has not been initialized!'), E_USER_ERROR);
-            return false;
-        }
-        if (!is_array(self::$data)) {
-            self:$data=[];
-        }
-        if (isset(self::$data[$name])) {
-            if (self::$data[$name]===$value) {
-                return true;
-            }
-        }
-        self::$data[$name]=$value;
-        self::$isDataChanged=true;
-        return true;
-    }
-
-    public static function get($name, $value)
-    {
-        if (!self::$inited) {
-            trigger_error(\doq\t('Session has not been initialized!'), E_USER_ERROR);
-            return false;
-        }
-        if (!is_array(self::$data)) {
-            return false;
-        } else {
-            return self::$data[$name];
-        }
-    }
-
-    public static function save($forced=false)
-    {
-        if ((!$forced)&&(!self::$isDataChanged)) {
-            return true;
-        }
-        self::$isDataSaved=false;
-        if ((!self::$sessionId)||(!self::$databaseHandler)) {
-            return false;
-        }
-        $mysql=self::$databaseHandler;
-        $stmt1=$mysql->mysqli->prepare('UPDATE sys_sessions SET SERIALIZED_DATA=? WHERE SESSION_ID=?');
-        if (!$stmt1) {
-            trigger_error(\doq\t('Failed session data update'), E_USER_ERROR);
-            return false;
-        }
-        $sdata=serialize(self::$data);
-        $stmt1->bind_param('ss', $sdata, self::$sessionId);
-        if (!$stmt1->execute()) {
-            trigger_error(\doq\t('Update session data request is invalid'), E_USER_ERROR);
-            return false;
-        }
-        $stmt1->close();
-        self::$isDataSaved=true;
-        self::$isDataChanged=false;
-        return true;
-    }
-
-
-    public static function init()
+    public static function init(&$config=null)
     {
         self::$sessionId=0;
         self::$userId=0;
@@ -91,15 +32,19 @@ class Session
         self::$activePerson='';
         self::$login='';
 
-        \doq\data\Connection::init($GLOBALS['doq']['env']['@dataConnections']);
-        $sessionDataConnection = $GLOBALS['doq']['env']['@session']['#sessionDataConnection'];
-        list($mysql, $err)=\doq\data\Connection::getDataConnection($sessionDataConnection);
+        if($config==null){
+            self::$config=&$GLOBALS['doq']['env']['@session'];
+        } else {
+            self::$config=&$config;
+        }
+        $sessionDataConnection = self::$config['#sessionDataConnection'];
+        list($mysql, $err)=\doq\data\Connections::getConnection($sessionDataConnection);
         if ($err==null) {
-            trigger_error(\doq\t('Unable to connect to the authotization dataconnection %s', $sessionDataConnection), E_USER_ERROR);
+            trigger_error(\doq\t('Unable to connect to the authorization dataconnection %s', $sessionDataConnection), E_USER_ERROR);
             return false;
         }
         if (!$mysql->isConnected) {
-            trigger_error(\doq\t('Unable to connect to the authotization dataconnection %s', $sessionDataConnection), E_USER_ERROR);
+            trigger_error(\doq\t('Unable to connect to the authorization dataconnection %s', $sessionDataConnection), E_USER_ERROR);
             return false;
         }
         self::$databaseHandler=$mysql;
@@ -267,4 +212,66 @@ class Session
         self::$isDataSaved=false;
         return true;
     }
+    
+    public static function set($name, $value)
+    {
+        if (!self::$inited) {
+            trigger_error(\doq\t('Session has not been initialized!'), E_USER_ERROR);
+            return false;
+        }
+        if (!is_array(self::$data)) {
+            self:$data=[];
+        }
+        if (isset(self::$data[$name])) {
+            if (self::$data[$name]===$value) {
+                return true;
+            }
+        }
+        self::$data[$name]=$value;
+        self::$isDataChanged=true;
+        return true;
+    }
+
+    public static function get($name, $value)
+    {
+        if (!self::$inited) {
+            trigger_error(\doq\t('Session has not been initialized!'), E_USER_ERROR);
+            return false;
+        }
+        if (!is_array(self::$data)) {
+            return false;
+        } else {
+            return self::$data[$name];
+        }
+    }
+
+    public static function save($forced=false)
+    {
+        if ((!$forced)&&(!self::$isDataChanged)) {
+            return true;
+        }
+        self::$isDataSaved=false;
+        if ((!self::$sessionId)||(!self::$databaseHandler)) {
+            return false;
+        }
+        $mysql=self::$databaseHandler;
+        $stmt1=$mysql->mysqli->prepare('UPDATE sys_sessions SET SERIALIZED_DATA=? WHERE SESSION_ID=?');
+        if (!$stmt1) {
+            trigger_error(\doq\t('Failed session data update'), E_USER_ERROR);
+            return false;
+        }
+        $sdata=serialize(self::$data);
+        $stmt1->bind_param('ss', $sdata, self::$sessionId);
+        if (!$stmt1->execute()) {
+            trigger_error(\doq\t('Update session data request is invalid'), E_USER_ERROR);
+            return false;
+        }
+        $stmt1->close();
+        self::$isDataSaved=true;
+        self::$isDataChanged=false;
+        return true;
+    }
+
+
+ 
 }

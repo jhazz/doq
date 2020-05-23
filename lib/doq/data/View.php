@@ -2,19 +2,25 @@
 namespace doq\data;
 
 /**
-* View - is a data loading queryDefs that creates Datasets that will read data according to parameters
+* doq\data\View - is a collection of a database schema, view configuration and columns.
+* It propose conversion those configurations to a query definitions (queryDefs) within 
+* SQL scripts to select data from database Connection.
+* QueryDefs stores to a doq\Cache and reuses if a main configuration of schema has not 
+* been changed by admin. 
 *
 */
 class View
 {
+    /** @var  \doq\Cache default cache provider used within created \doq\View */
     private static $defaultCache;
+    private static $defaultCfgSchema;
     public $queryDefs; // Used by logger dumper
     public $viewId;
     public $cfgView;
     public $cfgSchema;
     public $viewColumns;
     public $linkedDatasources;
-    /** @var  \doq\Cache */
+    /** @var  \doq\Cache used cache provider*/
     public $cache;
 
     public static function create(&$cfgSchema, &$cfgView, $viewId=false)
@@ -39,7 +45,7 @@ class View
     }
 
     /**
-     * Sets default cache provider to store evaluated querys
+     * Sets default cache provider to store prepared querys
      * @param \doq\Cache $cache refers to a cache provider
      */
     public static function setDefaultCache(&$cache)
@@ -48,7 +54,7 @@ class View
     }
 
     /**
-     * Sets cache provider to store evaluated querys only to this view
+     * Sets cache provider to store prepared querys only for this view
      * @param \doq\Cache $cache refers to a cache provider
      */
     public function setCacher(&$cache)
@@ -64,7 +70,7 @@ class View
 
     /**
      * Prepares queryDefs for view. Create from view configuration or reuse from cache
-     * @param int $configMtime timestamp of external configuration file
+     * @param int $configMtime timestamp of a querydef file or a querydef collection database modifying time
      * @param boolean $forceRebuild force to recreate cache and set configMtime timestamp to it
      */
     public function prepare($configMtime, $forceRebuild=false)

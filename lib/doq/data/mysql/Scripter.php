@@ -59,7 +59,6 @@ class Scripter extends \doq\data\Scripter
         $tableAlias='ta'.$this->tableAliasNo;
         $dataset['#tableAlias']=$tableAlias;
 
-
         if (isset($datasetDef['#keyField'])) {
             $keyField=$datasetDef['#keyField'];
             $datasetDef['#keyFieldScriptName']=$tableAlias.'.'.$keyField;

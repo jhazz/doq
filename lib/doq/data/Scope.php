@@ -19,8 +19,9 @@ abstract class Scope
 
     public $datanode;
     public $path;
+    abstract protected function __construct(Datanode $datanode, $path='');
     abstract protected function seek($origin);
     abstract protected function makeDetailScope($path, $masterFieldName);
-    abstract protected function __construct(Datanode $datanode, $path='');
     abstract public function asString();
+    abstract public function value();
 }

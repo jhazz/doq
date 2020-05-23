@@ -15,9 +15,10 @@ abstract class Cache
      * @param int $setModifyTime time that equal to a source file/data modification time
      * @param string $key is a key identitying storing to the cache data
      * @param mixed &$data any data to store
+     * @param int $ttl time to live timestamp (in seconds)
      * @return array pair of [true,$newCacheObject] or [false,errorMessage]
      */
-    abstract public function put($setModifyTime, $key, &$data);
+    abstract public function put($setModifyTime, $key, &$data, $ttl=null);
     
     public static function create(&$cacheParams)
     {
