@@ -12,26 +12,86 @@ namespace doq\data;
 class View
 {
     /** @var  \doq\Cache default cache provider used within created \doq\View */
-    private static $defaultCache;
-    private static $defaultCfgSchema;
     public $queryDefs; // Used by logger dumper
     public $viewId;
     public $cfgView;
     public $cfgSchema;
     public $viewColumns;
     public $linkedDatasources;
+    public $configMTime;
     /** @var  \doq\Cache used cache provider*/
     public $cache;
+    private $prepared;
+    private static $defaultCache;
+    private static $defaultCacheTargetName;
+    private static $isInited;
+    private static $appPath;
+    private static $commonPath;
 
-    public static function create(&$cfgSchema, &$cfgView, $viewId=false)
-    {
-        $r=new View($cfgSchema, $cfgView, $viewId);
-        return[&$r,null];
+    public static function init($appPath=null, $commonPath=null,$defaultCacheTargetName=null){
+        if($defaultCacheTargetName==null){
+            $defaultCacheTargetName='views';
+        }
+        
+        self::$defaultCacheTargetName=$defaultCacheTargetName;
+        list($cache,$err)=\doq\Cache::create($defaultCacheTargetName);
+        if($err){
+            trigger_error($err,E_USER_ERROR);
+            return;
+        }
+        self::$defaultCache=$cache;
+        
+        if($appPath==null){
+            $appPath=$GLOBALS['APP_PATH'];
+        }
+        self::$appPath=$appPath;
+        
+        if($commonPath==null){
+            $commonPath=$GLOBALS['doq']['env']['#commonPath'];
+        }
+        self::$commonPath=$commonPath;
+        self::$isInited=true;
+    }
+    
+    
+    public static function create($datasourceName, $viewName)
+    {   
+        if(!self::$isInited){
+            self::init();
+        }
+        $datasourceFile=self::$appPath.'/datasources/'.$datasourceName.'.php';
+        if(file_exists($datasourceFile)){
+            $time1=filemtime($datasourceFile);
+            $cfgDatasource=require($datasourceFile);
+        } else {
+            $datasourceFile=self::$commonPath.'/datasources/'.$datasourceName.'.php';
+            if(file_exists($datasourceFile)){
+                $time1=filemtime($datasourceFile);
+                $cfgDatasource=require($datasourceFile);
+            }
+        }
+        
+        $viewFile=self::$appPath.'/views/'.$viewName.'.php';
+        if(file_exists($viewFile)){
+            $time2=filemtime($viewFile);
+            $cfgView=require($viewFile);
+        } else {
+            $viewFile=self::$commonPath.'/views/'.$viewName.'.php';
+            if(file_exists($viewFile)){
+                $time2=filemtime($viewFile);
+                $cfgView=require($viewFile);
+            }
+        }
+        $time=($time2>$time1)?$time2:$time1;
+        $view=new View($cfgDatasource, $cfgView, $time, $viewName.'~'.$datasourceName);
+        return [&$view, null];
     }
 
-    public function __construct(&$cfgSchema, &$cfgView, $viewId=false)
+    public function __construct(&$cfgDatasource, &$cfgView, $configMTime, $viewId)
     {
-        $this->cfgSchema=&$cfgSchema;
+        //$this->cfgSchema=&$cfgSchema;
+        $this->configMTime=$configMTime;
+        $this->cfgDatasource=$cfgDatasource;
         $this->cfgView=&$cfgView;
         $this->viewId=$viewId;
         $this->isCacheable=false;
@@ -39,19 +99,9 @@ class View
             $this->cache=self::$defaultCache;
             $this->isCacheable=true;
         }
-        if ($viewId===false && isset($cfgView['#viewId'])) {
-            $viewId=$cfgView['#viewId'];
-        }
     }
 
-    /**
-     * Sets default cache provider to store prepared querys
-     * @param \doq\Cache $cache refers to a cache provider
-     */
-    public static function setDefaultCache(&$cache)
-    {
-        self::$defaultCache=&$cache;
-    }
+
 
     /**
      * Sets cache provider to store prepared querys only for this view
@@ -60,7 +110,7 @@ class View
     public function setCacher(&$cache)
     {
         if ($this->viewId===false) {
-            trigger_error(\doq\t('You must set viewId to get ability for using cachers'), E_USER_ERROR);
+            trigger_error(\doq\t('You must set viewId before set Cacher'), E_USER_ERROR);
             return false;
         }
         $this->cache=&$cache;
@@ -77,11 +127,11 @@ class View
     {
         if ((!$this->isCacheable)||($forceRebuild)) {
             if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                \doq\Logger::debug('view', 'Rebuild cache for view "'.$this->viewId.'"', __FILE__, __LINE__);
+                \doq\Logger::debug('doq.View', 'Rebuild cache for view "'.$this->viewId.'"', __FILE__, __LINE__);
             }
             if ($this->makeQuery()) {
                 if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                    \doq\Logger::debug('view', 'Overwrite rebuild queryDefs for view "'.$this->viewId.'"', __FILE__, __LINE__);
+                    \doq\Logger::debug('doq.View', 'Overwrite rebuild queryDefs for view "'.$this->viewId.'"', __FILE__, __LINE__);
                 }
 
                 $this->cache->put($configMtime, $this->viewId, $this->queryDefs);
@@ -90,18 +140,19 @@ class View
             list($data, $err)=$this->cache->get($configMtime, $this->viewId);
             if ($err===null) {
                 if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                    \doq\Logger::debug('view', 'Reuse queryDefs from cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
+                    \doq\Logger::debug('doq.View', 'Reuse queryDefs from cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
                 }
                 $this->queryDefs=&$data;
             } else {
                 if ($this->makeQuery()) {
                     if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                        \doq\Logger::debug('view', 'Store queryDefs in cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
+                        \doq\Logger::debug('doq.View', 'Store queryDefs in cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
                     }
                     $this->cache->put($configMtime, $this->viewId, $this->queryDefs);
                 }
             }
         }
+        $this->prepared=true;
     }
 
     /**
@@ -110,13 +161,19 @@ class View
     * @param string $newDatasetName any string identifies creating Dataset 
     * @return array (\doq\data\Datanode node, err)
     */
-    public function read(&$params, $newDatasetName)
+    public function read(&$params, $newDatasetName=null)
     {
+        if($newDatasetName==null){
+           $newDatasetName=$this->viewId;
+        }
+        if($this->prepared==null){
+            $this->prepare($this->configMTime);
+        }
         $datanode=new \doq\data\Datanode(\doq\data\Datanode::NT_DATASET, $newDatasetName);
         if ($this->readQuery($this->queryDefs, $datanode, $params, $newDatasetName)) {
-            return [$datanode,null];
+            return [&$datanode,null];
         } else {
-            return [false,'No readQuery'];
+            return [null,'No readQuery results'];
         }
     }
 
@@ -210,7 +267,9 @@ class View
 
         $datasetRef=$datasourceName.':'.$schemaName.'/'.$datasetName;
 
-        $cfgSchemaDataset=&$this->cfgSchema['@datasources'][$datasourceName]['@schemas'][$schemaName]['@datasets'][$datasetName];
+        // $cfgSchemaDataset=&$this->cfgSchema['@datasources'][$datasourceName]['@schemas'][$schemaName]['@datasets'][$datasetName];
+        $cfgSchemaDataset=&$this->cfgDatasource['@schemas'][$schemaName]['@datasets'][$datasetName];
+        
         if (!$cfgSchemaDataset) {
             trigger_error(\doq\t('Cannot find model schema  %s', $datasetRef), E_USER_ERROR);
             return false;
@@ -243,8 +302,7 @@ class View
             $queryDefs['#queryId']=$this->lastQueryId;
             $this->lastQueryId++;
             $queryDefs['#dataSource']=$datasourceName;
-            $cfgDatasource=&$this->cfgSchema['@datasources'][$datasourceName];
-            $dataConnectionName=$cfgDatasource['#dataConnection'];
+            $dataConnectionName=$this->cfgDatasource['#dataConnection'];
             $queryDefs['#dataConnection']=$dataConnectionName;
             list($connection,$err) = \doq\data\Connections::getConnection($dataConnectionName);
             $providerName=$connection->provider;

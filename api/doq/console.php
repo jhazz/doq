@@ -1,5 +1,7 @@
 <?php
-require_once '../autorun.php';
+require_once 'autorun.php';
+\doq\Logger::init($GLOBALS['doq']['env']['@log']);
+
 $requestText=file_get_contents("php://input");
 $request=json_decode($requestText, true) ?: [];
 

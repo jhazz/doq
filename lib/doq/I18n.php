@@ -44,8 +44,11 @@ class I18n
      * @param string|null $langBasePath Full path to lang directory contains language countries directories
      * @return readyness
      */
-    public static function init(&$env)
+    public static function init(&$env=null)
     {
+        if($env==null){
+            $env=&$GLOBALS['doq']['env']['@lang'];
+        }
         self::$sourceLang='en';
         self::$selectedCategory=false;
         if (isset($env['#sourceLang'])){

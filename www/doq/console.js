@@ -43,7 +43,7 @@ doq.module('doq.console', ['doq.router'], function(){
         splitterHandleSize=7,
         splitterHandleHalfSize=3,
         drag={mode:0},
-        apiConsoleURL='../../api/doq/console.php',
+        apiConsoleURL=doq.cfg.APIRoot+'/doq/console.php',
         debugScope={
             clientToken:null,
             pageloadToken:null,

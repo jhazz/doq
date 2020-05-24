@@ -5,6 +5,7 @@ class Connections
 {
 	private static $config;
 	private static $items;
+    private static $isInited;
 
 	public static function init(&$config=null)
 	{
@@ -13,14 +14,18 @@ class Connections
             $config=&$GLOBALS['doq']['env']['@dataConnections'];
         }
 		self::$config=&$config;
+        self::$isInited=true;
 	}
-
-	public static function &getConfig(){
-		return self::$config;
-	}
+//
+//	public static function &getConfig(){
+//		return self::$config;
+//	}
 	 
 	public static function getConnection($connectionName)
 	{
+        if(self::$isInited==null){
+            self::init();
+        }
 		if (!isset(self::$config[$connectionName])) {
             $err=\doq\tr('doq', 'Unknown connection name %s', $connectionName);
 			trigger_error($err,E_USER_ERROR);

@@ -1,5 +1,6 @@
 <?php
-require_once '../autorun.php';
+require_once 'autorun.php';
+        
 $requestText=file_get_contents("php://input");
 $request=json_decode($requestText, true) ?: [];
 

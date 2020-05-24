@@ -1,7 +1,5 @@
 <?php
-#$GLOBALS['doq']['views']=
 return [
-  'Products'=>[
     '#dataset'=>'main:store/PRODUCTS',
     'PRODUCT_ID'=>['#label'=>'Product Id'],
     'SKU'=>['#label'=>'SKU code'],
@@ -80,5 +78,4 @@ return [
         ]
       ]
     ]
-  ]
 ];

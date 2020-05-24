@@ -3,6 +3,61 @@ namespace doq;
 
 abstract class Cache
 {
+    public static $cacheConfig;
+    public static $isInited;
+    
+    
+    public static function init(&$cacheConfig=null){
+        if($cacheConfig==null){
+            $cacheConfig=&$GLOBALS['doq']['env']['@cache'];
+        }
+        if(!$cacheConfig){
+            $err=\doq\tr('doq','Cache is not configured');
+            throw new \Exception($err);
+        }
+        self::$cacheConfig=&$cacheConfig;
+        self::$isInited=true;
+    }
+    
+    /**
+     * Build cache provider
+     * @param array &$cacheCfg 
+     * @return  [\doq\Cache, err]
+     */
+    public static function create($cacheTargetName=null)
+    {
+        if(!self::$isInited){
+            self::init();
+        }
+        if($cacheTargetName==null){
+            if(isset(self::$cacheConfig['#defaultTarget'])){
+                $cacheTargetName=self::$cacheConfig['#defaultTarget'];
+            }
+        }
+        if(!$cacheTargetName){
+            $err=\doq\tr('doq','Error create Cache without target name');
+            trigger_error($err, E_USER_ERROR);
+            return [null, $err];
+        }
+        $cacheTargetConfig=&self::$cacheConfig['@targets'][$cacheTargetName];
+        $cacheProvider=$cacheTargetConfig ['#provider'];
+        switch ($cacheProvider) {
+            case 'SerialFileCache':
+                return [new cache\SerialFileCache($cacheTargetConfig), null];
+                /*
+            case 'jsonfile':
+                return [true,new JSONFileCache($cacheTargetConfig)];
+            case 'memcache':
+                return new MemoryСache($cacheTargetConfig);
+                */
+            default:
+                $err=\doq\tr('doq', 'Unknown cache provider "%s" . Check characters cases', $cacheType);
+                trigger_error($err, E_USER_ERROR);
+                return [null, $err];
+            end;
+            }
+    }
+
     /** 
      * Gets data from cache by a key string
      * @param int $prevModifyTime the time of previous cache put
@@ -20,25 +75,6 @@ abstract class Cache
      */
     abstract public function put($setModifyTime, $key, &$data, $ttl=null);
     
-    public static function create(&$cacheParams)
-    {
-        $cacheType=$cacheParams['#type'];
-        switch ($cacheType) {
-            case 'serialfile':
-                return [new cache\SerialFileCache($cacheParams), null];
-                /*
-            case 'jsonfile':
-                return [true,new JSONFileCache($cacheParams)];
-            case 'memcache':
-                return new MemoryСache($cacheParams);
-                */
-            default:
-                $err=\doq\tr('doq', 'Unknown cache type "%s"', $cacheType);
-                trigger_error($err, E_USER_ERROR);
-                return [false, $err];
-            end;
-            }
-    }
 
 
 }

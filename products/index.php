@@ -1,5 +1,5 @@
 <?php
-require_once '../autorun.php';
+require_once 'autorun.php';
 
 
 $action='json_demo1';

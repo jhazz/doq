@@ -428,13 +428,9 @@ abstract class Logger
     
     public static function placeConsole()
     {    
-        $wwwURL=$GLOBALS['doq']['env']['#wwwURL'];
         \doq\Html::head();
         ?>
-    <script src="<?=$wwwURL?>/doq/doq.js"></script>
     <script>
-    doq.cfg.jsModulesRoot="<?=$wwwURL?>"
-    doq.cfg.CSRF="<?=\doq\Logger::getCSRF()?>"
     doq.cfg.clientToken="<?=\doq\Logger::getClientToken()?>"
     doq.cfg.pageloadToken="<?=\doq\Logger::getPageloadToken()?>"
     doq.cfg.pageToken="<?=\doq\Logger::getPageToken()?>"

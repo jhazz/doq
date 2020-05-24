@@ -21,7 +21,7 @@ class Scripter
             $r=new \doq\data\mysql\Scripter();
             return [true,$r];
         default:
-            throw new Exception('Unknown Data provider type');
+            throw new \Exception('Unknown Data provider type');
         }
     }
 

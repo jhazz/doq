@@ -1,12 +1,15 @@
 <?php
-$ROOT_PATH=dirname(__FILE__, 2);
+if(!isset($ROOT_PATH)){
+    $ROOT_PATH=dirname(__FILE__, 2);
+}
 
 return [
     '#rootPath'=>$ROOT_PATH,
     '#libPath'=>$ROOT_PATH.'/lib',
     '#commonPath'=>$ROOT_PATH.'/common',
-    '#schemaPath'=>$ROOT_PATH.'/common/schema',
-    '#cachesPath'=>$ROOT_PATH.'/runtime/caches',
+    //'#schemaPath'=>$ROOT_PATH.'/common/datasources',# deprecated
+    
+    
     '#templatesPath'=>$ROOT_PATH.'/frontend/templates',
     '#wwwURL'=>'../../www',
     '#cookiePath'=>'/',
@@ -33,21 +36,28 @@ return [
         'auth'    =>['actions'=>['default'=>'auth_status.php']],
         'products'=>['actions'=>['default'=>'products_list.php']]
     ],
-    '@caches'=>[
-        'querys'=>[
-            '#type'=>'serialfile',
-            '#targetFolder'=>'querys',
-            '#filePrefix'=>'vp_',
-            '#fileSuffix'=>'.query.txt',
-            '#forceCreateFolder'=>1
+    '@cache'=>[
+        '@providers'=>[
+             'SerialFileCache'=>[
+                '#cachePath'=>$ROOT_PATH.'/runtime/caches',
+            ]
         ],
-        'templates'=>[
-            '#type'=>'serialfile',
-            '#targetFolder'=>'templates',
-            '#filePrefix'=>'t_',
-            '#fileSuffix'=>'.tmpls.txt',
-            '#forceCreateFolder'=>1
-        ],
+        '@targets'=>[
+            'views'=>[
+                '#provider'=>'SerialFileCache',
+                '#targetFolder'=>'views',
+                '#filePrefix'=>'vp_',
+                '#fileSuffix'=>'.query.txt',
+                '#forceCreateFolder'=>1
+            ],
+            'templates'=>[
+                '#provider'=>'SerialFileCache',
+                '#targetFolder'=>'templates',
+                '#filePrefix'=>'t_',
+                '#fileSuffix'=>'.tmpls.txt',
+                '#forceCreateFolder'=>1
+            ]
+        ]
 
     ],
     '@session'=>[

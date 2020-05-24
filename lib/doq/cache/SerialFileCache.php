@@ -8,28 +8,33 @@ class SerialFileCache extends \doq\Cache
     public $fileSuffix;
   
     /**
-     * 
+     * Cachecfg must have parameters:
      * #filePrefix
      * #fileSuffix
      * #forceCreateFolder
      */
-    public function __construct(&$cacheParams)
+    public function __construct(&$cacheCfg)
     {
-        $s=$cacheParams['#targetFolder'];
-        if (!$s) {
-            trigger_error(\doq\tr('doq','Undefined parameter #targetFolder in cache config'), E_USER_ERROR);
-            $s='default';
+        $cachePath=self::$cacheConfig['@providers']['SerialFileCache']['#cachePath'];
+        if(!$cachePath){
+            trigger_error(\doq\tr('doq','Main cache path target has not been configured'), E_USER_ERROR);
+            return;
         }
-    
-        $this->cacheFolder=$GLOBALS['doq']['env']['#cachesPath'].'/'.$s;
-        $this->filePrefix=(isset($cacheParams['#filePrefix'])?$cacheParams['#filePrefix']:'');
-        $this->fileSuffix=(isset($cacheParams['#fileSuffix'])?$cacheParams['#fileSuffix']:'.txt');
+        
+        $targetFolder=$cacheCfg['#targetFolder'];
+        if (!$targetFolder) {
+            trigger_error(\doq\tr('doq','Undefined parameter #targetFolder in cache config. Use default as a target folder'), E_USER_ERROR);
+            $targetFolder='default';
+        }
+        $this->cacheFolder=$cachePath.'/'.$targetFolder;
+        $this->filePrefix=(isset($cacheCfg['#filePrefix'])?$cacheCfg['#filePrefix']:'');
+        $this->fileSuffix=(isset($cacheCfg['#fileSuffix'])?$cacheCfg['#fileSuffix']:'.txt');
     
         /** @var bool try to use any folder for cache */
         $tryUseAny=false; 
-    
+        
         if (!is_dir($this->cacheFolder)) {
-            if (isset($cacheParams['#forceCreateFolder'])) {
+            if (isset($cacheCfg['#forceCreateFolder'])) {
                 if (mkdir($this->cacheFolder, 0777, true)===false) {
                     trigger_error(\doq\tr('doq','Unable to create cache folder "%s". Use local or temporary instead',$this->cacheFolder), E_USER_WARNING);
                     $tryUseAny=true;
@@ -47,7 +52,7 @@ class SerialFileCache extends \doq\Cache
                 $this->cacheFolder=getcwd();
             }
         }
-        \doq\Logger::debug('cache','Uses cachefolder "'.$this->cacheFolder.'"', __FILE__);
+        \doq\Logger::debug('doq','Uses cachefolder "'.$this->cacheFolder.'"', __FILE__);
     }
 
     public function get($prevModifyTime, $key)
@@ -57,7 +62,7 @@ class SerialFileCache extends \doq\Cache
             $data=unserialize(file_get_contents($fileName));
             return [&$data,null];
         } else {
-            return [false,'Cache missed'];
+            return [null,'Cache missed'];
         }
     }
   

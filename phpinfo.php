@@ -1,4 +1,4 @@
 <?php
-print $_SERVER['DOQ_ENVIRONMENT'];
+print 'Current DOQ_ENVIRONMENT='.getenv('DOQ_ENVIRONMENT').'<br>';
 phpinfo();
 ?>

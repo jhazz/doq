@@ -1,17 +1,27 @@
-<?php
-$GLOBALS['doq']=[
-    'env'=>array_merge (
-        require_once(dirname(__FILE__,2).'/common/env.php'),
-        require_once('env.php')
-    )
-];
-$GLOBALS['doq']['schema']=require_once($GLOBALS['doq']['env']['#commonPath'].'/schema.php');
-$GLOBALS['doq']['views']=require_once($GLOBALS['doq']['env']['#commonPath'].'/views.php');
-require_once($GLOBALS['doq']['env']['#libPath'].'/classloader.php');
-\doq\Logger::init($GLOBALS['doq']['env']['@log']);
-\doq\Html::init($GLOBALS['doq']['env']['@html']);
-\doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
-\doq\I18n::init($GLOBALS['doq']['env']['@lang']);
-\doq\I18n::target($GLOBALS['doq']['env']['@lang']['#defaultTarget']);
+<?php 
 
+/** application name is a name of the first subdirectory after folder 'api' */
+function extractAppName(){
+    $c=(strpos("\\", $_SERVER['SCRIPT_FILENAME']) !== false)?"\\":"/";
+    $parts=explode($c,$_SERVER['SCRIPT_FILENAME']);
+    $n=array_search('api',$parts);
+    if(($n!==false)&&(count($parts)>$n)){
+        return $parts[$n+1];
+    }
+    return '';
+}
+
+$ROOT_PATH=dirname(__FILE__,2);
+if(!isset($APP_NAME)) {
+    $APP_NAME=extractAppName();
+}
+$APP_PATH=$ROOT_PATH.'/'.$APP_NAME;
+
+$GLOBALS['doq']=[];
+if(!file_exists($APP_PATH.'/env.php')){
+    $GLOBALS['doq']['env']=require_once($ROOT_PATH.'/common/env.php');
+} else {
+    $GLOBALS['doq']['env']=array_merge (require_once($ROOT_PATH.'/common/env.php'), require_once($APP_PATH.'/env.php'));
+}
+require_once($GLOBALS['doq']['env']['#libPath'].'/classloader.php');
 ?>

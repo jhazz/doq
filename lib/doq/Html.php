@@ -70,6 +70,41 @@ class Html
         }
         if(!isset(self::$isHeadInited)){
             print "\n<head>\n";
+            print "<!-- \n script fname: {$_SERVER['SCRIPT_FILENAME']} \n env rootPath: {$GLOBALS['doq']['env']['#rootPath']} \n php self: {$_SERVER['PHP_SELF']}-->\n";
+            
+            $c=(strpos("\\", $_SERVER['SCRIPT_FILENAME']) !== false)?"\\":"/";
+            \doq\Logger::debug('Html','Script filename='.$_SERVER['SCRIPT_FILENAME']);
+            $parts1=explode($c,$_SERVER['SCRIPT_FILENAME']);
+            $cnt1=count($parts1);
+
+            $root=$GLOBALS['doq']['env']['#rootPath'];
+            \doq\Logger::debug('Html','Root path='.$root);
+            $c=(strpos("\\", $root) !== false)?"\\":"/";
+            $parts2=explode($c,$root);
+            $cnt2=count($parts2);
+
+            for($i=0;($i<$cnt1)&&($i<$cnt2);$i++){
+                if($parts1[$i]!=$parts2[$i]){
+                    break;
+                }
+            }
+            $rootRelativeURL='';
+            if($i==$cnt2){
+                for($j=$cnt1-1;$j>$i;$j--){
+                    $rootRelativeURL.='../';
+                }
+            } else {
+                $err=\doq\tr('doq', 'Unknown cache provider "%s" . Check characters cases', $cacheType);
+                trigger_error($err, E_USER_ERROR);
+            }
+            $GLOBALS['doq']['#rootRelativeURL']=$rootRelativeURL;
+            ?>
+    <script src="<?=$rootRelativeURL?>www/doq/doq.js"></script>
+    <script>
+    doq.cfg.jsModulesRoot="<?=$GLOBALS['doq']['#rootRelativeURL']?>www"
+    doq.cfg.APIRoot="<?=$GLOBALS['doq']['#rootRelativeURL']?>api"
+    doq.cfg.CSRF="<?=\doq\Logger::getCSRF()?>"
+    </script><?php
             self::$isHeadInited=true;
         }
     }
