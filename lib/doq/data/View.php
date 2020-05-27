@@ -59,6 +59,9 @@ class View
         if(!self::$isInited){
             self::init();
         }
+        
+        
+        // Надо отделить загрузку конфигураций datasources
         $datasourceFile=self::$appPath.'/datasources/'.$datasourceName.'.php';
         if(file_exists($datasourceFile)){
             $time1=filemtime($datasourceFile);
@@ -268,6 +271,8 @@ class View
         $datasetRef=$datasourceName.':'.$schemaName.'/'.$datasetName;
 
         // $cfgSchemaDataset=&$this->cfgSchema['@datasources'][$datasourceName]['@schemas'][$schemaName]['@datasets'][$datasetName];
+        
+        
         $cfgSchemaDataset=&$this->cfgDatasource['@schemas'][$schemaName]['@datasets'][$datasetName];
         
         if (!$cfgSchemaDataset) {

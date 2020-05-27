@@ -1,0 +1,48 @@
+<?php
+return [
+    '#dataConnection'=>'MYSQL0',
+    '@schemas'=>[
+        'store'=>[
+            '@datasets'=>[
+                'PRODUCT_TYPES'=>[
+                    '#kind'=>'list',
+                    '@fields'=>[
+                        'PRODUCT_TYPE_ID'=>[
+                        '#type'=>'int64',
+                        '#isAutoInc'=>1
+                        ],
+                        'NAME'=>[
+                            '#type'=>'string',
+                            '#size'=>50
+                        ]
+                    ],
+                    '#keyField'=>'PRODUCT_TYPE_ID'
+                ],
+                'PARAMETERS'=>[
+                    '@fields'=>[
+                    'PARAMETER_ID'=>['#type'=>'int64'],
+                    'PARAMETER_GROUP_ID'=>['#type'=>'int64'],
+                    'NAME'=>['#type'=>'string','#size'=>'100'],
+                    'UNITS'>['#type'=>'string','#size'=>'50']
+                    ],
+                    '#keyField'=>'PARAMETER_ID'
+                ],
+                'PRODUCT_PARAMETERS'=>[
+                    '@fields'=>[
+                      'PRODUCT_PARAMETER_ID'=>['#type'=>'int64'],
+                      'PARAMETER_ID'=>['#type'=>'int64'],
+                      'VALUE_STRING'=>['#type'=>'string','#size'=>'250'],
+                      'PRODUCT_ID'=>[
+                        '#type'=>'int64',
+                        '#kind'=>'lookup',
+                        '#ref'=>'main:store/PRODUCTS'
+                      ],
+                    ],
+                    '#keyField'=>'PRODUCT_PARAMETER_ID'
+                ]
+            ]
+        ]
+    ]
+];
+
+?>
