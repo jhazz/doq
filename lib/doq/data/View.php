@@ -54,47 +54,32 @@ class View
     }
     
     
-    public static function create($datasourceName, $viewName)
+    public static function create($viewName)
     {   
         if(!self::$isInited){
             self::init();
         }
         
-        
-        // Надо отделить загрузку конфигураций datasources
-        $datasourceFile=self::$appPath.'/datasources/'.$datasourceName.'.php';
-        if(file_exists($datasourceFile)){
-            $time1=filemtime($datasourceFile);
-            $cfgDatasource=require($datasourceFile);
-        } else {
-            $datasourceFile=self::$commonPath.'/datasources/'.$datasourceName.'.php';
-            if(file_exists($datasourceFile)){
-                $time1=filemtime($datasourceFile);
-                $cfgDatasource=require($datasourceFile);
-            }
-        }
-        
         $viewFile=self::$appPath.'/views/'.$viewName.'.php';
         if(file_exists($viewFile)){
-            $time2=filemtime($viewFile);
+            $time=filemtime($viewFile);
             $cfgView=require($viewFile);
         } else {
             $viewFile=self::$commonPath.'/views/'.$viewName.'.php';
             if(file_exists($viewFile)){
-                $time2=filemtime($viewFile);
+                $time=filemtime($viewFile);
                 $cfgView=require($viewFile);
             }
         }
-        $time=($time2>$time1)?$time2:$time1;
-        $view=new View($cfgDatasource, $cfgView, $time, $viewName.'~'.$datasourceName);
+        $view=new View($cfgView, $time, $viewName);
         return [&$view, null];
     }
 
-    public function __construct(&$cfgDatasource, &$cfgView, $configMTime, $viewId)
+    public function __construct(&$cfgView, $configMTime, $viewId)
     {
         //$this->cfgSchema=&$cfgSchema;
         $this->configMTime=$configMTime;
-        $this->cfgDatasource=$cfgDatasource;
+        //$this->cfgDatasource=$cfgDatasource;УДАЛЯЮ!
         $this->cfgView=&$cfgView;
         $this->viewId=$viewId;
         $this->isCacheable=false;
@@ -270,13 +255,15 @@ class View
 
         $datasetRef=$datasourceName.':'.$schemaName.'/'.$datasetName;
 
-        // $cfgSchemaDataset=&$this->cfgSchema['@datasources'][$datasourceName]['@schemas'][$schemaName]['@datasets'][$datasetName];
+        // $datasetCfg=&$this->cfgSchema['@datasources'][$datasourceName]['@schemas'][$schemaName]['@datasets'][$datasetName];
         
+        list($datasourceCfg, $datasetCfg,$err)=\doq\data\Datasources::getDataset($datasourceName,$schemaName,$datasetName);
+        $dataConnectionName=$datasourceCfg['#dataConnection'];
         
-        $cfgSchemaDataset=&$this->cfgDatasource['@schemas'][$schemaName]['@datasets'][$datasetName];
-        
-        if (!$cfgSchemaDataset) {
-            trigger_error(\doq\t('Cannot find model schema  %s', $datasetRef), E_USER_ERROR);
+        # УДАЛИТЬ $this->cfgDatasource!!  не нужен
+        # $datasetCfg=&$this->cfgDatasource['@schemas'][$schemaName]['@datasets'][$datasetName];
+        if (!$err!=null) {
+            trigger_error($err, E_USER_ERROR);
             return false;
         }
 
@@ -293,11 +280,11 @@ class View
         }
         $datasetDefs=['#schema'=>$schemaName,'#datasetName'=>$datasetName,'@fields'=>[]];
 
-        if (isset($cfgSchemaDataset['@keyFields'])) {
+        if (isset($datasetCfg['@keyFields'])) {
             trigger_error('Unsupported multiple field primary keys', E_USER_ERROR);
             return false;
-        } elseif (isset($cfgSchemaDataset['#keyField'])) {
-            $datasetDefs['#keyField']=$cfgSchemaDataset['#keyField'];
+        } elseif (isset($datasetCfg['#keyField'])) {
+            $datasetDefs['#keyField']=$datasetCfg['#keyField'];
         }
 
 
@@ -307,8 +294,9 @@ class View
             $queryDefs['#queryId']=$this->lastQueryId;
             $this->lastQueryId++;
             $queryDefs['#dataSource']=$datasourceName;
-            $dataConnectionName=$this->cfgDatasource['#dataConnection'];
-            $queryDefs['#dataConnection']=$dataConnectionName;
+            //            $dataConnectionName=$this->cfgDatasource['#dataConnection'];
+            //            $queryDefs['#dataConnection']=$dataConnectionName;
+            
             list($connection,$err) = \doq\data\Connections::getConnection($dataConnectionName);
             $providerName=$connection->provider;
             $queryDefs['#dataProvider']=$providerName;
@@ -347,8 +335,8 @@ class View
                     $foundKeyColumn=&$newColumn;
                     #$queryDefs['#keyTupleFieldNo']=$queryDefs['#lastTupleFieldNo'];
                 }
-                if (isset($cfgSchemaDataset['@fields'][$originField])) {
-                    $modelFieldDef=&$cfgSchemaDataset['@fields'][$originField];
+                if (isset($datasetCfg['@fields'][$originField])) {
+                    $modelFieldDef=&$datasetCfg['@fields'][$originField];
                     $newColumn['#originField']=$originField;
                     if (isset($modelFieldDef['#type'])) {
                         $type=$newColumn['#type']=$modelFieldDef['#type'];

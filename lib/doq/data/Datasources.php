@@ -25,7 +25,35 @@ class Datasources{
     }
     
     
-    public static function loadConfig($datasourceName){
+    // list($cfgSchemaDataset,$dataConnectionName,$err)=\doq\data\Datasources::getDatasetCfg($datasourceName,$schemaName,$datasetName);
+    // $this->cfgSchema['@datasources'][$datasourceName]['@schemas'][$schemaName]['@datasets'][$datasetName];
+
+    /**
+     * 
+     * @param {string} $datasourceName 
+     * @param {string} $schemaName 
+     * @param {string} $datasetName 
+     * @return  [&$datasourceCfg, &$cfgSchemaDataset,$err]
+     */
+    public static function getDatasetCfg($datasourceName,$schemaName,$datasetName){
+        $datasourceCfg=self::getDatasourceCfg($datasourceName);
+        if(!isset($datasourceCfg['@schemas'][$schemaName])){
+            $err=\doq\tr('doq', 'Schema %s not found', $schemaName);
+            return [null, null, $err];
+        }
+        
+        $schemaCfg=&$datasourceCfg['@schemas'][$schemaName];
+        if(!isset($schemaCfg['@datasets'][$datasetName])){
+            $err=\doq\tr('doq', 'Dataset %s not found', $datasetName);
+            return [null, null, $err];
+        }
+        
+        $cfgSchemaDataset=&$schemaCfg['@datasets'][$datasetName];
+        return [&$datasourceCfg, &$cfgSchemaDataset, null];
+        
+    }
+    
+    public static function &getDatasourceCfg($datasourceName){
         if(self::$isInited==null){
             self::init();
         }
@@ -35,7 +63,7 @@ class Datasources{
         } else {
             $fpath=self::$schemaPath.'/'.$datasourceName.'.php';
             if(!file_exists($fpath)){
-                $err=\doq\tr('data.Datasource', 'Datasource %s not found', $datasourceName);
+                $err=\doq\tr('doq', 'Datasource %s not found', $datasourceName);
                 trigger_error($err,E_USER_ERROR);
                 return [null,$err];
             }
