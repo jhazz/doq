@@ -69,6 +69,10 @@ class View
             if(file_exists($viewFile)){
                 $time=filemtime($viewFile);
                 $cfgView=require($viewFile);
+            } else {
+                $err=\doq\tr('doq','View "%s" not found',$viewName);
+                trigger_error($err,E_USER_ERROR);
+                return [null,$err];
             }
         }
         $view=new View($cfgView, $time, $viewName);
@@ -149,7 +153,7 @@ class View
     * @param string $newDatasetName any string identifies creating Dataset 
     * @return array (\doq\data\Datanode node, err)
     */
-    public function read(&$params, $newDatasetName=null)
+    public function read($params, $newDatasetName=null)
     {
         if($newDatasetName==null){
            $newDatasetName=$this->viewId;
@@ -257,12 +261,12 @@ class View
 
         // $datasetCfg=&$this->cfgSchema['@datasources'][$datasourceName]['@schemas'][$schemaName]['@datasets'][$datasetName];
         
-        list($datasourceCfg, $datasetCfg,$err)=\doq\data\Datasources::getDataset($datasourceName,$schemaName,$datasetName);
-        $dataConnectionName=$datasourceCfg['#dataConnection'];
+        list($datasourceCfg, $datasetCfg, $mtime, $err)=\doq\data\Datasources::getDatasetCfg($datasourceName,$schemaName,$datasetName);
+        $dataConnectionName=$datasourceCfg['@config']['#dataConnection'];
         
         # УДАЛИТЬ $this->cfgDatasource!!  не нужен
         # $datasetCfg=&$this->cfgDatasource['@schemas'][$schemaName]['@datasets'][$datasetName];
-        if (!$err!=null) {
+        if ($err!==null) {
             trigger_error($err, E_USER_ERROR);
             return false;
         }
@@ -294,9 +298,7 @@ class View
             $queryDefs['#queryId']=$this->lastQueryId;
             $this->lastQueryId++;
             $queryDefs['#dataSource']=$datasourceName;
-            //            $dataConnectionName=$this->cfgDatasource['#dataConnection'];
-            //            $queryDefs['#dataConnection']=$dataConnectionName;
-            
+            $queryDefs['#dataConnection']=$dataConnectionName;
             list($connection,$err) = \doq\data\Connections::getConnection($dataConnectionName);
             $providerName=$connection->provider;
             $queryDefs['#dataProvider']=$providerName;
@@ -376,7 +378,8 @@ class View
                     if ($ref) {
                         $subMasterFieldNo=isset($newColumn['#fieldNo'])?$newColumn['#fieldNo']:false;
                         $subDatasetId=$newColumn['#field'];
-                        list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource)=\doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
+                        list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource)
+                            = \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
                         $newColumn['#refSchema']=$RschemaName;
                         $newColumn['#refDataset']=$RdatasetName;
                         if ($kind=='aggregation') {

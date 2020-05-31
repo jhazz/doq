@@ -17,7 +17,7 @@ function extractAppName(){
     $s=$_SERVER['SCRIPT_FILENAME'];
     $c=(strpos("\\", $s) !== false)?"\\":"/";
     $parts=explode($c,$s);
-    return $parts[count($parts)-1];
+    return $parts[count($parts)-2];
 }
 
 ?>

@@ -1,5 +1,4 @@
 <?php
-return;
 namespace doq\data;
 
 class Datasources{
@@ -8,6 +7,7 @@ class Datasources{
     public static $destCfg;
     private static $appPath;
     private static $commonPath;
+    private static $datasourcesFolderPath;
     
     public static function init(&$env=null, &$destCfg=null){
         if($env==null){
@@ -21,39 +21,38 @@ class Datasources{
             $GLOBALS['doq']['@datasources']=[];
         }
         self::$datasources=&$GLOBALS['doq']['@datasources'];
+        self::$datasourcesFolderPath=$env['#commonPath'].'/datasources';
         self::$isInited=true;
     }
     
     
-    // list($cfgSchemaDataset,$dataConnectionName,$err)=\doq\data\Datasources::getDatasetCfg($datasourceName,$schemaName,$datasetName);
-    // $this->cfgSchema['@datasources'][$datasourceName]['@schemas'][$schemaName]['@datasets'][$datasetName];
-
     /**
      * 
      * @param {string} $datasourceName 
      * @param {string} $schemaName 
      * @param {string} $datasetName 
-     * @return  [&$datasourceCfg, &$cfgSchemaDataset,$err]
+     * @return  [&$datasourceCfg, &$cfgSchemaDataset,$mtime, $err]
      */
     public static function getDatasetCfg($datasourceName,$schemaName,$datasetName){
-        $datasourceCfg=self::getDatasourceCfg($datasourceName);
-        if(!isset($datasourceCfg['@schemas'][$schemaName])){
+        list($datasourceCfg,$err)=self::getDatasourceCfg($datasourceName);
+        if(!isset($datasourceCfg['@config']['@schemas'][$schemaName])){
             $err=\doq\tr('doq', 'Schema %s not found', $schemaName);
-            return [null, null, $err];
+            return [null, null, null, $err];
         }
+        $mtime=$datasourceCfg['#mtime'];
         
-        $schemaCfg=&$datasourceCfg['@schemas'][$schemaName];
+        $schemaCfg=&$datasourceCfg['@config']['@schemas'][$schemaName];
         if(!isset($schemaCfg['@datasets'][$datasetName])){
             $err=\doq\tr('doq', 'Dataset %s not found', $datasetName);
-            return [null, null, $err];
+            return [null, null, null, $err];
         }
         
         $cfgSchemaDataset=&$schemaCfg['@datasets'][$datasetName];
-        return [&$datasourceCfg, &$cfgSchemaDataset, null];
+        return [&$datasourceCfg, &$cfgSchemaDataset, $mtime, null];
         
     }
     
-    public static function &getDatasourceCfg($datasourceName){
+    public static function getDatasourceCfg($datasourceName){
         if(self::$isInited==null){
             self::init();
         }
@@ -61,20 +60,20 @@ class Datasources{
         if(isset(self::$datasources[$datasourceName])){
             return [&self::$datasources[$datasourceName],null];
         } else {
-            $fpath=self::$schemaPath.'/'.$datasourceName.'.php';
+            $fpath=self::$datasourcesFolderPath.'/'.$datasourceName.'.php';
             if(!file_exists($fpath)){
                 $err=\doq\tr('doq', 'Datasource %s not found', $datasourceName);
                 trigger_error($err,E_USER_ERROR);
-                return [null,$err];
+                return [null,null,$err];
             }
-            $time=filemtime($fpath);
-            self::$datasources[$datasourceName]=['#time'=>$time, '@config'=>require($fpath)];
-            return self::$datasources[$datasourceName];
+            $mtime=filemtime($fpath);
+            self::$datasources[$datasourceName]=['#mtime'=>$mtime, '@config'=>require($fpath)];
+            return [&self::$datasources[$datasourceName],null];
         }
     }
 
     
-    /** Load datasource configurations by DataSourceNames list from * #datasourcesSchemaPath. 
+    /** Load datasource configurations by DataSourceNames list from * #datasourcesdatasourcesFolderPath. 
      * Configurations are stored to $GLOBALS['doq']['datasources']
      * @param Array $datasourceNames array of datasources
      * @return int timestamp of the last modifyied DS 
@@ -89,7 +88,7 @@ class Datasources{
             if(isset(self::$datasources[$dsn])){
                 $time=self::$datasources[$dsn]['#time'];
             } else {
-                $fpath=self::$schemaPath.'/'.$dsn.'.php';
+                $fpath=self::$datasourcesFolderPath.'/'.$dsn.'.php';
                 if(!file_exists($fpath)){
                     $err=\doq\tr('data.Datasource', 'Datasource %s not found', $dsn);
                     trigger_error($err,E_USER_ERROR);

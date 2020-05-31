@@ -7,7 +7,7 @@ doq\Logger::placeConsole();
 doq\Html::body();
 doq\data\Connections::init();
 
-list($viewProducts,$err)=doq\data\View::create('main','products');
+list($viewProducts,$err)=doq\data\View::create('products');
 $params=[];
 list($dataset,$err)=$viewProducts->read($params);
 
