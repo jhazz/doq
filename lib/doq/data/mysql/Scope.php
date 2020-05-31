@@ -72,6 +72,11 @@ class Scope extends \doq\data\Scope
                     $this->tuplesByKey=&$this->index['@tuplesByKey'];
                     $this->tuplesByNo=&$this->index['@tuplesByNo'];
                     $this->indexSize=count($this->tuplesByNo);
+                    if($this->indexSize>0){
+                        $this->rowNo=0;
+                        $this->curTuple=&$this->tuplesByNo[0];
+                    }
+                    
         } else {
                     $this->curType=self::SW_ALL_RECORDS;
                     $this->indexSize=count($this->datanode->dataset->tuples);
@@ -208,4 +213,10 @@ class Scope extends \doq\data\Scope
             return $this->curTuple[$this->datanode->fieldDefs['#tupleFieldNo']];
         }
     }
+    
+    /*public function field($fieldName){
+        if ($this->datanode->type === \doq\data\Datanode::NT_DATASET) {
+            return $this->curTuple[$this->datanode->dataset->queryDefs['@dataset']['fields'][ПО НОМЕРАМ ТОЛЬКО] ];
+        }        
+    }*/
 }

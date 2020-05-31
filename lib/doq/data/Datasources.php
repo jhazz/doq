@@ -31,7 +31,7 @@ class Datasources{
      * @param {string} $datasourceName 
      * @param {string} $schemaName 
      * @param {string} $datasetName 
-     * @return  [&$datasourceCfg, &$cfgSchemaDataset,$mtime, $err]
+     * @return  [&$datasourceCfg, &$datasetCfg,$mtime, $err]
      */
     public static function getDatasetCfg($datasourceName,$schemaName,$datasetName){
         list($datasourceCfg,$err)=self::getDatasourceCfg($datasourceName);
@@ -47,8 +47,8 @@ class Datasources{
             return [null, null, null, $err];
         }
         
-        $cfgSchemaDataset=&$schemaCfg['@datasets'][$datasetName];
-        return [&$datasourceCfg, &$cfgSchemaDataset, $mtime, null];
+        $datasetCfg=&$schemaCfg['@datasets'][$datasetName];
+        return [&$datasourceCfg, &$datasetCfg, $mtime, null];
         
     }
     

@@ -6,10 +6,10 @@ class ScopeStack
     public $stack;
     public $top;
 
-    public static function create(Datanode $datanode, $path='', $indexName='', $indexKey=null)
+    public static function create(Datanode $datanode, $indexName='', $indexKey=null)
     {
         $scopeStack=new ScopeStack();
-        $scope=$datanode->dataset->makeScope($datanode, $path, $indexName, $indexKey);
+        $scope=$datanode->dataset->makeScope($datanode, $datanode->name.':', $indexName, $indexKey);
         $scopeStack->pushScope($scope);
         return [$scopeStack, null];
     }
@@ -20,6 +20,28 @@ class ScopeStack
         return $scope;
     }
 
+    public function extract($fieldNameList){
+        $result=[];
+        $childNodes=$this->top->datanode->childNodes;
+        foreach($fieldNameList as $i=>$fieldName){
+            if(!isset($childNodes[$fieldName])){
+                throw new \Exception(\doq\tr('Field "%s" is unavailable in the scope "%s"',$fieldName,$this->path));
+            }
+            $node=&$childNodes[$fieldName];
+            $tupleFieldNo=$node->fieldDefs['#tupleFieldNo'];
+            $result[]=$this->top->curTuple[$tupleFieldNo];
+        }
+        return $result;
+    }
+    
+    /**
+     * Seek to next scope row
+     * @return  EOT true means end of dataset
+     */
+    public function next(){
+        return $this->top->seek(\doq\data\Scope::TO_NEXT);
+    }
+    
     public function open($addPath)
     {
         $datasetScope=null;
@@ -40,6 +62,7 @@ class ScopeStack
         $path=$scope->path;
         if ($addPath=='') {
             $this->stack[]=$scope;
+            $scope->seek(Scope::TO_START);
             return [$scope, null];
         }
 
@@ -84,8 +107,7 @@ class ScopeStack
                         trigger_error($err, E_USER_ERROR);
                         return [false,$err];
                     }
-                    // TODO Если dataset->makeScope может само понять какой путь формировать из nextDataNode, то моет вообще выбросить из makeScope адрес как аргумент
-                    $scope=$nextDatanode->dataset->makeScope($nextDatanode, $path,'', null, $datasetScope );
+                    $scope=$nextDatanode->dataset->makeScope($nextDatanode, $path, '', null, $datasetScope );
                     break;
                 case Datanode::NT_COLUMN:
                         $err=\doq\tr('doq', 'Column %s cannot not have any subnames like %s', $scope->path, $pathElementName);
@@ -113,5 +135,8 @@ class ScopeStack
             }
             return $this->top;
         }
+    }
+    public function getScope(){
+        return $this->top;
     }
 }

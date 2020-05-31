@@ -153,8 +153,9 @@ class View
     * @param string $newDatasetName any string identifies creating Dataset 
     * @return array (\doq\data\Datanode node, err)
     */
-    public function read($params, $newDatasetName=null)
+    public function read($params=[], $newDatasetName=null)
     {
+        
         if($newDatasetName==null){
            $newDatasetName=$this->viewId;
         }
@@ -162,10 +163,11 @@ class View
             $this->prepare($this->configMTime);
         }
         $datanode=new \doq\data\Datanode(\doq\data\Datanode::NT_DATASET, $newDatasetName);
-        if ($this->readQuery($this->queryDefs, $datanode, $params, $newDatasetName)) {
-            return [&$datanode,null];
+        $err=$this->readQuery($this->queryDefs, $datanode, $params, $newDatasetName);
+        if (!$err) {
+            return [&$datanode, $datanode->dataset->rowCount, null];
         } else {
-            return [null,'No readQuery results'];
+            return [null,0,$err];
         }
     }
 
@@ -173,18 +175,19 @@ class View
 
     /**
     * Recursive loading data into Dataset wrapped by Datanodes
+    * @return $err Exception error or null if no errors occured
     */
     private function readQuery(&$queryDefs, \doq\data\Datanode $datanode, &$params, $newDatasetName)
     {
         $providerName=$queryDefs['#dataProvider'];
         list($dataset, $err)=\doq\data\Dataset::create($providerName, $queryDefs, $newDatasetName);
         if ($err!==null) {
-            throw new \Exception($err);
+            return new \Exception($err);
         }
         $datanode->dataset=$dataset;
         list($connection,$err)=$dataset->connect();
         if($err!==null) {
-            throw new \Exception($err);
+            return new \Exception($err);
         }
         $dataset->read($params);
         $datanode->wrap($queryDefs, $dataset);
@@ -213,13 +216,13 @@ class View
                 }
 
                 $childNode=new \doq\data\Datanode(Datanode::NT_DATASET, $detailDatasetName, $datanode);
-                $ok=$this->readQuery($subQuery, $childNode, $newParams, $detailDatasetName);
-                if (!$ok) {
+                $err=$this->readQuery($subQuery, $childNode, $newParams, $detailDatasetName);
+                if ($err!==null) {
                     return false;
                 }
             }
         }
-        return true;
+        return null;
     }
 
     /**
@@ -256,16 +259,9 @@ class View
                 $schemaName, 
                 $datasetName);
         }
-
         $datasetRef=$datasourceName.':'.$schemaName.'/'.$datasetName;
-
-        // $datasetCfg=&$this->cfgSchema['@datasources'][$datasourceName]['@schemas'][$schemaName]['@datasets'][$datasetName];
-        
         list($datasourceCfg, $datasetCfg, $mtime, $err)=\doq\data\Datasources::getDatasetCfg($datasourceName,$schemaName,$datasetName);
         $dataConnectionName=$datasourceCfg['@config']['#dataConnection'];
-        
-        # УДАЛИТЬ $this->cfgDatasource!!  не нужен
-        # $datasetCfg=&$this->cfgDatasource['@schemas'][$schemaName]['@datasets'][$datasetName];
         if ($err!==null) {
             trigger_error($err, E_USER_ERROR);
             return false;

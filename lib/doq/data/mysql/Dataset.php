@@ -95,6 +95,7 @@ class Dataset extends \doq\data\Dataset
                     unset($tuple);
                 }
             }
+            $this->rowCount=count($this->tuples);
             $this->mysqlresult->close();
             unset($this->mysqlresult);
             if (isset($this->queryDefs['@indexes'])) {
@@ -268,5 +269,20 @@ class Dataset extends \doq\data\Dataset
     }
 
 
+    /**
+    public function &getTupleFields(){
+        if(isset($this->tupleFields)){
+            return $this->tupleFields;
+        } else {
+            $fieldDefs=&$this->queryDefs['@dataset']['@fields'];
+            foreach ($fieldDefs as $fieldNo=>&$fieldDef) {
+                if(isset($fieldDef['#tupleFieldNo'])){
+                    $this->tupleFields[$fieldDef['#tupleFieldNo']]=&$fieldDef;
+                }
+            }
+        };
+        return $this->tupleFields;
+    }
+*/
 
 }

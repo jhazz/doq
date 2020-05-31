@@ -7,6 +7,7 @@ abstract class Dataset
 
     public $name;
     public $queryDefs;
+    public $rowCount;
     abstract protected function makeScope(Datanode $datanode);
     abstract public function dataToHTML();
     abstract public function indexesToHTML();
@@ -18,7 +19,9 @@ abstract class Dataset
         case 'mysql':
             return [new mysql\Dataset($queryDefs, $newDatasetName),null];
         default:
-            return [false,'Unknown provider '.$providerName];
+            $err=\doq\tr('doq','Unknown data provider %s',$providerName);
+            trigger_error($err,E_USER_ERROR);
+            return [false,$err];
         }
     }
 
@@ -27,22 +30,6 @@ abstract class Dataset
         trigger_error('Abstract Dataset class should not used to create itself!', E_USER_ERROR);
     }
 
-    /**
-     * Sometime useful to make tupleFields list inside Dataset
-     */
-    public function &getTupleFields(){
-        if(isset($this->tupleFields)){
-            return $this->tupleFields;
-        } else {
-            $fieldDefs=&$this->queryDefs['@dataset']['@fields'];
-            foreach ($fieldDefs as $fieldNo=>&$fieldDef) {
-                if(isset($fieldDef['#tupleFieldNo'])){
-                    $this->tupleFields[$fieldDef['#tupleFieldNo']]=&$fieldDef;
-                }
-            }
-        };
-        return $this->tupleFields;
-    }
 
     /**
      * Sometime useful to make tupleFields list inside Dataset

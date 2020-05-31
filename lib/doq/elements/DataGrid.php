@@ -56,7 +56,8 @@ class DataGrid
         list($cssTable,$cssCell)=$render->addRenderStyles(
             [   'cssTable'=>'datagrid-tab',
                 'cssCell'=>'datagrid-cell'
-            ],$block['params'],
+            ],
+            $block['params'],
             ['datagrid-tab'=>['border-collapse'=>'collapse'],
             'datagrid-cell'=>[
                 'border'=>'1px  solid black',
@@ -66,8 +67,7 @@ class DataGrid
                 ]
             ]);
             
-
-        #$render->addStyle($cssTable,['border-collapse'=>'collapse']);
+        
         $render->out[]='<table class="'.$cssTable.'"><tr>';
         for ($i=0;$i<$columnCount;$i++) {
             $render->out[]='<td bgcolor="#a0f0a0">'.$columns[$i]['path'].'</td>';

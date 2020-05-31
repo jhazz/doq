@@ -107,7 +107,7 @@ function jsonLoader($options){
     list($viewProducts,$err)=doq\data\View::create('products');
     $viewProducts->prepare($schemaFileTime, true);
         
-        #doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
+    #doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
 
     if(isset($options['@params'])) {
         $params=$options['@params'];

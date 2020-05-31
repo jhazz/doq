@@ -61,12 +61,12 @@ class Datanode
                 continue;
             }
             if (isset($field['@dataset'])) {
-                $newDatanode=new Datanode(Datanode::NT_SUBCOLUMNS, $fieldName, $this);
+                $newDatanode=new Datanode(self::NT_SUBCOLUMNS, $fieldName, $this);
                 $newDatanode->dataset=$dataset;
                 $newDatanode->fieldDefs=&$field['@dataset'];
                 $newDatanode->wrap($field, $dataset);
             } else {
-                $newDatanode=new Datanode(Datanode::NT_COLUMN, $fieldName, $this);
+                $newDatanode=new Datanode(self::NT_COLUMN, $fieldName, $this);
                 $newDatanode->dataset=$dataset;
                 $newDatanode->fieldDefs=&$field;
             }

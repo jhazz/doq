@@ -28,7 +28,7 @@ class Render
      */
     public function build(&$datanode, &$template)
     {
-        list($scopeStack, $err)=\doq\data\ScopeStack::create($datanode, $datanode->name.':');
+        list($scopeStack, $err)=\doq\data\ScopeStack::create($datanode);
         return $this->fromTemplate($scopeStack, $template, $template->rootBlock);
     }
 
