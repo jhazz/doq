@@ -145,7 +145,7 @@ function collectFieldDefs($currentPath, &$fieldDefs, &$result){
             $path=$fieldDef['#field'];
         }
         if($path==$keyField){
-            $f['isKeyField']=1;
+            $f['#isKeyField']=1;
         }
         if(isset($fieldDef['#columnId'])){
             $f['#columnId']=$fieldDef['#columnId'];
