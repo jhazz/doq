@@ -70,9 +70,9 @@ return [
         'SKU'
     ],
 
-    '@searchForms'=>[
+    '@search'=>[
       'default'=>[
-        'params'=>[
+        '@params'=>[
           '#bySKU'=>['#field'=>'SKU','#type'=>'filterByString','#filterMode'=>'like','#askLabel'=>'Укажите артикул или его часть'],
           '#byProductGroup'=>['#field'=>'PRODUCT_GROUP_ID','#type'=>'filterByOneOfComboBox','#askLabel'=>'Укажите группу товаров']
         ]

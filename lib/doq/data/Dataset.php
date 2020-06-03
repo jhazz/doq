@@ -64,15 +64,22 @@ abstract class Dataset
     
     public static function getFieldByColumnId($findColumnId, &$queryDefs)
     {
+        $isInt=is_integer($findColumnId);
         foreach ($queryDefs['@dataset']['@fields'] as $i=>&$field) {
-            if (isset($field['#columnId']) && ($field['#columnId']==$findColumnId)) {
-                return [true,&$field];
+            if($isInt) {
+                if (isset($field['#columnId']) && ($field['#columnId']==$findColumnId)) {
+                    return [&$field,null];
+                }
+            } else {
+                if (isset($field['#field']) && ($field['#field']==$findColumnId)) {
+                    return [&$field,null];
+                }
             }
             if (isset($field['@dataset'])) {
                 return self::getFieldByColumnId($findColumnId, $field);
             }
         }
-        return[false,'ColumnId '.$findColumnId.' not fount'];
+        return[null,'ColumnId '.$findColumnId.' not found'];
     }
 
 

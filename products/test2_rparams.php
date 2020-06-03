@@ -8,15 +8,12 @@ if(isset($_POST['params'])){
     $params=$_POST['params'];
 } else $params=<<<END
     {
-        "#viewId":"VIEW1",
-        "@params":{
-            "@filter":
-                [
-                    {"#columnId":"SKU", "#operand":"LIKE", "@values":["ОР-Д2-4.0"]}
-                ],
-            "#pageSize":10,
-            "#pageNo":1
-        }
+    "@filter":
+        [
+            {"#columnId":"SKU", "#operand":"LIKE", "@values":["ОР-Д2-4.0"]}
+        ],
+    "#pageSize":10,
+    "#pageNo":1
     }
 END;
 ?>
@@ -28,8 +25,10 @@ END;
 
 <?php
 
+$phpParams=json_decode($params,true);
 list($viewProducts,$err)=doq\data\View::create('products');
-list($datanode, $rowCount, $err)=$viewProducts->read();
+list($datanode, $rowCount, $err)=$viewProducts->read($phpParams);
+//['#columnId'=>'SKU', '#operand'=>'LIKE', '@values'=>['ОР-Д2-4.0']]);
 
 
 print 'Total rows:'.$rowCount.'<br>';

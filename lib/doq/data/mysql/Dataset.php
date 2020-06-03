@@ -36,44 +36,44 @@ class Dataset extends \doq\data\Dataset
         if (isset($params['@filter'])) {
             foreach ($params['@filter'] as $i=>&$param) {
                 switch ($param['#operand']) {
-                case '=':
-                    $columnId=$param['#columnId'];
-                    $res=self::getFieldByColumnId($columnId, $this->queryDefs);
-                    if (!$res[0]) {
-                        trigger_error(\doq\t('Column with id=%d not found in %s', $columnId, 'dataset'), E_USER_ERROR);
-                    }
-                    $fieldDef=&$res[1];
-                    $scriptField=$fieldDef['#scriptField'];
-                    $where[]=$scriptField.' = '.$param['@value'];
-                    break;
-                case 'IN':
-                    $columnId=$param['#columnId'];
-                    $res=self::getFieldByColumnId($columnId, $this->queryDefs);
-                    if (!$res[0]) {
-                        trigger_error(\doq\t('Column with id=%d not found in %s', $columnId, 'dataset'), E_USER_ERROR);
-                    }
-                    $fieldDef=&$res[1];
-                    $scriptField=$fieldDef['#scriptField'];
-                    $where[]=$scriptField.' IN ('.implode($param['@values'], ',').')';
-                     break;
-                case 'LIKE':
-                    $columnId=$param['#columnId'];
-                    $res=self::getFieldByColumnId($columnId, $this->queryDefs);
-                    if (!$res[0]) {
-                        trigger_error(\doq\t('Column with id=%d not found in %s', $columnId, 'dataset'), E_USER_ERROR);
-                    }
-                    $fieldDef=&$res[1];
-                    $scriptField=$fieldDef['#scriptField'];
-                    $where[]='(';
-                    foreach ($param['@values'] as $j=>$v){
-                        if($j>0){
-                            $where[]=' OR ';
+                    case '=':
+                        $columnId=$param['#columnId'];
+                        list($fieldDef,$err)=self::getFieldByColumnId($columnId, $this->queryDefs);
+                        if ($err!==null) {
+                            trigger_error($err, E_USER_ERROR);
+                            continue;
                         }
-                        $where[]='('.$scriptField.' LIKE "%'.$v.'%")';
-                    }
-                    $where[]=')';
-                    break;
-                    }
+                        $scriptField=$fieldDef['#scriptField'];
+                        $where[]=$scriptField.' = '.$param['@value'];
+                        break;
+                    case 'IN':
+                        $columnId=$param['#columnId'];
+                        list($fieldDef,$err)=self::getFieldByColumnId($columnId, $this->queryDefs);
+                        if ($err!==null) {
+                            trigger_error($err, E_USER_ERROR);
+                            continue;
+                        }
+                        $scriptField=$fieldDef['#scriptField'];
+                        $where[]=$scriptField.' IN ('.implode($param['@values'], ',').')';
+                         break;
+                    case 'LIKE':
+                        $columnId=$param['#columnId'];
+                        list($fieldDef,$err)=self::getFieldByColumnId($columnId, $this->queryDefs);
+                        if ($err!==null) {
+                            trigger_error($err, E_USER_ERROR);
+                            continue;
+                        }
+                        $scriptField=$fieldDef['#scriptField'];
+                        $where[]='(';
+                        foreach ($param['@values'] as $j=>$v){
+                            if($j>0){
+                                $where[]=' OR ';
+                            }
+                            $where[]='('.$scriptField.' LIKE "%'.$v.'%")';
+                        }
+                        $where[]=')';
+                        break;
+                }
             }
         }
         if (count($where)) {

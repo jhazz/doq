@@ -81,9 +81,7 @@ class View
 
     public function __construct(&$cfgView, $configMTime, $viewId)
     {
-        //$this->cfgSchema=&$cfgSchema;
         $this->configMTime=$configMTime;
-        //$this->cfgDatasource=$cfgDatasource;УДАЛЯЮ!
         $this->cfgView=&$cfgView;
         $this->viewId=$viewId;
         $this->isCacheable=false;
