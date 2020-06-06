@@ -43,19 +43,30 @@ return [
             ]
         ],
         '@targets'=>[
-            'views'=>[
+            'queries'=>[
                 '#provider'=>'SerialFileCache',
-                '#targetFolder'=>'views',
-                '#filePrefix'=>'vp_',
-                '#fileSuffix'=>'.query.txt',
-                '#forceCreateFolder'=>1
+                '#targetFolder'=>'queries',
+                '#filePrefix'=>'q_',
+                '#fileSuffix'=>'.q.txt',
+                '#forceCreateFolder'=>1,
+                '#alwaysRebuild'=>1
+            ],
+            'writers'=>[
+                '#provider'=>'SerialFileCache',
+                '#targetFolder'=>'writers',
+                '#filePrefix'=>'w_',
+                '#fileSuffix'=>'.w.txt',
+                '#forceCreateFolder'=>1,
+                '#alwaysRebuild'=>1
             ],
             'templates'=>[
                 '#provider'=>'SerialFileCache',
                 '#targetFolder'=>'templates',
                 '#filePrefix'=>'t_',
                 '#fileSuffix'=>'.tmpls.txt',
-                '#forceCreateFolder'=>1
+                '#forceCreateFolder'=>1,
+                '#alwaysRebuild'=>1,
+                
             ]
         ]
 

@@ -31,8 +31,9 @@ abstract class Dataset
     }
 
 
+
     /**
-     * Sometime useful to make tupleFields list inside Dataset
+     * Useful to make tupleFields list inside Dataset
      */
     public function &getColumns(){
         $columns=[];
@@ -62,24 +63,24 @@ abstract class Dataset
     }
 
     
-    public static function getFieldByColumnId($findColumnId, &$queryDefs)
+    public static function getFieldDefByColumn($column, &$queryDefs)
     {
-        $isInt=is_integer($findColumnId);
+        $isInt=is_integer($column);
         foreach ($queryDefs['@dataset']['@fields'] as $i=>&$field) {
             if($isInt) {
-                if (isset($field['#columnId']) && ($field['#columnId']==$findColumnId)) {
+                if (isset($field['#columnId']) && ($field['#columnId']==$column)) {
                     return [&$field,null];
                 }
             } else {
-                if (isset($field['#field']) && ($field['#field']==$findColumnId)) {
+                if (isset($field['#field']) && ($field['#field']==$column)) {
                     return [&$field,null];
                 }
             }
             if (isset($field['@dataset'])) {
-                return self::getFieldByColumnId($findColumnId, $field);
+                return self::getFieldDefByColumn($column, $field);
             }
         }
-        return[null,'ColumnId '.$findColumnId.' not found'];
+        return[null,'ColumnId '.$column.' not found'];
     }
 
 

@@ -17,6 +17,7 @@ class Dataset extends \doq\data\Dataset
 
     public function makeScope(\doq\data\Datanode $datanode, $path='', $indexName='', $masterValue=null, $masterScope=null)
     {
+        // \doq\data\mysql\Scope
         return new Scope($datanode, $path, $indexName, $masterValue, $masterScope);
     }
 
@@ -35,50 +36,43 @@ class Dataset extends \doq\data\Dataset
         $where=[];
         if (isset($params['@filter'])) {
             foreach ($params['@filter'] as $i=>&$param) {
+                $columnId=$param['#columnId'];
+                list($fieldDef,$err)=self::getFieldDefByColumn($columnId, $this->queryDefs);
+                if ($err!==null) {
+                    trigger_error($err, E_USER_ERROR);
+                    continue;
+                }
+                $scriptField=$fieldDef['#scriptField'];
+                
                 switch ($param['#operand']) {
                     case '=':
-                        $columnId=$param['#columnId'];
-                        list($fieldDef,$err)=self::getFieldByColumnId($columnId, $this->queryDefs);
-                        if ($err!==null) {
-                            trigger_error($err, E_USER_ERROR);
-                            continue;
-                        }
-                        $scriptField=$fieldDef['#scriptField'];
                         $where[]=$scriptField.' = '.$param['@value'];
                         break;
                     case 'IN':
-                        $columnId=$param['#columnId'];
-                        list($fieldDef,$err)=self::getFieldByColumnId($columnId, $this->queryDefs);
-                        if ($err!==null) {
-                            trigger_error($err, E_USER_ERROR);
-                            continue;
-                        }
-                        $scriptField=$fieldDef['#scriptField'];
                         $where[]=$scriptField.' IN ('.implode($param['@values'], ',').')';
                          break;
                     case 'LIKE':
-                        $columnId=$param['#columnId'];
-                        list($fieldDef,$err)=self::getFieldByColumnId($columnId, $this->queryDefs);
-                        if ($err!==null) {
-                            trigger_error($err, E_USER_ERROR);
-                            continue;
-                        }
-                        $scriptField=$fieldDef['#scriptField'];
-                        $where[]='(';
-                        foreach ($param['@values'] as $j=>$v){
-                            if($j>0){
-                                $where[]=' OR ';
+                        if(isset($param['#value'])){
+                            $where[]=$scriptField.' LIKE "%'.$param['#value'].'%"';
+                        } else if(isset($param['@values'])){
+                            $expr='';
+                            foreach ($param['@values'] as $j=>$v){
+                                if($j>0){
+                                    $expr.=' OR ';
+                                }
+                                $expr.='('.$scriptField.' LIKE "%'.$v.'%")';
                             }
-                            $where[]='('.$scriptField.' LIKE "%'.$v.'%")';
+                            $where[]=$expr;
                         }
-                        $where[]=')';
                         break;
                 }
             }
         }
         if (count($where)) {
+            
             $s.=' WHERE ('.implode($where, ') AND (').')';
         }
+        
         $s.=';';
         if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_DATAQUERY){
             \doq\Logger::debugDataQuery($this->name,$s,__FILE__,__LINE__);

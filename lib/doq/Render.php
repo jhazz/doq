@@ -28,8 +28,8 @@ class Render
      */
     public function build(&$datanode, &$template)
     {
-        list($scopeStack, $err)=\doq\data\ScopeStack::create($datanode);
-        return $this->fromTemplate($scopeStack, $template, $template->rootBlock);
+        list($context, $err)=\doq\data\Context::create($datanode);
+        return $this->fromTemplate($context, $template, $template->rootBlock);
     }
 
     public function addStyle($styleSelector, $style)
@@ -65,7 +65,7 @@ class Render
         return $result;
     }
 
-    public function fromTemplate(&$scopeStack, &$template, &$block)
+    public function fromTemplate(&$context, &$template, &$block)
     {
         if (!isset($block['@'])) {
             return false;
@@ -97,9 +97,9 @@ class Render
                 }
             }
             if ($tagName=='begin') {
-                $result=$elementClassName::begin($scopeStack, $template, $childBlock, $this);
+                $result=$elementClassName::begin($context, $template, $childBlock, $this);
             } elseif ($tagName=='put') {
-                $result=$elementClassName::put($scopeStack, $template, $childBlock, $this);
+                $result=$elementClassName::put($context, $template, $childBlock, $this);
             }
             break;
           case 'fragment':

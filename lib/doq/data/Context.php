@@ -1,17 +1,17 @@
 <?php
 namespace doq\data;
 
-class ScopeStack
+class Context
 {
     public $stack;
     public $top;
 
     public static function create(Datanode $datanode, $indexName='', $indexKey=null)
     {
-        $scopeStack=new ScopeStack();
+        $context=new Context();
         $scope=$datanode->dataset->makeScope($datanode, $datanode->name.':', $indexName, $indexKey);
-        $scopeStack->pushScope($scope);
-        return [$scopeStack, null];
+        $context->pushScope($scope);
+        return [$context, null];
     }
 
     private function pushScope(Scope $scope)
@@ -20,7 +20,19 @@ class ScopeStack
         return $scope;
     }
 
-    public function extract($fieldNameList){
+    public function extractAllFields(){
+        $result=[];
+        $childNodes=$this->top->datanode->childNodes;
+        foreach($childNodes as $nodeName=>&$node){
+            if($node->type==\doq\data\Datanode::NT_COLUMN){
+                $tupleFieldNo=$node->fieldDefs['#tupleFieldNo'];
+                $result[$nodeName]=$this->top->curTuple[$tupleFieldNo];
+            }
+        }
+        return $result;
+    }
+    
+    public function extractFieldsByName(Array $fieldNameList){
         $result=[];
         $childNodes=$this->top->datanode->childNodes;
         foreach($fieldNameList as $i=>$fieldName){
@@ -42,10 +54,10 @@ class ScopeStack
         return $this->top->seek(\doq\data\Scope::TO_NEXT);
     }
     
-    public function open($addPath)
+    public function open($newPath)
     {
         $datasetScope=null;
-        $apath=explode('/', $addPath);
+        $apath=explode('/', $newPath);
         $apathLen=count($apath);
         $scopeStackLen=count($this->stack);
 
@@ -60,7 +72,7 @@ class ScopeStack
             $datasetScope=$scope;
         }
         $path=$scope->path;
-        if ($addPath=='') {
+        if ($newPath=='') {
             $this->stack[]=$scope;
             $scope->seek(Scope::TO_START);
             return [$scope, null];

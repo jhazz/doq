@@ -30,7 +30,7 @@ return [
     # mysql\Dataset
     'Unique value %s are repeating in the index %s'=>'Уникальное значение %s повторяется в индексе %s',
 
-    # ScopeStack
+    # Context
     'Dataset "%s" in the local scope has no node with name "%s"'=>'Набор данных "%s" в локальной области видимости не имеет узла с названием "%s"',
     'Dataset %s has no column %s'=>'Объект данных "%s" не содержит в себе колонку "%s"',
     'Column %s has no dataset in previous scopes of path %s. Subcolumn should be the next scope after any dataset scope'=>'У колонки "%s" нет родительского набора данных по адресу "%s". Колонки должны следовать сразу за набором данных dataset',

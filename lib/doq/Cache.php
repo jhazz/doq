@@ -41,6 +41,7 @@ abstract class Cache
         }
         $cacheTargetConfig=&self::$cacheConfig['@targets'][$cacheTargetName];
         $cacheProvider=$cacheTargetConfig ['#provider'];
+        
         switch ($cacheProvider) {
             case 'SerialFileCache':
                 return [new cache\SerialFileCache($cacheTargetConfig), null];

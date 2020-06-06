@@ -4,7 +4,7 @@ use \doq\data\Scope;
 
 class DataGrid
 {
-    public static function begin($scopeStack, &$template, &$block, &$render)
+    public static function begin($context, &$template, &$block, &$render)
     {
         $render->out[]='[It is a begin of DataGrid "'.$block['params']['id'].'" ]';
         $cnt=count($block['@']);
@@ -37,7 +37,7 @@ class DataGrid
         } else {
             $path='';
         }
-        list($scope, $err)=$scopeStack->open($path);
+        list($scope, $err)=$context->open($path);
         if ($err!==null) {
             return false;
         }
@@ -49,7 +49,7 @@ class DataGrid
         $columnCount=count($columns);
         if ($scope->seek(Scope::TO_START)) {
             $render->out[]='Dataset is empty';
-            $scopeStack->close();
+            $context->close();
             return true;
         }
 
@@ -81,31 +81,31 @@ class DataGrid
             for ($j=0;$j<$columnCount;$j++) {
                 $cellPath=$columns[$j]['path'];
                 $render->out[]='<td class="'.$cssCell.'">';
-                $rowScope=$scopeStack->top;
+                $rowScope=$context->top;
                 $key=$rowScope->curTupleKey;
                 $rowScope->path=$basePath.'['.$key.']';
-                list($cellScope, $err)=$scopeStack->open($cellPath);
+                list($cellScope, $err)=$context->open($cellPath);
                 if ($err===null) {
                     if (isset($cellBlocks[$cellPath])) {
-                        $render->fromTemplate($scopeStack, $template, $cellBlocks[$cellPath]);
+                        $render->fromTemplate($context, $template, $cellBlocks[$cellPath]);
                     } elseif (isset($cellBlocks['*'])) {
-                        $render->fromTemplate($scopeStack, $template, $cellBlocks['*']);
+                        $render->fromTemplate($context, $template, $cellBlocks['*']);
                     } else {
                         $render->out[]=$cellScope->asString().'<br/><span style="font-size:10px;">'.$cellScope->path.'</span>';
                     }
                     $render->out[]='</td>';
-                    $rowScope=$scopeStack->close();
+                    $rowScope=$context->close();
                 }
             }
             $render->out[]='</tr>';
             $i++;
-            $scope=$scopeStack->top;
+            $scope=$context->top;
             if (($scope->seek(Scope::TO_NEXT)) || ($i>100)) {
                 break;
             }
         }
         $render->out[]='</table>';
-        $scopeStack->close();
+        $context->close();
         return true;
     }
 }

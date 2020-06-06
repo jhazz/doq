@@ -2,18 +2,18 @@
 namespace doq\elements;
 
 class Field {
-  public static function put($scopeStack,&$template,&$block,&$render){
+  public static function put($context,&$template,&$block,&$render){
     if(isset($block['params']['path'])) {
       $path=$block['params']['path'];
     } else $path='';
 
     if($path!=='') {
-      $scopeStack->open($path);
+      $context->open($path);
     }
-    $scope=$scopeStack->top;
+    $scope=$context->top;
     $render->out[]='<input type="text" value="'.$scope->value().'"><br/><span style="font-size:10px;">{'.$scope->path.'}</span>';
     if($path!=='') {
-      $scopeStack->close();
+      $context->close();
     }
 
     return true;

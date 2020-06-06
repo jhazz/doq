@@ -2,12 +2,12 @@
 namespace doq\data;
 
 class Datasources{
-    public static $datasources;
     public static $isInited;
-    public static $destCfg;
+
     private static $appPath;
     private static $commonPath;
     private static $datasourcesFolderPath;
+    private static $datasources;
     
     public static function init(&$env=null, &$destCfg=null){
         if($env==null){

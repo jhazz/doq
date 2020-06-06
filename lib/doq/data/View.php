@@ -20,27 +20,38 @@ class View
     public $linkedDatasources;
     public $configMTime;
     /** @var  \doq\Cache used cache provider*/
-    public $cache;
-    private $prepared;
-    private static $defaultCache;
-    private static $defaultCacheTargetName;
+    public $queryCache;
+    public $writerCache;
+
+    private $isPreparedQuery;
+    private $isPreparedWriter;
+    private static $defaultQueryCache;
+    private static $defaultQueryCacheName;
+    private static $defaultWriterCache;
+    private static $defaultWriterCacheName;
+    
     private static $isInited;
     private static $appPath;
     private static $commonPath;
 
-    public static function init($appPath=null, $commonPath=null,$defaultCacheTargetName=null){
-        if($defaultCacheTargetName==null){
-            $defaultCacheTargetName='views';
-        }
-        
-        self::$defaultCacheTargetName=$defaultCacheTargetName;
-        list($cache,$err)=\doq\Cache::create($defaultCacheTargetName);
+    public static function init($appPath=null, $commonPath=null,$defaultQueryCacheName='queries', $defaultWriterCacheName='writers'){
+       
+        self::$defaultQueryCacheName=$defaultQueryCacheName;
+        self::$defaultWriterCacheName=$defaultWriterCacheName;
+        list($cache,$err)=\doq\Cache::create($defaultQueryCacheName);
         if($err){
             trigger_error($err,E_USER_ERROR);
             return;
         }
-        self::$defaultCache=$cache;
-        
+        self::$defaultQueryCache=$cache;
+        list($cache,$err)=\doq\Cache::create($defaultWriterCacheName);
+        if($err){
+            trigger_error($err,E_USER_ERROR);
+            return;
+        }
+        self::$defaultWriterCache=$cache;
+
+                
         if($appPath==null){
             $appPath=$GLOBALS['APP_PATH'];
         }
@@ -85,64 +96,48 @@ class View
         $this->cfgView=&$cfgView;
         $this->viewId=$viewId;
         $this->isCacheable=false;
-        if (isset(self::$defaultCache)) {
-            $this->cache=self::$defaultCache;
+        if (isset(self::$defaultQueryCache)) {
+            $this->queryCache=self::$defaultQueryCache;
             $this->isCacheable=true;
         }
     }
 
 
 
-    /**
-     * Sets cache provider to store prepared querys only for this view
-     * @param \doq\Cache $cache refers to a cache provider
-     */
-    public function setCacher(&$cache)
-    {
-        if ($this->viewId===false) {
-            trigger_error(\doq\t('You must set viewId before set Cacher'), E_USER_ERROR);
-            return false;
-        }
-        $this->cache=&$cache;
-        $this->isCacheable=true;
-        return true;
-    }
-
+    
     /**
      * Prepares queryDefs for view. Create from view configuration or reuse from cache
      * @param int $configMtime timestamp of a querydef file or a querydef collection database modifying time
      * @param boolean $forceRebuild force to recreate cache and set configMtime timestamp to it
      */
-    public function prepare($configMtime, $forceRebuild=false)
+    public function prepareQuery($configMtime, $forceRebuild=false)
     {
-        if ((!$this->isCacheable)||($forceRebuild)) {
-            if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                \doq\Logger::debug('doq.View', 'Rebuild cache for view "'.$this->viewId.'"', __FILE__, __LINE__);
-            }
-            if ($this->makeQuery()) {
-                if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                    \doq\Logger::debug('doq.View', 'Overwrite rebuild queryDefs for view "'.$this->viewId.'"', __FILE__, __LINE__);
-                }
-
-                $this->cache->put($configMtime, $this->viewId, $this->queryDefs);
-            }
-        } else {
-            list($data, $err)=$this->cache->get($configMtime, $this->viewId);
+        $doRebuild=(!$this->isCacheable)||($forceRebuild);
+        
+        if(!$doRebuild){
+            list($cachedQueryDefs, $err)=$this->queryCache->get($configMtime, $this->viewId);
             if ($err===null) {
                 if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                    \doq\Logger::debug('doq.View', 'Reuse queryDefs from cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
+                    \doq\Logger::debug('doq.View', 'Reuse queryDefs from cache for the query of view "'.$this->viewId.'"', __FILE__, __LINE__);
                 }
-                $this->queryDefs=&$data;
+                $this->queryDefs=&$cachedQueryDefs;
             } else {
-                if ($this->makeQuery()) {
-                    if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                        \doq\Logger::debug('doq.View', 'Store queryDefs in cache for the view "'.$this->viewId.'"', __FILE__, __LINE__);
-                    }
-                    $this->cache->put($configMtime, $this->viewId, $this->queryDefs);
-                }
+                $doRebuild=1;
             }
         }
-        $this->prepared=true;
+        
+        if($doRebuild){
+            if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
+                \doq\Logger::debug('doq.View', 'Rebuild cache for the query of view "'.$this->viewId.'"', __FILE__, __LINE__);
+            }
+            if ($this->makeQueryDefs()) {
+                if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
+                    \doq\Logger::debug('doq.View', 'Overwrites rebuilt queryDefs for the query of view "'.$this->viewId.'"', __FILE__, __LINE__);
+                }
+                $this->queryCache->put($configMtime, $this->viewId, $this->queryDefs);
+            }
+        }
+        $this->isPreparedQuery=true;
     }
 
     /**
@@ -157,12 +152,12 @@ class View
         if($newDatasetName==null){
            $newDatasetName=$this->viewId;
         }
-        if($this->prepared==null){
-            $this->prepare($this->configMTime);
+        if($this->isPreparedQuery==null){
+            $this->prepareQuery($this->configMTime);
         }
         $datanode=new \doq\data\Datanode(\doq\data\Datanode::NT_DATASET, $newDatasetName);
-        $err=$this->readQuery($this->queryDefs, $datanode, $params, $newDatasetName);
-        if (!$err) {
+        $err=$this->readByQueryDefs($this->queryDefs, $datanode, $params, $newDatasetName);
+        if ($err==null) {
             return [&$datanode, $datanode->dataset->rowCount, null];
         } else {
             return [null,0,$err];
@@ -175,17 +170,17 @@ class View
     * Recursive loading data into Dataset wrapped by Datanodes
     * @return $err Exception error or null if no errors occured
     */
-    private function readQuery(&$queryDefs, \doq\data\Datanode $datanode, &$params, $newDatasetName)
+    private function readByQueryDefs(&$queryDefs, \doq\data\Datanode $datanode, &$params, $newDatasetName)
     {
         $providerName=$queryDefs['#dataProvider'];
         list($dataset, $err)=\doq\data\Dataset::create($providerName, $queryDefs, $newDatasetName);
         if ($err!==null) {
-            return new \Exception($err);
+            return $err;
         }
         $datanode->dataset=$dataset;
         list($connection,$err)=$dataset->connect();
         if($err!==null) {
-            return new \Exception($err);
+            return $err;
         }
         $dataset->read($params);
         $datanode->wrap($queryDefs, $dataset);
@@ -194,6 +189,7 @@ class View
                 if (isset($subQuery['#detailDatasetName'])) {
                     $detailDatasetName=$subQuery['#detailDatasetName'];
                     $masterFieldNo=$subQuery['#masterFieldNo'];
+                    // TODO: Заменить в getTupleFieldValues использование tuples, так как это реализация только табличных данных. Надо использовать индексы
                     $masterTupleFieldNo=$dataset->queryDefs['@dataset']['@fields'][$masterFieldNo]['#tupleFieldNo'];
                     list($parentValueSet, $err)=$dataset->getTupleFieldValues($masterTupleFieldNo);
                     if ($err!==null) {
@@ -209,32 +205,53 @@ class View
                         ]
                     ];
                 } else {
-                    trigger_error('Unknown queryDefs linking', E_USER_ERROR);
-                    return false;
+                    $err='Unknown queryDefs linking';
+                    trigger_error($err, E_USER_ERROR);
+                    return $err;
                 }
 
                 $childNode=new \doq\data\Datanode(Datanode::NT_DATASET, $detailDatasetName, $datanode);
-                $err=$this->readQuery($subQuery, $childNode, $newParams, $detailDatasetName);
+                $err=$this->readByQueryDefs($subQuery, $childNode, $newParams, $detailDatasetName);
                 if ($err!==null) {
-                    return false;
+                    return $err;
                 }
             }
         }
         return null;
     }
 
+
+    
+    public function prepareWriter($configMtime, $forceRebuild=false)
+    {
+        $doRebuild=(!$this->isCacheable)||($forceRebuild);
+        
+        $this->makeWriterDefs();
+        $this->isPreparedWriter=true;
+        
+    }
+    public function makeWriterDefs(){
+        $this->writerDefs=[];
+        
+    }
+    
+    
     /**
      * Forms queryDefs based on view configuration, queryDefs
      */
-    public function makeQuery()
+    public function makeQueryDefs()
     {
         $this->queryDefs=[];
         $this->lastQueryId=1;
         $viewColumns=null;
-        return $this->makeQueryRecursive($this->cfgView, $this->queryDefs, $viewColumns);
+        return $this->makeQueryDefsRecursive($this->cfgView, $this->queryDefs, $viewColumns);
     }
 
-    private function makeQueryRecursive(
+    
+    
+    
+    
+    private function makeQueryDefsRecursive(
         &$cfgView,
         &$queryDefs,
         &$parentViewColumn,
@@ -251,11 +268,7 @@ class View
         $parentDatasetname=$datasetName;
         if (isset($cfgView['#dataset'])) {
             list($datasourceName, $schemaName, $datasetName, $isOtherDatasource)
-            =\doq\data\Scripter::getDatasetPathElements(
-                $cfgView['#dataset'],
-                $datasourceName, 
-                $schemaName, 
-                $datasetName);
+                =\doq\data\Scripter::getDatasetPathElements($cfgView['#dataset'],$datasourceName, $schemaName, $datasetName);
         }
         $datasetRef=$datasourceName.':'.$schemaName.'/'.$datasetName;
         list($datasourceCfg, $datasetCfg, $mtime, $err)=\doq\data\Datasources::getDatasetCfg($datasourceName,$schemaName,$datasetName);
@@ -310,6 +323,7 @@ class View
         }
 
         $fieldNo=0;
+        $datasourceFieldDef=null;
         foreach ($cfgView as $localFieldName=>&$viewFieldDef) {
             $fc=$localFieldName[0];
             if (($fc!='#')&&($fc!='@')) {
@@ -321,7 +335,7 @@ class View
                 $queryDefs['#lastColumnId']++;
                 $fieldNo++;
 
-                unset($modelFieldDef);
+                unset($datasourceFieldDef);
                 $originField=$localFieldName;
                 if (isset($viewFieldDef['#field'])) {
                     $originField=$viewFieldDef['#field'];
@@ -332,10 +346,10 @@ class View
                     #$queryDefs['#keyTupleFieldNo']=$queryDefs['#lastTupleFieldNo'];
                 }
                 if (isset($datasetCfg['@fields'][$originField])) {
-                    $modelFieldDef=&$datasetCfg['@fields'][$originField];
+                    $datasourceFieldDef=&$datasetCfg['@fields'][$originField];
                     $newColumn['#originField']=$originField;
-                    if (isset($modelFieldDef['#type'])) {
-                        $type=$newColumn['#type']=$modelFieldDef['#type'];
+                    if (isset($datasourceFieldDef['#type'])) {
+                        $type=$newColumn['#type']=$datasourceFieldDef['#type'];
                     } else {
                         $type='';
                     }
@@ -351,16 +365,20 @@ class View
 
                 if (isset($viewFieldDef['#label'])) {
                     $newColumn['#label']=$viewFieldDef['#label'];
-                } elseif (isset($modelFieldDef['#label'])) {
-                    $newColumn['#label']=$modelFieldDef['#label'];
+                } elseif (isset($datasourceFieldDef['#label'])) {
+                    $newColumn['#label']=$datasourceFieldDef['#label'];
                 }
-                if (isset($modelFieldDef['#kind'])) {
-                    $newColumn['#kind']=$kind=$modelFieldDef['#kind'];
+                if (isset($datasourceFieldDef['#kind'])) {
+                    $newColumn['#kind']=$kind=$datasourceFieldDef['#kind'];
                 } else {
                     $kind='';
                 }
-                if (isset($modelFieldDef['#ref'])) {
-                    $newColumn['#ref']=$ref=$modelFieldDef['#ref'];
+                
+                if (isset($datasourceFieldDef['#isRequired'])) {
+                    $newColumn['#isRequired']=1;
+                }
+                if (isset($datasourceFieldDef['#ref'])) {
+                    $newColumn['#ref']=$ref=$datasourceFieldDef['#ref'];
                     if ($masterKind=='aggregation') {
                         if ($parentRef==$ref) {
                             $foundDetailColumnForMaster=&$newColumn;
@@ -396,7 +414,7 @@ class View
                         } else {
                             $newColumn['#refType']='join';
                         }
-                        $this->makeQueryRecursive(
+                        $this->makeQueryDefsRecursive(
                             $viewFieldDef['@linked'],
                             $queryDefs,
                             $newColumn,
@@ -413,7 +431,7 @@ class View
                     } else {
                         $newColumn['#error']='No #ref defined for linking column';
                     }
-                } elseif (!isset($modelFieldDef)) {
+                } elseif (!isset($datasourceFieldDef)) {
                     $newColumn['#error']='Unknown field '.$localFieldName;
                 }
                 $datasetDefs['@fields'][]=&$newColumn;

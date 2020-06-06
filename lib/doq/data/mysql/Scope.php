@@ -3,8 +3,6 @@ namespace doq\data\mysql;
 
 class Scope extends \doq\data\Scope
 {
-
-
     //inherited public $path;
     //inherited public $datanode;
     /** @var array|null Текущий индекс */

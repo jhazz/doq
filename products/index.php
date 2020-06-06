@@ -40,8 +40,6 @@ switch($action){
 
 function htmlRenderer()
 {
-    $schemaFile=$GLOBALS['doq']['env']['#commonPath'].'/schema.php';
-    $schemaFileTime=filemtime($schemaFile);
 
     if (isset($GLOBALS['doq']['env']['@caches']['querys'])) {
         list($queryCache,$err)=doq\Cache::create($GLOBALS['doq']['env']['@caches']['querys']);
@@ -63,7 +61,6 @@ function htmlRenderer()
     doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
     list($viewProducts,$err)=doq\data\View::create('products');
     
-    $viewProducts->prepare($schemaFileTime, true);
     doq\Logger::debugQueryDefs($viewProducts->queryDefs, 'View products');
 
     $params=[];
@@ -105,7 +102,7 @@ function jsonLoader($options){
     doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
     //list($viewProducts,$err)=doq\data\View::create($GLOBALS['doq']['schema'],$GLOBALS['doq']['views']['Products'],'Products1');
     list($viewProducts,$err)=doq\data\View::create('products');
-    $viewProducts->prepare($schemaFileTime, true);
+    $viewProducts->prepareQuery($schemaFileTime, true);
         
     #doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
 
@@ -139,6 +136,9 @@ function collectFieldDefs($currentPath, &$fieldDefs, &$result){
         if(isset($fieldDef['#label'])){
             $f['#label'] = $fieldDef['#label'];
         }
+        if(isset($fieldDef['#isRequired'])){
+            $f['#isRequired'] = $fieldDef['#isRequired'];
+        }
         if($currentPath!='') {
             $path=$currentPath.'/'.$fieldDef['#field'];
         } else {
@@ -171,6 +171,7 @@ function collectFieldDefs($currentPath, &$fieldDefs, &$result){
         }
     }
 }
+
 
 function datanodeToArray(\doq\data\Datanode $node, &$dstArray, $parentPath='',  $level=10){
     if($level<0){

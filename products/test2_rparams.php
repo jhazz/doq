@@ -28,16 +28,17 @@ END;
 $phpParams=json_decode($params,true);
 list($viewProducts,$err)=doq\data\View::create('products');
 list($datanode, $rowCount, $err)=$viewProducts->read($phpParams);
-//['#columnId'=>'SKU', '#operand'=>'LIKE', '@values'=>['ОР-Д2-4.0']]);
 
 
 print 'Total rows:'.$rowCount.'<br>';
 
-
-list($products, $err)=\doq\data\ScopeStack::create($datanode);
+list($products, $err)=\doq\data\Context::create($datanode);
 do{
-    list($sku,$title)=$products->extract(['SKU','TITLE']);
-    print $products->top->rowNo.': SKU='.$sku.' TITLE='.$title.'<br>';
+    #list($sku,$title)=$products->extractFields(['SKU','TITLE']);
+    $r=$products->extractAllFields();
+    #print $products->top->rowNo.': SKU='.$sku.' TITLE='.$title.'<br>';
+    print_r($r);
+    print '<br>';
 } while (!$products->next());
 
 

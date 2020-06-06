@@ -6,6 +6,7 @@ class SerialFileCache extends \doq\Cache
     public $cacheFolder;
     public $filePrefix;
     public $fileSuffix;
+    public $alwaysRebuild;
   
     /**
      * Cachecfg must have parameters:
@@ -29,7 +30,9 @@ class SerialFileCache extends \doq\Cache
         $this->cacheFolder=$cachePath.'/'.$targetFolder;
         $this->filePrefix=(isset($cacheCfg['#filePrefix'])?$cacheCfg['#filePrefix']:'');
         $this->fileSuffix=(isset($cacheCfg['#fileSuffix'])?$cacheCfg['#fileSuffix']:'.txt');
-    
+        $this->alwaysRebuild=(isset($cacheCfg['#alwaysRebuild'])?intval($cacheCfg['#alwaysRebuild']):0);
+        
+        
         /** @var bool try to use any folder for cache */
         $tryUseAny=false; 
         
@@ -57,6 +60,9 @@ class SerialFileCache extends \doq\Cache
 
     public function get($prevModifyTime, $key)
     {
+        if($this->alwaysRebuild) {
+            return [null,'The cache should always be rebuilt as specified in the configuration'];
+        }
         $fileName=$this->cacheFolder.'/'.$this->filePrefix.$key.$this->fileSuffix;
         if (file_exists($fileName) && (filemtime($fileName)===$prevModifyTime)) {
             $data=unserialize(file_get_contents($fileName));
