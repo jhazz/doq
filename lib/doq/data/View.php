@@ -225,14 +225,28 @@ class View
     public function prepareWriter($configMtime, $forceRebuild=false)
     {
         $doRebuild=(!$this->isCacheable)||($forceRebuild);
-        
-        $this->makeWriterDefs();
+        $this->writerDefs=[];
+        $this->makeWriterDefs($this->cfgView);
         $this->isPreparedWriter=true;
         
     }
-    public function makeWriterDefs(){
-        $this->writerDefs=[];
-        
+    
+    public function makeWriterDefs(&$cfgView, $datasourceName='', $schemaName='', $datasetName=''){
+        $parentDatasetname=$datasetName;
+        if (isset($cfgView['#dataset'])) {
+            list($datasourceName, $schemaName, $datasetName, $isOtherDatasource)
+                =\doq\data\Scripter::getDatasetPathElements($cfgView['#dataset'],$datasourceName, $schemaName, $datasetName);
+        }
+        $datasetRef=$datasourceName.':'.$schemaName.'/'.$datasetName;
+        list($datasourceCfg, $datasetCfg, $mtime, $err)=\doq\data\Datasources::getDatasetCfg($datasourceName,$schemaName,$datasetName);
+        if ($err!==null) {
+            trigger_error($err, E_USER_ERROR);
+            return false;
+        }
+        $dataConnectionName=$datasourceCfg['@config']['#dataConnection'];
+        $this->writerDefs[]=[
+            '@datasetCfg'=>$datasetCfg
+        ];
     }
     
     
@@ -247,10 +261,6 @@ class View
         return $this->makeQueryDefsRecursive($this->cfgView, $this->queryDefs, $viewColumns);
     }
 
-    
-    
-    
-    
     private function makeQueryDefsRecursive(
         &$cfgView,
         &$queryDefs,
@@ -272,11 +282,11 @@ class View
         }
         $datasetRef=$datasourceName.':'.$schemaName.'/'.$datasetName;
         list($datasourceCfg, $datasetCfg, $mtime, $err)=\doq\data\Datasources::getDatasetCfg($datasourceName,$schemaName,$datasetName);
-        $dataConnectionName=$datasourceCfg['@config']['#dataConnection'];
         if ($err!==null) {
             trigger_error($err, E_USER_ERROR);
             return false;
         }
+        $dataConnectionName=$datasourceCfg['@config']['#dataConnection'];
 
         if ($isOtherDatasource) {
             $subQuery=[];
