@@ -223,13 +223,13 @@ abstract class Logger
     public static function debugQueryDefs (&$queryDefs, $id='', $file=null, $line=null)
     {
         if (self::$logMode & self::LE_DEBUG_QUERY) {
-           /* if (!is_object(self::$loggerInstance)) {
-                print "<hr>DataLog not initialized. Bad try to dump query in (${file} @ ${line})<br>";
-                print_r($queryDefs);
-                return;
-            }
-        self::$loggerInstance->pushQueryDefs(['id'=>$id,'query'=>&$queryDefs,'file'=>$file,'line'=>$line]);
-        */
+            /* if (!is_object(self::$loggerInstance)) {
+                    print "<hr>DataLog not initialized. Bad try to dump query in (${file} @ ${line})<br>";
+                    print_r($queryDefs);
+                    return;
+                }
+            self::$loggerInstance->pushQueryDefs(['id'=>$id,'query'=>&$queryDefs,'file'=>$file,'line'=>$line]);
+            */
             self::$loggerInstance->pushToDataLog([
                 'type'=>'queryDefs',
                 'id'=>$id,
@@ -239,7 +239,7 @@ abstract class Logger
         }
 
     }
-    
+    /* Push SQL or any script queryString */
     public static function debugDataQuery($id, $queryString,  $file = null, $line = null){
         if (self::$logMode & self::LE_DEBUG_QUERY){
         self::$loggerInstance->pushToDataLog([

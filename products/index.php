@@ -61,10 +61,11 @@ function htmlRenderer()
     doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
     list($viewProducts,$err)=doq\data\View::create('products');
     
-    doq\Logger::debugQueryDefs($viewProducts->queryDefs, 'View products');
 
     $params=[];
     list($products, $err)=$viewProducts->read($params, 'VIEW1');
+    doq\Logger::debugQueryDefs($viewProducts->queryDefs, 'View products',__FILE__, __LINE__);
+
     //print $products->dataset->dataToHTML();
 
     list($page1, $err)=doq\Render::create();
@@ -104,7 +105,7 @@ function jsonLoader($options){
     list($viewProducts,$err)=doq\data\View::create('products');
     $viewProducts->prepareQuery($schemaFileTime, true);
         
-    #doq\Logger::debugQuery($viewProducts->queryDefs, 'View products');
+    doq\Logger::debugQueryDefs($viewProducts->queryDefs, 'View products');
 
     if(isset($options['@params'])) {
         $params=$options['@params'];

@@ -80,12 +80,7 @@ class Scripter extends \doq\data\Scripter
                 if ($field['#kind']=='lookup') {
                     $ref=$field['#ref'];
                     list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource)
-               =\doq\data\Scripter::getDatasetPathElements(
-                   $ref,
-                   $this->datasourceName,
-                   $schemaName,
-                   $datasetName
-               );
+                        =\doq\data\Scripter::getDatasetPathElements($ref, $this->datasourceName, $schemaName, $datasetName);
                     if (isset($field['#refType']) && $field['#refType']=='join') {
                         if ($isROtherDatasource) {
                             trigger_error(\doq\tr('doq', 'Strange join to the other Datasource %s:%s/%s. Joining cancelled', $RdatasourceName, $RschemaName, $RdatasetName), E_USER_ERROR);

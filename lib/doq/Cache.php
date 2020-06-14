@@ -44,7 +44,7 @@ abstract class Cache
         
         switch ($cacheProvider) {
             case 'SerialFileCache':
-                return [new cache\SerialFileCache($cacheTargetConfig), null];
+                return [new cache\SerialFileCache($cacheTargetConfig, $cacheTargetName), null];
                 /*
             case 'jsonfile':
                 return [true,new JSONFileCache($cacheTargetConfig)];

@@ -1,10 +1,13 @@
 <?php
-return [
+return [ // View "products"
     '#dataset'=>'main:store/PRODUCTS',
-    
+
     'PRODUCT_ID'=>['#label'=>'Product Id'],
+
     'SKU'=>['#label'=>'SKU code'],
+
     'TITLE'=>['#label'=>'Product title'],
+
     'PARAMETERS'=>[
       '#label'=>'Product parameters',
       '@linked'=>[
@@ -13,7 +16,7 @@ return [
         'PARAMETER_VALUE'=>['#field'=>'VALUE_STRING','#label'=>'Parameter value']
       ],
     ],
-    
+
     'PRODUCTGROUP'=>[
       '#field'=>'PRODUCT_GROUP_ID',
       '@linked'=>[

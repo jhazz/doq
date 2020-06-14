@@ -3,19 +3,20 @@ namespace doq\cache;
 
 class SerialFileCache extends \doq\Cache
 {
+    public $name;
     public $cacheFolder;
     public $filePrefix;
     public $fileSuffix;
     public $alwaysRebuild;
-  
     /**
      * Cachecfg must have parameters:
      * #filePrefix
      * #fileSuffix
      * #forceCreateFolder
      */
-    public function __construct(&$cacheCfg)
+    public function __construct(&$cacheCfg, $cacheTargetName)
     {
+        $this->name=$cacheTargetName;
         $cachePath=self::$cacheConfig['@providers']['SerialFileCache']['#cachePath'];
         if(!$cachePath){
             trigger_error(\doq\tr('doq','Main cache path target has not been configured'), E_USER_ERROR);
@@ -61,7 +62,7 @@ class SerialFileCache extends \doq\Cache
     public function get($prevModifyTime, $key)
     {
         if($this->alwaysRebuild) {
-            return [null,'The cache should always be rebuilt as specified in the configuration'];
+            return [null,'The cache "'.$this->name.'" should always be rebuilt as specified in the cache configuration'];
         }
         $fileName=$this->cacheFolder.'/'.$this->filePrefix.$key.$this->fileSuffix;
         if (file_exists($fileName) && (filemtime($fileName)===$prevModifyTime)) {

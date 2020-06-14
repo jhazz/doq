@@ -14,11 +14,11 @@ class View
     /** @var  \doq\Cache default cache provider used within created \doq\View */
     public $queryDefs; // Used by logger dumper
     public $viewId;
-    public $cfgView;
+    public $viewCfg;
     public $cfgSchema;
     public $viewColumns;
     public $linkedDatasources;
-    public $configMTime;
+    public $viewModifyTime;
     /** @var  \doq\Cache used cache provider*/
     public $queryCache;
     public $writerCache;
@@ -38,6 +38,7 @@ class View
        
         self::$defaultQueryCacheName=$defaultQueryCacheName;
         self::$defaultWriterCacheName=$defaultWriterCacheName;
+
         list($cache,$err)=\doq\Cache::create($defaultQueryCacheName);
         if($err){
             trigger_error($err,E_USER_ERROR);
@@ -73,71 +74,37 @@ class View
         
         $viewFile=self::$appPath.'/views/'.$viewName.'.php';
         if(file_exists($viewFile)){
-            $time=filemtime($viewFile);
-            $cfgView=require($viewFile);
+            $viewModifyTime=filemtime($viewFile);
+            $viewCfg=require($viewFile);
         } else {
             $viewFile=self::$commonPath.'/views/'.$viewName.'.php';
             if(file_exists($viewFile)){
-                $time=filemtime($viewFile);
-                $cfgView=require($viewFile);
+                $viewModifyTime=filemtime($viewFile);
+                $viewCfg=require($viewFile);
             } else {
                 $err=\doq\tr('doq','View "%s" not found',$viewName);
                 trigger_error($err,E_USER_ERROR);
                 return [null,$err];
             }
         }
-        $view=new View($cfgView, $time, $viewName);
+        $view=new View($viewCfg, $viewModifyTime, $viewName);
         return [&$view, null];
     }
 
-    public function __construct(&$cfgView, $configMTime, $viewId)
+    public function __construct(&$viewCfg, $viewModifyTime, $viewId)
     {
-        $this->configMTime=$configMTime;
-        $this->cfgView=&$cfgView;
+        $this->viewModifyTime=$viewModifyTime;
+        $this->viewCfg=&$viewCfg;
         $this->viewId=$viewId;
         $this->isCacheable=false;
         if (isset(self::$defaultQueryCache)) {
             $this->queryCache=self::$defaultQueryCache;
             $this->isCacheable=true;
         }
-    }
-
-
-
-    
-    /**
-     * Prepares queryDefs for view. Create from view configuration or reuse from cache
-     * @param int $configMtime timestamp of a querydef file or a querydef collection database modifying time
-     * @param boolean $forceRebuild force to recreate cache and set configMtime timestamp to it
-     */
-    public function prepareQuery($configMtime, $forceRebuild=false)
-    {
-        $doRebuild=(!$this->isCacheable)||($forceRebuild);
-        
-        if(!$doRebuild){
-            list($cachedQueryDefs, $err)=$this->queryCache->get($configMtime, $this->viewId);
-            if ($err===null) {
-                if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                    \doq\Logger::debug('doq.View', 'Reuse queryDefs from cache for the query of view "'.$this->viewId.'"', __FILE__, __LINE__);
-                }
-                $this->queryDefs=&$cachedQueryDefs;
-            } else {
-                $doRebuild=1;
-            }
+        if(isset(self::$defaultWriterCache)){
+            $this->writerCache=self::$defaultWriterCache;
+            $this->isCacheable=true;
         }
-        
-        if($doRebuild){
-            if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                \doq\Logger::debug('doq.View', 'Rebuild cache for the query of view "'.$this->viewId.'"', __FILE__, __LINE__);
-            }
-            if ($this->makeQueryDefs()) {
-                if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
-                    \doq\Logger::debug('doq.View', 'Overwrites rebuilt queryDefs for the query of view "'.$this->viewId.'"', __FILE__, __LINE__);
-                }
-                $this->queryCache->put($configMtime, $this->viewId, $this->queryDefs);
-            }
-        }
-        $this->isPreparedQuery=true;
     }
 
     /**
@@ -148,12 +115,11 @@ class View
     */
     public function read($params=[], $newDatasetName=null)
     {
-        
         if($newDatasetName==null){
            $newDatasetName=$this->viewId;
         }
         if($this->isPreparedQuery==null){
-            $this->prepareQuery($this->configMTime);
+            $this->prepareQuery($this->viewModifyTime);
         }
         $datanode=new \doq\data\Datanode(\doq\data\Datanode::NT_DATASET, $newDatasetName);
         $err=$this->readByQueryDefs($this->queryDefs, $datanode, $params, $newDatasetName);
@@ -164,7 +130,56 @@ class View
         }
     }
 
+
+
     
+    /**
+     * Prepares queryDefs for view. Create from view configuration or reuse from cache
+     * @param int $configModifyTime is a timestamp of a last modification time of the view 
+     *            configuration that will be sticked to caching defs
+     * @param boolean $forceRebuild force to recreate cache
+     */
+    public function prepareQuery($viewModifyTime, $forceRebuild=false, array &$roles=null)
+    {
+        if($roles===null) $roles=[];
+        else sort($roles, SORT_STRING);
+        
+        $rolesStr=implode(',', $roles);
+        $doRebuild=(!isset($this->queryCache))||($forceRebuild);
+        $cacheId=$this->viewId.'_'.md5($rolesStr);
+
+        if(!$doRebuild){
+            list($cachedQueryDefs, $err)=$this->queryCache->get($viewModifyTime, $cacheId);
+            if ($err===null) {
+                if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
+                    \doq\Logger::debug('doq.View', 'Reuse queryDefs from cache for the roles ['.$rolesStr.'] and query for the view "'.$this->viewId.'"', __FILE__, __LINE__);
+                }
+                $this->queryDefs=&$cachedQueryDefs;
+            } else {
+                if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
+                    \doq\Logger::debug('doq.View', $err, __FILE__, __LINE__);
+                }
+                $doRebuild=1;
+            }
+        }
+        
+        if($doRebuild){
+            if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
+                \doq\Logger::debug('doq.View', 'Rebuild the queryDefs of view "'.$this->viewId.'"', __FILE__, __LINE__);
+            }
+            if ($this->makeQueryDefs()) {
+                if(isset($this->queryCache)){
+                    if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
+                        \doq\Logger::debug('doq.View', 'Overwrites rebuilt queryDefs for the roles ['.$rolesStr.'] and query of the view "'.$this->viewId.'"', __FILE__, __LINE__);
+                    }
+                    $this->queryCache->put($viewModifyTime, $cacheId, $this->queryDefs);
+                }
+            }
+        }
+        $this->isPreparedQuery=true;
+    }
+
+   
 
     /**
     * Recursive loading data into Dataset wrapped by Datanodes
@@ -221,35 +236,6 @@ class View
     }
 
 
-    
-    public function prepareWriter($configMtime, $forceRebuild=false)
-    {
-        $doRebuild=(!$this->isCacheable)||($forceRebuild);
-        $this->writerDefs=[];
-        $this->makeWriterDefs($this->cfgView);
-        $this->isPreparedWriter=true;
-        
-    }
-    
-    public function makeWriterDefs(&$cfgView, $datasourceName='', $schemaName='', $datasetName=''){
-        $parentDatasetname=$datasetName;
-        if (isset($cfgView['#dataset'])) {
-            list($datasourceName, $schemaName, $datasetName, $isOtherDatasource)
-                =\doq\data\Scripter::getDatasetPathElements($cfgView['#dataset'],$datasourceName, $schemaName, $datasetName);
-        }
-        $datasetRef=$datasourceName.':'.$schemaName.'/'.$datasetName;
-        list($datasourceCfg, $datasetCfg, $mtime, $err)=\doq\data\Datasources::getDatasetCfg($datasourceName,$schemaName,$datasetName);
-        if ($err!==null) {
-            trigger_error($err, E_USER_ERROR);
-            return false;
-        }
-        $dataConnectionName=$datasourceCfg['@config']['#dataConnection'];
-        $this->writerDefs[]=[
-            '@datasetCfg'=>$datasetCfg
-        ];
-    }
-    
-    
     /**
      * Forms queryDefs based on view configuration, queryDefs
      */
@@ -258,11 +244,11 @@ class View
         $this->queryDefs=[];
         $this->lastQueryId=1;
         $viewColumns=null;
-        return $this->makeQueryDefsRecursive($this->cfgView, $this->queryDefs, $viewColumns);
+        return $this->makeQueryDefsRecursive($this->viewCfg, $this->queryDefs, $viewColumns);
     }
 
     private function makeQueryDefsRecursive(
-        &$cfgView,
+        &$viewCfg,
         &$queryDefs,
         &$parentViewColumn,
         $datasourceName='',
@@ -274,11 +260,12 @@ class View
         $masterKind=false,
         $isNewQuery=true,
         $isOtherDatasource=false
-    ) {
+    )
+    {
         $parentDatasetname=$datasetName;
-        if (isset($cfgView['#dataset'])) {
+        if (isset($viewCfg['#dataset'])) {
             list($datasourceName, $schemaName, $datasetName, $isOtherDatasource)
-                =\doq\data\Scripter::getDatasetPathElements($cfgView['#dataset'],$datasourceName, $schemaName, $datasetName);
+                =\doq\data\Scripter::getDatasetPathElements($viewCfg['#dataset'],$datasourceName, $schemaName, $datasetName);
         }
         $datasetRef=$datasourceName.':'.$schemaName.'/'.$datasetName;
         list($datasourceCfg, $datasetCfg, $mtime, $err)=\doq\data\Datasources::getDatasetCfg($datasourceName,$schemaName,$datasetName);
@@ -333,120 +320,121 @@ class View
         }
 
         $fieldNo=0;
-        $datasourceFieldDef=null;
-        foreach ($cfgView as $localFieldName=>&$viewFieldDef) {
-            $fc=$localFieldName[0];
-            if (($fc!='#')&&($fc!='@')) {
-                $newColumn=[
-                    '#columnId'=>$queryDefs['#lastColumnId'],
-                    '#field'=>$localFieldName,
-                    '#fieldNo'=>$fieldNo
-                ];
-                $queryDefs['#lastColumnId']++;
-                $fieldNo++;
-
-                unset($datasourceFieldDef);
-                $originField=$localFieldName;
-                if (isset($viewFieldDef['#field'])) {
-                    $originField=$viewFieldDef['#field'];
-                }
-                
-                if (($keyField!==null) && ($keyField==$localFieldName)) {
-                    $foundKeyColumn=&$newColumn;
-                    #$queryDefs['#keyTupleFieldNo']=$queryDefs['#lastTupleFieldNo'];
-                }
-                if (isset($datasetCfg['@fields'][$originField])) {
-                    $datasourceFieldDef=&$datasetCfg['@fields'][$originField];
-                    $newColumn['#originField']=$originField;
-                    if (isset($datasourceFieldDef['#type'])) {
-                        $type=$newColumn['#type']=$datasourceFieldDef['#type'];
-                    } else {
-                        $type='';
-                    }
-                } else {
-                    trigger_error(\doq\t('Model %s.%s.%s has no defined field [%s] that used by view %s', $datasourceName, $schemaName, $datasetName, $localFieldName, $this->viewId), E_USER_WARNING);
-                    continue;
-                }
-                if ($type!=='virtual') {
-                    $newColumn['#tupleFieldNo']=$queryDefs['#lastTupleFieldNo'];
-                    $queryDefs['#lastTupleFieldNo']++;
-                }
-
-
-                if (isset($viewFieldDef['#label'])) {
-                    $newColumn['#label']=$viewFieldDef['#label'];
-                } elseif (isset($datasourceFieldDef['#label'])) {
-                    $newColumn['#label']=$datasourceFieldDef['#label'];
-                }
-                if (isset($datasourceFieldDef['#kind'])) {
-                    $newColumn['#kind']=$kind=$datasourceFieldDef['#kind'];
-                } else {
-                    $kind='';
-                }
-                
-                if (isset($datasourceFieldDef['#isRequired'])) {
-                    $newColumn['#isRequired']=1;
-                }
-                if (isset($datasourceFieldDef['#ref'])) {
-                    $newColumn['#ref']=$ref=$datasourceFieldDef['#ref'];
-                    if ($masterKind=='aggregation') {
-                        if ($parentRef==$ref) {
-                            $foundDetailColumnForMaster=&$newColumn;
-                        }
-                    }
-                }
-
-                if (isset($viewFieldDef['@linked'])) {
-                    if ($ref) {
-                        $subMasterFieldNo=isset($newColumn['#fieldNo'])?$newColumn['#fieldNo']:false;
-                        $subDatasetId=$newColumn['#field'];
-                        list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource)
-                            = \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
-                        $newColumn['#refSchema']=$RschemaName;
-                        $newColumn['#refDataset']=$RdatasetName;
-                        if ($kind=='aggregation') {
-                            $isROtherDatasource=true;
-                        }
-
-                        if ($isROtherDatasource) {
-                            $newColumn['#refType']='linknext';
-                            $newColumn['#refDatasource']=$RdatasourceName;
-                            if ($kind=='aggregation') {
-                                if ($type=='virtual') {
-                                    // virtual is a type of aggregation field for now
-                                    if ($foundKeyColumn===null) {
-                                        trigger_error('Define primary key field in the View first!');
-                                        return false;
-                                    }
-                                    $subMasterFieldNo=$foundKeyColumn['#fieldNo'];
-                                }
-                            }
-                        } else {
-                            $newColumn['#refType']='join';
-                        }
-                        $this->makeQueryDefsRecursive(
-                            $viewFieldDef['@linked'],
-                            $queryDefs,
-                            $newColumn,
-                            $RdatasourceName,
-                            $RschemaName,
-                            $RdatasetName,
-                            $datasetRef,
-                            $subMasterFieldNo,
-                            $subDatasetId,
-                            $kind,
-                            false,
-                            $isROtherDatasource
-                        );
-                    } else {
-                        $newColumn['#error']='No #ref defined for linking column';
-                    }
-                } elseif (!isset($datasourceFieldDef)) {
-                    $newColumn['#error']='Unknown field '.$localFieldName;
-                }
-                $datasetDefs['@fields'][]=&$newColumn;
-                unset($newColumn);
+        $datasetFieldDef=null;
+        foreach ($viewCfg as $fieldAlias=>&$viewFieldDef) {
+            $firstChar=$fieldAlias[0];
+            if (($firstChar=='#')||($firstChar=='@')) {
+                continue;
             }
+            $newColumn=[
+                '#columnId'=>$queryDefs['#lastColumnId'],
+                '#field'=>$fieldAlias,
+                '#fieldNo'=>$fieldNo
+            ];
+            $queryDefs['#lastColumnId']++;
+            $fieldNo++;
+
+            unset($datasetFieldDef);
+            $originField=$fieldAlias;
+            if (isset($viewFieldDef['#field'])) {
+                $originField=$viewFieldDef['#field'];
+            }
+            if (($keyField!==null) && ($keyField==$fieldAlias)) {
+                $foundKeyColumn=&$newColumn;
+                #$queryDefs['#keyTupleFieldNo']=$queryDefs['#lastTupleFieldNo'];
+            }
+            if (isset($datasetCfg['@fields'][$originField])) {
+                $datasetFieldDef=&$datasetCfg['@fields'][$originField];
+                $newColumn['#originField']=$originField;
+                if (isset($datasetFieldDef['#type'])) {
+                    $type=$newColumn['#type']=$datasetFieldDef['#type'];
+                } else {
+                    $type='';
+                }
+            } else {
+                trigger_error(\doq\t('Model %s.%s.%s has no defined field [%s] that used by view %s', $datasourceName, $schemaName, $datasetName, $fieldAlias, $this->viewId), E_USER_WARNING);
+                continue;
+            }
+            if ($type!=='virtual') {
+                $newColumn['#tupleFieldNo']=$queryDefs['#lastTupleFieldNo'];
+                $queryDefs['#lastTupleFieldNo']++;
+            }
+
+
+            if (isset($viewFieldDef['#label'])) {
+                $newColumn['#label']=$viewFieldDef['#label'];
+            } elseif (isset($datasetFieldDef['#label'])) {
+                $newColumn['#label']=$datasetFieldDef['#label'];
+            }
+            if (isset($datasetFieldDef['#kind'])) {
+                $kind=$newColumn['#kind']=$datasetFieldDef['#kind'];
+            } else {
+                $kind='';
+            }
+
+            if (isset($datasetFieldDef['#isRequired'])) {
+                $newColumn['#isRequired']=1;
+            }
+            if (isset($datasetFieldDef['#ref'])) {
+                $ref=$newColumn['#ref']=$datasetFieldDef['#ref'];
+                if ($masterKind=='aggregation') {
+                    if ($parentRef==$ref) {
+                        $foundDetailColumnForMaster=&$newColumn;
+                    }
+                }
+            }
+
+            if (isset($viewFieldDef['@linked'])) {
+                if ($ref) {
+                    $subMasterFieldNo=isset($newColumn['#fieldNo'])?$newColumn['#fieldNo']:false;
+                    $subDatasetId=$newColumn['#field'];
+                    list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource)
+                        = \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
+                    $newColumn['#refSchema']=$RschemaName;
+                    $newColumn['#refDataset']=$RdatasetName;
+                    if ($kind=='aggregation') {
+                        $isROtherDatasource=true;
+                    }
+
+                    if ($isROtherDatasource) {
+                        $newColumn['#refType']='linknext';
+                        $newColumn['#refDatasource']=$RdatasourceName;
+                        if ($kind=='aggregation') {
+                            if ($type=='virtual') {
+                                // virtual is a type of aggregation field for now
+                                if ($foundKeyColumn===null) {
+                                    trigger_error('Define primary key field in the View first!');
+                                    return false;
+                                }
+                                $subMasterFieldNo=$foundKeyColumn['#fieldNo'];
+                            }
+                        }
+                    } else {
+                        $newColumn['#refType']='join';
+                    }
+                    $this->makeQueryDefsRecursive(
+                        $viewFieldDef['@linked'],
+                        $queryDefs,
+                        $newColumn,
+                        $RdatasourceName,
+                        $RschemaName,
+                        $RdatasetName,
+                        $datasetRef,
+                        $subMasterFieldNo,
+                        $subDatasetId,
+                        $kind,
+                        false,
+                        $isROtherDatasource
+                    );
+                } else {
+                    $newColumn['#error']='No #ref defined for linking column';
+                }
+            } elseif (!isset($datasetFieldDef)) {
+                $newColumn['#error']='Unknown field '.$fieldAlias;
+            }
+            $datasetDefs['@fields'][]=&$newColumn;
+            unset($newColumn);
+        
         }
 
         if ($isNewQuery) {
@@ -544,6 +532,173 @@ class View
             }
         }
         return true;
+    }
+
+        public function prepareWriter(int $viewModifyTime, bool $forceRebuild=false, array &$roles=null)
+    {
+        if($roles===null) $roles=[];
+        else sort($roles, SORT_STRING);
+
+        $rolesStr=implode(',', $roles);
+        $doRebuild=(!isset($this->writerCache))||($forceRebuild);
+        $cacheId=$this->viewId.'_'.md5($rolesStr);
+
+        if(!$doRebuild){
+            list($cachedQueryDefs, $err)=$this->writerCache->get($viewModifyTime, $cacheId);
+            if ($err===null) {
+                if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
+                    \doq\Logger::debug('doq.View', 'Reuse writerDefs from cache for the roles ['.$rolesStr.'] and view "'.$this->viewId.'"', __FILE__, __LINE__);
+                }
+                $this->writerDefs=&$cachedQueryDefs;
+            } else {
+                if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
+                    \doq\Logger::debug('doq.View', $err, __FILE__, __LINE__);
+                }
+                $doRebuild=1;
+            }
+        }
+
+
+        if($doRebuild){
+            if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
+                \doq\Logger::debug('doq.View', 'Rebuild the writerDefs of view for roles ['.$rolesStr.'] and view "'.$this->viewId.'"', __FILE__, __LINE__);
+            }
+            if ($this->makeWriterDefs($roles)) {
+                if(isset($this->writerCache)){
+                    if (\doq\Logger::$logMode & \doq\Logger::LE_DEBUG_INFO) {
+                        \doq\Logger::debug('doq.View', 'Overwrites rebuilt writerDefs for the query of view "'.$this->viewId.'" and the current roles set', __FILE__, __LINE__);
+                    }
+                    $this->writerCache->put($viewModifyTime, $cacheId, $this->writerDefs);
+                }
+            }
+        }
+        $this->isPreparedWriter=true;
+    }
+
+
+    public function makeWriterDefs(array &$roles){
+        $this->writerDefs=[];
+        return $this->makeWriterDefsRecursive($this->viewCfg, $this->writerDefs, $roles,'');
+    }
+
+    private function makeWriterDefsRecursive(&$viewCfg, &$writeDefs, &$roles, $baseRule='', $datasourceName='', $schemaName='', $datasetName='')
+    {
+        $parentDatasetname=$datasetName;
+        if (isset($viewCfg['#dataset'])) {
+            list($datasourceName, $schemaName, $datasetName, $isOtherDatasource)
+                =\doq\data\Scripter::getDatasetPathElements($viewCfg['#dataset'],$datasourceName, $schemaName, $datasetName);
+        }
+        $datasetRef=$datasourceName.':'.$schemaName.'/'.$datasetName;
+        list($datasourceCfg, $datasetCfg, $mtime, $err)=\doq\data\Datasources::getDatasetCfg($datasourceName,$schemaName,$datasetName);
+        if ($err!==null) {
+            trigger_error($err, E_USER_ERROR);
+            return false;
+        }
+        $dataConnectionName=$datasourceCfg['@config']['#dataConnection'];
+
+        $datasetRule=$baseRule;
+        $upFields=[];
+        if(isset($datasetCfg['@permissions'])){
+            $datasetRule=self::concatPermissions($datasetRule, $datasetCfg['@permissions'], $roles);
+        }
+
+        foreach ($datasetCfg['@fields'] as $datasetField=>&$datasetFieldDef) {
+            $isAutoInc=(isset($datasetFieldDef['#isAutoInc']))?intval($datasetFieldDef['#isAutoInc']):0;
+            $isRequired=(isset($datasetFieldDef['#isRequired']))?intval($datasetFieldDef['#isRequired']):0;
+            $fieldRule=$datasetRule;
+            if($isAutoInc || $isRequired ){
+                if(isset($datasetFieldDef['@permissions'])){
+                    $fieldRule=self::concatPermissions($fieldRule, $datasetFieldDef['@permissions'], $roles);
+                }
+
+                $upField=['#permissionRule'=>$fieldRule];
+                if($isAutoInc) {
+                    $upField['#isAutoInc']=$isAutoInc;
+                }
+                if (isset($datasetFieldDef['#kind'])) {
+                    $upField['#kind']=$datasetFieldDef['#kind'];
+                }
+                $upFields[$datasetField]=$upField;
+            }
+        }
+
+        foreach ($viewCfg as $fieldAlias=>&$viewFieldDef) {
+            $firstChar=$fieldAlias[0];
+            if (($firstChar=='#')||($firstChar=='@')) {
+                continue;
+            }
+
+            $originField=isset($viewFieldDef['#field'])?$viewFieldDef['#field']:$fieldAlias;
+            if (isset($datasetCfg['@fields'][$originField])) {
+                $datasetFieldDef=&$datasetCfg['@fields'][$originField];
+            }
+            if(isset($upFields[$originField])){
+                $upField=&$upFields[$originField];
+                $upField['#alias']=$fieldAlias;
+            } else {
+                $upFields[$originField]=['#alias'=>$fieldAlias];
+                $upField=&$upFields[$originField];
+                $fieldRule=$datasetRule;
+                if(isset($datasetFieldDef['@permissions'])){
+                    $fieldRule=self::concatPermissions($fieldRule, $datasetFieldDef['@permissions'], $roles);
+                }
+                $upField['#permissionRule']=$fieldRule;
+            }
+            if(isset($datasetFieldDef['#kind'])){
+                $kind=$upField['#kind']=$datasetFieldDef['#kind'];
+                $ref=$upField['#ref']=$datasetFieldDef['#ref'];
+                list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource)= \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
+                if($kind=='lookup'){
+                    if(isset($viewFieldDef['@linked'])){
+                        $linked=&$viewFieldDef['@linked'];
+                        self::makeWriterDefsRecursive($linked, $writeDefs, $roles, '', $RdatasourceName, $RschemaName, $RdatasetName);
+                    }
+                }
+            }
+            
+        }
+        $writeDefs[]=&$upFields;
+        \doq\Logger::debug('doq.View',print_r($upFields,true));
+        unset($upFields);
+        return true;
+    }
+    
+    
+    private function concatPermissionRule(string $currentRule, string $overrideRule){
+        $cnt=strlen($overrideRule);
+        $mode='';
+        for($i=0;$i<$cnt;$i++){
+            $c=$overrideRule[$i];
+            if(($c=='+')||($c=='-')) {
+                $mode=$c;
+                continue;
+            }
+            if(strpos('siud',$c)===false){
+                continue;
+            }
+            $p=strpos($currentRule,$c);
+            if( ($mode=='') || ($mode=='+')){
+                if ($p===false){
+                    $currentRule.=$c;
+                }
+            } else {
+                $currentRule=substr($currentRule, 0, $p) . substr($currentRule, $p + 1);
+            }
+        }
+        return $currentRule;
+    }
+
+    private function concatPermissions($rule, &$applyingPermissions, &$roles)
+    {
+        if(isset($applyingPermissions['*'])){
+            $rule=self::concatPermissionRule($rule, $applyingPermissions['*']);
+        }
+        foreach($applyingPermissions as $role=>&$appendingRule) {
+            if($role!='*') {
+                $rule=self::concatPermissionRule($rule, $appendingRule);
+            }
+        }
+        return $rule;
     }
 
 }

@@ -49,7 +49,7 @@ return [
                 '#filePrefix'=>'q_',
                 '#fileSuffix'=>'.q.txt',
                 '#forceCreateFolder'=>1,
-                '#alwaysRebuild'=>1
+                '#alwaysRebuild'=>0
             ],
             'writers'=>[
                 '#provider'=>'SerialFileCache',
@@ -57,7 +57,7 @@ return [
                 '#filePrefix'=>'w_',
                 '#fileSuffix'=>'.w.txt',
                 '#forceCreateFolder'=>1,
-                '#alwaysRebuild'=>1
+                '#alwaysRebuild'=>0
             ],
             'templates'=>[
                 '#provider'=>'SerialFileCache',
