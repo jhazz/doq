@@ -72,7 +72,7 @@ class Dataset extends \doq\data\Dataset{
 
     $columnNo=0;
     foreach ($this->cfgFields as $fieldName=>&$fieldDef) {
-#      if(isset($fieldDefs['#isAutoInc'])) {
+#      if(isset($fieldDefs['#isAutoValue'])) {
 #        if($this->autoIncField) {
           # TODO Надо перенести в билдер createFromSchema()
 #          $this->error=\doq\t('memtable_error_more_than_one_autoinc',$this->name,$this->autoIncField,$fieldName);

@@ -194,7 +194,7 @@ class Dataset extends \doq\data\Dataset
             $result[]='<td>#id:'.$field['#columnId']
             .'<br/>#tupleFieldNo:'.$field['#tupleFieldNo']
             .'<br/>#field:['.$field['#field'].']'
-            .'<br>#originField:['.$field['#originField'].']'
+            .'<br>#fieldOrigin:['.$field['#fieldOrigin'].']'
             .'<br>#scriptField:['.$field['#scriptField'].']'
             .(isset($column['#label'])?'<br/>#label:'.$field['#label']:'').'</td>';
         }

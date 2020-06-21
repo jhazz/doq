@@ -9,7 +9,7 @@ return [ // Datasource "main"
                     '#kind'=>'table',
                     '@permissions'=>['*'=>'s'],
                     '@fields'=>[
-                        'PRODUCT_ID'=>['#type'=>'int64','#isAutoInc'=>1, '@permissions'=>['*'=>'+s','store.editors'=>'+iud']],
+                        'PRODUCT_ID'=>['#type'=>'int64','#isAutoValue'=>1, '@permissions'=>['*'=>'+s','store.editors'=>'+iud']],
                         'TITLE'=>['#type'=>'string','#size'=>80,'#isRequired'=>1,'@permissions'=>['*'=>'+s','store.editors'=>'+iud']],
                         'SKU'=>['#type'=>'string','#size'=>30,'@permissions'=>['*'=>'s','store.editors'=>'+iud']],
                         'PRODUCT_GROUP_ID'=>['#type'=>'int64','#kind'=>'lookup','#ref'=>'main:store/PRODUCT_GROUPS'],
@@ -26,7 +26,7 @@ return [ // Datasource "main"
                     '#kind'=>'tree', # = list for dictionaries, = tree for small navigation trees, = table for tables printing via DataGrid
                     '#label'=>'Das ist Product groups',
                     '@fields'=>[
-                        'PRODUCT_GROUP_ID'=>['#type'=>'int64','#isAutoInc'=>'1'],
+                        'PRODUCT_GROUP_ID'=>['#type'=>'int64','#isAutoValue'=>'1'],
                         'PARENT_ID'=>       ['#type'=>'int64','#kind'=>'lookup','#ref'=>'store/PRODUCT_GROUPS'],
                         'NAME'=>            ['#type'=>'string','#size'=>'80', '#isRequired'=>'1'],
                         'SUB_NAME'=>        ['#type'=>'string','#size'=>'80'],

@@ -109,9 +109,10 @@ class View
 
     /**
     * Executes queryDefs that reads data from a database to datasets
-    * @param array $params any paramaters to a queryDefs, i.e. @filters
+    * @param mixed[] $params any paramaters to a queryDefs
+    *   @type array "@filters" select filter commands sequence
     * @param string $newDatasetName any string identifies creating Dataset 
-    * @return array (\doq\data\Datanode node, err)
+    * @return [\doq\data\Datanode node, number rowcount, mixed error]
     */
     public function read($params=[], $newDatasetName=null)
     {
@@ -124,13 +125,11 @@ class View
         $datanode=new \doq\data\Datanode(\doq\data\Datanode::NT_DATASET, $newDatasetName);
         $err=$this->readByQueryDefs($this->queryDefs, $datanode, $params, $newDatasetName);
         if ($err==null) {
-            return [&$datanode, $datanode->dataset->rowCount, null];
+            return [$datanode, $datanode->dataset->rowCount, null];
         } else {
             return [null,0,$err];
         }
     }
-
-
 
     
     /**
@@ -335,17 +334,17 @@ class View
             $fieldNo++;
 
             unset($datasetFieldDef);
-            $originField=$fieldAlias;
+            $fieldOrigin=$fieldAlias;
             if (isset($viewFieldDef['#field'])) {
-                $originField=$viewFieldDef['#field'];
+                $fieldOrigin=$viewFieldDef['#field'];
             }
             if (($keyField!==null) && ($keyField==$fieldAlias)) {
                 $foundKeyColumn=&$newColumn;
                 #$queryDefs['#keyTupleFieldNo']=$queryDefs['#lastTupleFieldNo'];
             }
-            if (isset($datasetCfg['@fields'][$originField])) {
-                $datasetFieldDef=&$datasetCfg['@fields'][$originField];
-                $newColumn['#originField']=$originField;
+            if (isset($datasetCfg['@fields'][$fieldOrigin])) {
+                $datasetFieldDef=&$datasetCfg['@fields'][$fieldOrigin];
+                $newColumn['#fieldOrigin']=$fieldOrigin;
                 if (isset($datasetFieldDef['#type'])) {
                     $type=$newColumn['#type']=$datasetFieldDef['#type'];
                 } else {
@@ -476,7 +475,7 @@ class View
                     trigger_error(\doq\tr('doq','Not found back referenced lookup to %s from %s', $parentRef, $datasetRef), E_USER_ERROR);
                     return false;
                 }
-                $newIdxName='idx_agg_'.$parentRef.'^'.$foundDetailColumnForMaster['#originField'];
+                $newIdxName='idx_agg_'.$parentRef.'^'.$foundDetailColumnForMaster['#fieldOrigin'];
                 if (!isset($queryDefs['@indexes'])) {
                     $queryDefs['@indexes']=[];
                 }
@@ -581,14 +580,14 @@ class View
         return $this->makeWriterDefsRecursive($this->viewCfg, $this->writerDefs, $roles,'');
     }
 
-    private function makeWriterDefsRecursive(&$viewCfg, &$writeDefs, &$roles, $baseRule='', $datasourceName='', $schemaName='', $datasetName='')
+    private function makeWriterDefsRecursive(&$viewCfg, &$writeDefs, &$roles, $baseRule='', $datasourceName='', $schemaName='', $datasetName='', $path='')
     {
         $parentDatasetname=$datasetName;
         if (isset($viewCfg['#dataset'])) {
             list($datasourceName, $schemaName, $datasetName, $isOtherDatasource)
                 =\doq\data\Scripter::getDatasetPathElements($viewCfg['#dataset'],$datasourceName, $schemaName, $datasetName);
         }
-        $datasetRef=$datasourceName.':'.$schemaName.'/'.$datasetName;
+        $datasetPath=$datasourceName.':'.$schemaName.'/'.$datasetName;
         list($datasourceCfg, $datasetCfg, $mtime, $err)=\doq\data\Datasources::getDatasetCfg($datasourceName,$schemaName,$datasetName);
         if ($err!==null) {
             trigger_error($err, E_USER_ERROR);
@@ -603,17 +602,17 @@ class View
         }
 
         foreach ($datasetCfg['@fields'] as $datasetField=>&$datasetFieldDef) {
-            $isAutoInc=(isset($datasetFieldDef['#isAutoInc']))?intval($datasetFieldDef['#isAutoInc']):0;
+            $isAutoValue=(isset($datasetFieldDef['#isAutoValue']))?intval($datasetFieldDef['#isAutoValue']):0;
             $isRequired=(isset($datasetFieldDef['#isRequired']))?intval($datasetFieldDef['#isRequired']):0;
             $fieldRule=$datasetRule;
-            if($isAutoInc || $isRequired ){
+            if($isAutoValue || $isRequired ){
                 if(isset($datasetFieldDef['@permissions'])){
                     $fieldRule=self::concatPermissions($fieldRule, $datasetFieldDef['@permissions'], $roles);
                 }
 
                 $upField=['#permissionRule'=>$fieldRule];
-                if($isAutoInc) {
-                    $upField['#isAutoInc']=$isAutoInc;
+                if($isAutoValue) {
+                    $upField['#isAutoValue']=$isAutoValue;
                 }
                 if (isset($datasetFieldDef['#kind'])) {
                     $upField['#kind']=$datasetFieldDef['#kind'];
@@ -628,22 +627,23 @@ class View
                 continue;
             }
 
-            $originField=isset($viewFieldDef['#field'])?$viewFieldDef['#field']:$fieldAlias;
-            if (isset($datasetCfg['@fields'][$originField])) {
-                $datasetFieldDef=&$datasetCfg['@fields'][$originField];
+            $fieldOrigin=isset($viewFieldDef['#field'])?$viewFieldDef['#field']:$fieldAlias;
+            if (isset($datasetCfg['@fields'][$fieldOrigin])) {
+                $datasetFieldDef=&$datasetCfg['@fields'][$fieldOrigin];
             }
-            if(isset($upFields[$originField])){
-                $upField=&$upFields[$originField];
+            if(isset($upFields[$fieldOrigin])){
+                $upField=&$upFields[$fieldOrigin];
                 $upField['#alias']=$fieldAlias;
             } else {
-                $upFields[$originField]=['#alias'=>$fieldAlias];
-                $upField=&$upFields[$originField];
+                $upFields[$fieldOrigin]=['#alias'=>$fieldAlias];
+                $upField=&$upFields[$fieldOrigin];
                 $fieldRule=$datasetRule;
                 if(isset($datasetFieldDef['@permissions'])){
                     $fieldRule=self::concatPermissions($fieldRule, $datasetFieldDef['@permissions'], $roles);
                 }
                 $upField['#permissionRule']=$fieldRule;
             }
+            $upField['##aliasPath']=$datasetPath.$path.'/'.$fieldAlias;
             if(isset($datasetFieldDef['#kind'])){
                 $kind=$upField['#kind']=$datasetFieldDef['#kind'];
                 $ref=$upField['#ref']=$datasetFieldDef['#ref'];
@@ -651,13 +651,13 @@ class View
                 if($kind=='lookup'){
                     if(isset($viewFieldDef['@linked'])){
                         $linked=&$viewFieldDef['@linked'];
-                        self::makeWriterDefsRecursive($linked, $writeDefs, $roles, '', $RdatasourceName, $RschemaName, $RdatasetName);
+                        self::makeWriterDefsRecursive($linked, $writeDefs, $roles, '', $RdatasourceName, $RschemaName, $RdatasetName, $path.'/'.$fieldAlias);
                     }
                 }
             }
             
         }
-        $writeDefs[]=&$upFields;
+        $writeDefs[]=['#datasetPath'=>$datasetPath, '@fields'=>&$upFields];
         \doq\Logger::debug('doq.View',print_r($upFields,true));
         unset($upFields);
         return true;

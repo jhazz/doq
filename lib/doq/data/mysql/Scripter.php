@@ -74,8 +74,8 @@ class Scripter extends \doq\data\Scripter
         }
 
         foreach ($datasetDef['@fields'] as $i=>&$field) {
-            $originField=$field['#originField'];
-            $field['#scriptField']=$tableAlias.'.'.$originField;
+            $fieldOrigin=$field['#fieldOrigin'];
+            $field['#scriptField']=$tableAlias.'.'.$fieldOrigin;
             if (isset($field['#kind'])) {
                 if ($field['#kind']=='lookup') {
                     $ref=$field['#ref'];
@@ -86,16 +86,16 @@ class Scripter extends \doq\data\Scripter
                             trigger_error(\doq\tr('doq', 'Strange join to the other Datasource %s:%s/%s. Joining cancelled', $RdatasourceName, $RschemaName, $RdatasetName), E_USER_ERROR);
                             return false;
                         }
-                        $this->columnList[]=[$tableAlias,$originField];
-                        $this->collectJoinsRecursive($field, $tableAlias, $originField);
+                        $this->columnList[]=[$tableAlias,$fieldOrigin];
+                        $this->collectJoinsRecursive($field, $tableAlias, $fieldOrigin);
                     } else {
                         # not the join
-                        $this->columnList[]=[$tableAlias,$originField];
+                        $this->columnList[]=[$tableAlias,$fieldOrigin];
                     }
                 }
             } else {
                 # plain field
-                $this->columnList[]=[$tableAlias,$originField];
+                $this->columnList[]=[$tableAlias,$fieldOrigin];
             }
         }
         return true;

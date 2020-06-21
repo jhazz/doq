@@ -14,7 +14,7 @@
                 '#kind'=>'tree', # = list for dictionaries, = tree for small navigation trees, = table for tables printing via DataGrid
                 '#label'=>'Das ist Product groups',
                 '@fields'=>[
-                  'PRODUCT_GROUP_ID'=>['#type'=>'int64','#isAutoInc'=>'1'],
+                  'PRODUCT_GROUP_ID'=>['#type'=>'int64','#isAutoValue'=>'1'],
                   'PARENT_ID'=>       ['#type'=>'int64','#kind'=>'lookup','#ref'=>'store/PRODUCT_GROUPS'],
                   'NAME'=>            ['#type'=>'string','#size'=>'80'],
                   'SUB_NAME'=>        ['#type'=>'string','#size'=>'80'],
@@ -28,7 +28,7 @@
                 '@fields'=>[
                   'PRODUCT_ID'      =>[
                     '#type'=>'int64',
-                    '#isAutoInc'=>1
+                    '#isAutoValue'=>1
                     ],
                   'PRODUCT_GROUP_ID'=>[
                     '#type'=>'int64',
@@ -74,7 +74,7 @@
                 '@fields'=>[
                   'PRODUCT_TYPE_ID'=>[
                     '#type'=>'int64',
-                    '#isAutoInc'=>1,
+                    '#isAutoValue'=>1,
                   ],
                   'NAME'=>[
                     '#type'=>'string',

@@ -72,4 +72,93 @@ class Datanode
             }
         }
     }
+    
+    public function toArray(&$dstArray=null, $parentPath='',  $level=10){
+        if($dstArray==null){
+            $dstArray=[];
+        }
+        if($level<0){
+            return;
+        }
+        if($this->type!==\doq\data\Datanode::NT_DATASET){
+            throw new \Exception('Not a dataset!');
+        }
+        $attrs=[
+            '#nodeName'=>$this->name,
+            '#dataSource'=>$this->dataset->queryDefs['#dataSource'],
+            '#schema'=>$this->dataset->queryDefs['@dataset']['#schema'],
+            '#dataset'=>$this->dataset->queryDefs['@dataset']['#datasetName'],
+            '#keyField'=>$this->dataset->queryDefs['@dataset']['#keyField']
+        ];
+        $dstArray[$this->name]=&$attrs;
+        $this->collectFieldDefs($parentPath, $attrs['#dataSource'], $attrs['#schema'], $attrs['#dataset'],$this->dataset->queryDefs['@dataset'], $r);
+        $attrs['@fields']=$r;
+        if ($this->dataset->tuples!==null) {
+            $rows=[];
+            foreach ($this->dataset->tuples as $rowNo=>&$tuple) {
+                $rows[]=$tuple;
+            }
+            $attrs['@tuples']=&$rows;
+        }
+        if(isset($this->childNodes)){
+            foreach($this->childNodes as $childNodeName=>&$childNode){
+                if($childNode->type==\doq\data\Datanode::NT_DATASET){
+                    $childNode->toArray($dstArray, $parentPath, $level-1);
+                }
+            }
+        }
+        return $dstArray;
+    }
+    
+    private function collectFieldDefs($currentPath, $datasource, $schema, $dataset, &$fieldDefs, &$result){
+        $keyField=$fieldDefs['#keyField'];
+        foreach ($fieldDefs['@fields'] as $fieldNo=>&$fieldDef) {
+            $ref=isset($fieldDef['#ref'])?$fieldDef['#ref']:false; 
+            $kind=false;
+            
+            if(isset($fieldDef['#kind'])){
+                $kind = $f['#kind'] = $fieldDef['#kind'];
+            }
+            $f=['#type'=>$fieldDef['#type'], '#datasource'=>$datasource, '#schema'=>$schema, '#dataset'=>$dataset];
+            // if(isset($fieldDef['#refSchema'])){$f['#refSchema']=$fieldDef['#refSchema'];}
+            if(isset($fieldDef['#label'])){
+                $f['#label'] = $fieldDef['#label'];
+            }
+            if(isset($fieldDef['#isRequired'])){
+                $f['#isRequired'] = $fieldDef['#isRequired'];
+            }
+            if($currentPath!='') {
+                $path=$currentPath.'/'.$fieldDef['#field'];
+            } else {
+                $path=$fieldDef['#field'];
+            }
+            if($path==$keyField){
+                $f['#isKeyField']=1;
+            }
+            if(isset($fieldDef['#columnId'])){
+                $f['#columnId']=$fieldDef['#columnId'];
+            }
+            if(isset($fieldDef['#tupleFieldNo'])) {
+                $f['#tupleFieldNo']=intval($fieldDef['#tupleFieldNo']);
+            }
+
+            if(($kind=='lookup')||($kind=='aggregation')) {
+                $f['#refDatasource'] = (isset($fieldDef['#refDatasource'])) ? $fieldDef['#refDatasource'] : $datasource;
+                $f['#refSchema'] = (isset($fieldDef['#refSchema']))? $fieldDef['#refSchema'] : $schema;
+                $f['#refDataset']=(isset($fieldDef['#refDataset']))? $fieldDef['#refDataset']: $dataset;
+                $reftype=false;
+                if(isset($fieldDef['#refType'])) {
+                    $reftype= $f['#refType']=$fieldDef['#refType'];
+                }
+                $result[$path] = $f;
+
+                if ($reftype=='join') {
+                    $this->collectFieldDefs($path, $f['#refDatasource'], $f['#refSchema'], $f['#refDataset'], $fieldDef['@dataset'], $result);
+                }
+            } else {
+                $result[$path] = $f;
+            }
+        }
+    }
+
 }

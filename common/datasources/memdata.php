@@ -7,7 +7,7 @@ return [
                 'PRODUCT_TYPES'=>[
                     '#kind'=>'list',
                     '@fields'=>[
-                        'PRODUCT_TYPE_ID'=>['#type'=>'int64','#isAutoInc'=>1],
+                        'PRODUCT_TYPE_ID'=>['#type'=>'int64','#isAutoValue'=>1],
                         'NAME'=>['#type'=>'string','#size'=>50]
                     ],
                     '#keyField'=>'PRODUCT_TYPE_ID'
