@@ -114,10 +114,10 @@ class Datanode
         $keyField=$fieldDefs['#keyField'];
         foreach ($fieldDefs['@fields'] as $fieldNo=>&$fieldDef) {
             $ref=isset($fieldDef['#ref'])?$fieldDef['#ref']:false; 
-            $kind=false;
+            $refKind=false;
             
-            if(isset($fieldDef['#kind'])){
-                $kind = $f['#kind'] = $fieldDef['#kind'];
+            if(isset($fieldDef['#refKind'])){
+                $refKind = $f['#refKind'] = $fieldDef['#refKind'];
             }
             $f=['#type'=>$fieldDef['#type'], '#datasource'=>$datasource, '#schema'=>$schema, '#dataset'=>$dataset];
             // if(isset($fieldDef['#refSchema'])){$f['#refSchema']=$fieldDef['#refSchema'];}
@@ -142,7 +142,7 @@ class Datanode
                 $f['#tupleFieldNo']=intval($fieldDef['#tupleFieldNo']);
             }
 
-            if(($kind=='lookup')||($kind=='aggregation')) {
+            if(($refKind=='lookup')||($refKind=='aggregation')) {
                 $f['#refDatasource'] = (isset($fieldDef['#refDatasource'])) ? $fieldDef['#refDatasource'] : $datasource;
                 $f['#refSchema'] = (isset($fieldDef['#refSchema']))? $fieldDef['#refSchema'] : $schema;
                 $f['#refDataset']=(isset($fieldDef['#refDataset']))? $fieldDef['#refDataset']: $dataset;

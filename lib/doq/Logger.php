@@ -382,17 +382,17 @@ abstract class Logger
             trigger_error('пусто', E_USER_ERROR);
         }
         foreach ($dataset['@fields'] as $i=>&$field) {
-            $kind=(isset($field['#kind'])?$field['#kind']:'text');
+            $refKind=(isset($field['#refKind'])?$field['#refKind']:'text');
             $row2.='<tr valign="top"><td>'
                 .'<span title="columnId#">columnId:'.$field['#columnId'].'</span>'
                 .(isset($field['#tupleFieldNo'])?'<br/>tupleFieldNo:'.$field['#tupleFieldNo'].'</span>':'<br/>(virtual)')
                 .'</td><td>#field:"<b>'.$field['#field'].'</b>"'
                 .(((isset($field['#originField'])&&$field['#originField']!==$field['#field'])?'<br/>#originField:'.$field['#originField']:''))
-                .'</td><td>'.$kind.'</td>'
+                .'</td><td>'.$refKind.'</td>'
                 .'<td>'.(isset($field['#label'])?'<i>'.$field['#label'].'</i><br/>':'');
 
             # Если это лукап-справочник, то он может быть #refType='join' или #refType='linknext'
-            if ($kind=='lookup') {
+            if ($refKind=='lookup') {
                 $refType=isset($field['#refType'])? $field['#refType'] : "";
                 if ($refType) {
                     $row2.='Reference type:<font color=green>'.$refType.'</font> ==> <b>'.$field['#ref'].'</b><br/>';
@@ -408,7 +408,7 @@ abstract class Logger
                 if (isset($field['#refType'])) {
                     $row2.='<table class="dpd" border=1 cellspacing="0" cellpadding="5">'.self::dumpQueryEntry($field).'</table>';
                 }
-            } elseif ($kind=='aggregation') {
+            } elseif ($refKind=='aggregation') {
                 # Если это агрегат, то ссылка может быть только удаленной
                 $refType=isset($field['#refType'])? $field['#refType'] : "(NO REFTYPE!)";
                 $row2.='Reference type:<font color=red>'.$refType.' ==> <b>'.$field['#ref'].'</font></b><br/>'

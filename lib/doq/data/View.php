@@ -365,10 +365,10 @@ class View
             } elseif (isset($datasetFieldDef['#label'])) {
                 $newColumn['#label']=$datasetFieldDef['#label'];
             }
-            if (isset($datasetFieldDef['#kind'])) {
-                $kind=$newColumn['#kind']=$datasetFieldDef['#kind'];
+            if (isset($datasetFieldDef['#refKind'])) {
+                $refKind=$newColumn['#refKind']=$datasetFieldDef['#refKind'];
             } else {
-                $kind='';
+                $refKind='';
             }
 
             if (isset($datasetFieldDef['#isRequired'])) {
@@ -391,14 +391,14 @@ class View
                         = \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
                     $newColumn['#refSchema']=$RschemaName;
                     $newColumn['#refDataset']=$RdatasetName;
-                    if ($kind=='aggregation') {
+                    if ($refKind=='aggregation') {
                         $isROtherDatasource=true;
                     }
 
                     if ($isROtherDatasource) {
                         $newColumn['#refType']='linknext';
                         $newColumn['#refDatasource']=$RdatasourceName;
-                        if ($kind=='aggregation') {
+                        if ($refKind=='aggregation') {
                             if ($type=='virtual') {
                                 // virtual is a type of aggregation field for now
                                 if ($foundKeyColumn===null) {
@@ -421,7 +421,7 @@ class View
                         $datasetRef,
                         $subMasterFieldNo,
                         $subDatasetId,
-                        $kind,
+                        $refKind,
                         false,
                         $isROtherDatasource
                     );
@@ -576,13 +576,13 @@ class View
 
 
     public function makeWriterDefs(array &$roles){
-        $this->writerDefs=[];
-        return $this->makeWriterDefsRecursive($this->viewCfg, $this->writerDefs, $roles,'');
+        $this->writerDefs=['@writePlan'=>[],'@aliasStructure'=>[]];
+        return $this->makeWriterDefsRecursive($this->viewCfg, $this->writerDefs['@writePlan'], $this->writerDefs['@aliasStructure'], $roles,'');
     }
 
-    private function makeWriterDefsRecursive(&$viewCfg, &$writeDefs, &$roles, $baseRule='', $datasourceName='', $schemaName='', $datasetName='', $path='')
+    private function makeWriterDefsRecursive(&$viewCfg, &$targetDatasets, &$targetAliases,  &$roles, $baseRule='', 
+            $datasourceName='', $schemaName='', $datasetName='', $path='')
     {
-        $parentDatasetname=$datasetName;
         if (isset($viewCfg['#dataset'])) {
             list($datasourceName, $schemaName, $datasetName, $isOtherDatasource)
                 =\doq\data\Scripter::getDatasetPathElements($viewCfg['#dataset'],$datasourceName, $schemaName, $datasetName);
@@ -600,36 +600,53 @@ class View
         if(isset($datasetCfg['@permissions'])){
             $datasetRule=self::concatPermissions($datasetRule, $datasetCfg['@permissions'], $roles);
         }
-
-        foreach ($datasetCfg['@fields'] as $datasetField=>&$datasetFieldDef) {
-            $isAutoValue=(isset($datasetFieldDef['#isAutoValue']))?intval($datasetFieldDef['#isAutoValue']):0;
-            $isRequired=(isset($datasetFieldDef['#isRequired']))?intval($datasetFieldDef['#isRequired']):0;
+        $keyField=$datasetCfg['#keyField'];
+        
+        foreach ($datasetCfg['@fields'] as $fieldOrigin=>&$fieldOriginDef) {
+            $isAutoValue=(isset($fieldOriginDef['#isAutoValue']))?intval($fieldOriginDef['#isAutoValue']):0;
+            $isRequired=(isset($fieldOriginDef['#isRequired']))?intval($fieldOriginDef['#isRequired']):0;
+            $isKeyField=($fieldOrigin==$keyField)?1:0;
             $fieldRule=$datasetRule;
-            if($isAutoValue || $isRequired ){
-                if(isset($datasetFieldDef['@permissions'])){
-                    $fieldRule=self::concatPermissions($fieldRule, $datasetFieldDef['@permissions'], $roles);
+            if($isAutoValue || $isRequired || $isKeyField){
+                if(isset($fieldOriginDef['@permissions'])){
+                    $fieldRule=self::concatPermissions($fieldRule, $fieldOriginDef['@permissions'], $roles);
                 }
 
                 $upField=['#permissionRule'=>$fieldRule];
-                if($isAutoValue) {
+                if($isAutoValue) { 
                     $upField['#isAutoValue']=$isAutoValue;
                 }
-                if (isset($datasetFieldDef['#kind'])) {
-                    $upField['#kind']=$datasetFieldDef['#kind'];
+                if (isset($fieldOriginDef['#refKind'])) {
+                    $upField['#refKind']=$fieldOriginDef['#refKind'];
                 }
-                $upFields[$datasetField]=$upField;
+                if($isKeyField) {
+                    $upField['#isKeyField']=1;
+                }
+                $upFields[$fieldOrigin]=$upField;
             }
         }
 
+        $putAfter=[];
         foreach ($viewCfg as $fieldAlias=>&$viewFieldDef) {
             $firstChar=$fieldAlias[0];
+            $ref=$refKind=null;
             if (($firstChar=='#')||($firstChar=='@')) {
                 continue;
             }
 
             $fieldOrigin=isset($viewFieldDef['#field'])?$viewFieldDef['#field']:$fieldAlias;
             if (isset($datasetCfg['@fields'][$fieldOrigin])) {
-                $datasetFieldDef=&$datasetCfg['@fields'][$fieldOrigin];
+                $fieldOriginDef=&$datasetCfg['@fields'][$fieldOrigin];
+            }
+            
+            if(isset($fieldOriginDef['#refKind']) && isset($viewFieldDef['@linked']) && isset($fieldOriginDef['#ref'])) {
+                $ref=$fieldOriginDef['#ref'];
+                $refKind=$fieldOriginDef['#refKind'];
+                $linked=&$viewFieldDef['@linked'];
+                if($refKind=='aggregation'){
+                    $putAfter[]=[$fieldAlias,&$linked,$ref,count($targetDatasets),$keyField];
+                    continue;
+                }
             }
             if(isset($upFields[$fieldOrigin])){
                 $upField=&$upFields[$fieldOrigin];
@@ -638,28 +655,43 @@ class View
                 $upFields[$fieldOrigin]=['#alias'=>$fieldAlias];
                 $upField=&$upFields[$fieldOrigin];
                 $fieldRule=$datasetRule;
-                if(isset($datasetFieldDef['@permissions'])){
-                    $fieldRule=self::concatPermissions($fieldRule, $datasetFieldDef['@permissions'], $roles);
+                if(isset($fieldOriginDef['@permissions'])){
+                    $fieldRule=self::concatPermissions($fieldRule, $fieldOriginDef['@permissions'], $roles);
                 }
                 $upField['#permissionRule']=$fieldRule;
             }
-            $upField['##aliasPath']=$datasetPath.$path.'/'.$fieldAlias;
-            if(isset($datasetFieldDef['#kind'])){
-                $kind=$upField['#kind']=$datasetFieldDef['#kind'];
-                $ref=$upField['#ref']=$datasetFieldDef['#ref'];
-                list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource)= \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
-                if($kind=='lookup'){
-                    if(isset($viewFieldDef['@linked'])){
-                        $linked=&$viewFieldDef['@linked'];
-                        self::makeWriterDefsRecursive($linked, $writeDefs, $roles, '', $RdatasourceName, $RschemaName, $RdatasetName, $path.'/'.$fieldAlias);
-                    }
-                }
-            }
+            // TODO: Remove it. Uses just for debugging purpose
+            $upField['##aliasPath']=$path.'/'.$fieldAlias;
             
+            $aliasDefs=['#writePlanPos'=>count($targetDatasets),'#field'=>$fieldOrigin];
+            $targetAliases[$fieldAlias]=&$aliasDefs;
+            if($refKind==='lookup') {
+                #$ref=$upField['#ref']=$fieldOriginDef['#ref'];
+                list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource) = \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
+                self::makeWriterDefsRecursive($linked, $targetDatasets, $aliasDefs, $roles, '', $RdatasourceName, $RschemaName, $RdatasetName, $path.'/'.$fieldAlias);
+            }
+            unset($aliasDefs);
         }
-        $writeDefs[]=['#datasetPath'=>$datasetPath, '@fields'=>&$upFields];
+        
+        $targetDatasets[]=['#datasetPath'=>$datasetPath, '##aliasPath'=>$path, '#keyField'=>$keyField,'@fields'=>&$upFields ];
         \doq\Logger::debug('doq.View',print_r($upFields,true));
         unset($upFields);
+
+        foreach($putAfter as $i=>&$item){
+            $fieldAlias=$item[0];
+            $viewFieldDef=&$item[1];
+            $ref=$item[2];
+            // $publisherPlanPos=$item[3];
+            // $publisherPlanKeyField=$item[4];
+            $fieldOrigin=isset($viewFieldDef['#field']) ? $viewFieldDef['#field'] : $fieldAlias;
+            $aliasDefs=['#writePlanPos'=>count($targetDatasets),'#field'=>$fieldOrigin];
+            $targetAliases[$fieldAlias]=&$aliasDefs;
+            list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource) = \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
+            self::makeWriterDefsRecursive($viewFieldDef, $targetDatasets, $aliasDefs, $roles, '', 
+                $RdatasourceName, $RschemaName, $RdatasetName, $path.'/'.$fieldAlias /*, $publisherPlanPos, $publisherPlanKeyField*/);
+            
+        }
+
         return true;
     }
     

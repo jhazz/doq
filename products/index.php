@@ -223,7 +223,7 @@ function showTopMenu(){
         .layer_form {padding:20px;}
     </style>
     <div class="menu-top">
-    <a href="?a=json">JSON reader</a> | <a href="?a=html">HTML render</a> | <a href="?a=json_demo1">request demo</a>
+    <a href="?a=json">JSON reader</a> | <a href="?a=html">HTML render</a> | <a href="?a=json_demo1">request demo</a> | <a href="test2_rparams.php">Short reading test</a> | <a href="test3_write.php">Write to datasource test</a>
     </div>
 <?php
 }

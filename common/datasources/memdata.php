@@ -5,7 +5,7 @@ return [
         'store'=>[
             '@datasets'=>[
                 'PRODUCT_TYPES'=>[
-                    '#kind'=>'list',
+                    '#refKind'=>'list',
                     '@fields'=>[
                         'PRODUCT_TYPE_ID'=>['#type'=>'int64','#isAutoValue'=>1],
                         'NAME'=>['#type'=>'string','#size'=>50]
@@ -28,7 +28,7 @@ return [
                         'VALUE_STRING'=>['#type'=>'string','#size'=>'250'],
                         'PRODUCT_ID'=>[
                             '#type'=>'int64',
-                            '#kind'=>'lookup',
+                            '#refKind'=>'lookup',
                             '#ref'=>'main:store/PRODUCTS'
                         ],
                     ],

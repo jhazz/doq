@@ -76,8 +76,8 @@ class Scripter extends \doq\data\Scripter
         foreach ($datasetDef['@fields'] as $i=>&$field) {
             $fieldOrigin=$field['#fieldOrigin'];
             $field['#scriptField']=$tableAlias.'.'.$fieldOrigin;
-            if (isset($field['#kind'])) {
-                if ($field['#kind']=='lookup') {
+            if (isset($field['#refKind'])) {
+                if ($field['#refKind']=='lookup') {
                     $ref=$field['#ref'];
                     list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource)
                         =\doq\data\Scripter::getDatasetPathElements($ref, $this->datasourceName, $schemaName, $datasetName);
