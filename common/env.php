@@ -28,8 +28,8 @@ return [
         '#targetType'=>'file',
         '#logMode'=>255,
         '#logCookiePath'=>'/',
-        '#clientTokenName'=>'DOQ_CLIENT_TOKEN',
-        '#pageloadTokenName'=>'DOQ_PAGELOAD_TOKEN',
+        '#clientTokenName'=>'DOQ_LOG_CLIENT',
+        '#pageloadTokenName'=>'DOQ_LOG_PAGELOAD',
         '#logsPath'=>'/tmp/doq'
     ],
     '@modules'=>[

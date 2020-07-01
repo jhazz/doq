@@ -1,8 +1,8 @@
 <?php
 require_once 'autorun.php';
 doq\Html::subTitle('Testing');
-?><style>body,html {padding:0; margin:0; width:100%; height:100%;}
-pre {font-family:'dejavu sans mono',consolas;font-size:8pt;height:100%; overflow:auto; width:100%; white-space:pre-wrap;}
+?><style>body,html {padding:0; margin:0; width:100%; height:100vh;}
+pre {font-family:'dejavu sans mono',consolas;font-size:8pt;height:90vh; overflow:auto; width:100%; white-space:pre-wrap;}
 </style><?php
 doq\Logger::placeConsole();
 doq\Html::body();
@@ -12,7 +12,7 @@ list($viewProducts,$err)=doq\data\View::create('products');
 $roles=['store.editors'];
 $viewProducts->prepareWriter($viewProducts->viewModifyTime,true, $roles);
 
-?><table border=1 width='100%' height='100%'><tr><td width="50%"><pre>
+?><table border=1 width='100%' ><tr><td width="50%"><pre>
 <?php
 
 $params=<<<END

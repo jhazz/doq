@@ -63,8 +63,8 @@ abstract class Logger
     const LE_DEBUG_QUERY=64;
     const LE_DEBUG_DATAQUERY=128;
     const LE_DEBUG_ALL=32767;
-    const DOQ_CLIENT_TOKEN_NAME='DOQ_CLIENT_TOKEN';
-    const DOQ_PAGELOAD_TOKEN_NAME='DOQ_PAGELOAD_TOKEN';
+    const DOQ_CLIENT_TOKEN_NAME='DOQ_LOG_CLIENT_TOKEN';
+    const DOQ_PAGELOAD_TOKEN_NAME='DOQ_LOG_PAGELOAD_TOKEN';
 
     const TIMEOUT_CLIENT=31536000; # one year
     
@@ -93,7 +93,22 @@ abstract class Logger
         self::LE_DEBUG_DATAQUERY=>'Dataquery'
     ];
 
-
+    public static function setcookieSameSite($name, $value, $expire=0, $path='/', $domain='', $secure=false, $httponly=true, $samesite="Strict")
+    {
+        if (PHP_VERSION_ID < 70300) {
+            setcookie($name, $value, $expire, "$path; samesite=$samesite", $domain, $secure, $httponly);
+        }
+        else {
+            setcookie($name, $value, [
+                'expires' => $expire,
+                'path' => $path,
+                'domain' => $domain,
+                'samesite' => $samesite,
+                'secure' => $secure,
+                'httponly' => $httponly,
+            ]);
+        }
+    }
     public static function init(&$env=null)
     {
         if($env==null){
@@ -131,7 +146,7 @@ abstract class Logger
         if (isset($env['#logCookiePath'])){
             $targetCookiePath=$env['#logCookiePath'];
         }
-        setcookie( $clientTokenName, $clientToken, time()+self::TIMEOUT_CLIENT, $targetCookiePath);
+        self::setcookieSameSite( $clientTokenName, $clientToken, time()+self::TIMEOUT_CLIENT, $targetCookiePath);
         self::$clientToken=$clientToken;
         
         $pageloadTokenName=$env['#pageloadTokenName'];
@@ -143,7 +158,8 @@ abstract class Logger
         } else {
             $pageloadToken=$_COOKIE[$pageloadTokenName];
         }
-        setcookie($pageloadTokenName, $pageloadToken,time()+10, $targetCookiePath);
+        self::setcookieSameSite($pageloadTokenName, $pageloadToken, time()+10, $targetCookiePath);
+        
         self::$pageloadToken=$pageloadToken;
 
         switch($targetType){

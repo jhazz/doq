@@ -37,13 +37,32 @@ class Html
     }
     
     
+    /**
+     * Add META parameter to HTML header.
+     * Be careful, not html-safe. Function use no character escaping transformations
+     * @param string $param parameter name
+     * @param string $value parameter value
+     */
     public static function setMeta($param,$value){
         if(!isset(self::$metaArray)){
             self::$metaArray=[];
         }
         self::$metaArray[$param]=$value;
     }
-
+    /**
+     * Add LINK tag to HTML header. 
+     * Be careful, not html-safe. Function use no character escaping transformations
+     * @param array $params key value pairs for LINK tag. 
+     */
+    public static function setLink($params){
+        $a=['<link'];
+        foreach($params as $k=>&$v){
+            $a[]=$k.'="'.$v.'"';
+        }
+        $a[]='/>';
+        self::addToHead(implode (' ',$a));
+    }
+    
     static function addToHead($s){
         if(!isset(self::$headStrings)){
             self::$headStrings=[];
@@ -94,7 +113,7 @@ class Html
                     $rootRelativeURL.='../';
                 }
             } else {
-                $err=\doq\tr('doq', 'Unknown cache provider "%s" . Check characters cases', $cacheType);
+                $err=\doq\tr('doq', 'Error deticting elements of the root path "%s"', $root);
                 trigger_error($err, E_USER_ERROR);
             }
             $GLOBALS['doq']['#rootRelativeURL']=$rootRelativeURL;
