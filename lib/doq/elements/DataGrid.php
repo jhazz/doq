@@ -6,7 +6,7 @@ class DataGrid
 {
     public static function begin($context, &$template, &$block, &$render)
     {
-        $render->out[]='[It is a begin of DataGrid "'.$block['params']['id'].'" ]';
+        //$render->out[]='[It is a begin of DataGrid "'.$block['params']['id'].'" ]';
         $cnt=count($block['@']);
         $properties=[];
         $columns=[];
@@ -48,39 +48,43 @@ class DataGrid
 
         $columnCount=count($columns);
         if ($scope->seek(Scope::TO_START)) {
-            $render->out[]='Dataset is empty';
+            $render->out[]='(empty)';
             $context->close();
             return true;
         }
 
-        list($cssTable,$cssCell)=$render->addRenderStyles(
+        list($cssTable,$cssCell,$cssThead)=$render->addRenderStyles(
             [   'cssTable'=>'datagrid-tab',
-                'cssCell'=>'datagrid-cell'
+                'cssCell'=>'datagrid-cell',
+                'cssTableHead'=>'datagrid-thead'
             ],
             $block['params'],
             ['datagrid-tab'=>['border-collapse'=>'collapse'],
             'datagrid-cell'=>[
-                'border'=>'1px  solid black',
-                'padding'=>'3px',
-                'font-family'=>'arial,sans',
-                'font-size'=>'9px'
-                ]
+                'border'=>'1px solid #008800',
+                'font-family'=>'arial,sans','font-size'=>'13x', 'padding'=>'3px'
+                ],
+            'datagrid-thead'=>[
+                'border'=>'1px solid #008800','background'=>'#a0f0a0', 
+                'font-family'=>'arial,sans','font-size'=>'10px', 'padding'=>'3px',]
             ]);
             
         
         $render->out[]='<table class="'.$cssTable.'"><tr>';
         for ($i=0;$i<$columnCount;$i++) {
-            $render->out[]='<td bgcolor="#a0f0a0">'.$columns[$i]['path'].'</td>';
+            $c=(isset($columns[$i]['width']))?' width="'.$columns[$i]['width'].'" ' : '';
+            $render->out[]='<th class="'.$cssThead.'"'.$c.'>'.$columns[$i]['path'].'</th>';
         }
         $render->out[]='</tr>';
 
         $i=0;
         $basePath=$scope->path;
         while (true) {
-            $render->out[]='<tr>';
+            $render->out[]='<tr valign="top">';
             for ($j=0;$j<$columnCount;$j++) {
                 $cellPath=$columns[$j]['path'];
-                $render->out[]='<td class="'.$cssCell.'">';
+                $c=(isset($columns[$j]['width']))?' width="'.$columns[$j]['width'].'" ' : '';
+                $render->out[]='<td class="'.$cssCell.'"'.$c.'>';
                 $rowScope=$context->top;
                 $key=$rowScope->curTupleKey;
                 $rowScope->path=$basePath.'['.$key.']';
@@ -91,7 +95,7 @@ class DataGrid
                     } elseif (isset($cellBlocks['*'])) {
                         $render->fromTemplate($context, $template, $cellBlocks['*']);
                     } else {
-                        $render->out[]=$cellScope->asString().'<br/><span style="font-size:10px;">'.$cellScope->path.'</span>';
+                        $render->out[]=$cellScope->asString().'<br/><span style="font-size:8px; ">'.$cellScope->path.'</span>';
                     }
                     $render->out[]='</td>';
                     $rowScope=$context->close();

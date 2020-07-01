@@ -33,7 +33,6 @@ return [ // Datasource "main"
                         'TITLE'=>           ['#type'=>'string','#size'=>'180']
                     ],
                     '#keyField'=>'PRODUCT_GROUP_ID',
-                    '#nesting'=>['#rootId'=>0,'#parentIdField'=>'PARENT_ID']
                 ],
             ]
         ]

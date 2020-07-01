@@ -5,7 +5,6 @@ return [
         'store'=>[
             '@datasets'=>[
                 'PRODUCT_TYPES'=>[
-                    '#refKind'=>'list',
                     '@fields'=>[
                         'PRODUCT_TYPE_ID'=>['#type'=>'int64','#isAutoValue'=>1],
                         'NAME'=>['#type'=>'string','#size'=>50]
@@ -14,7 +13,7 @@ return [
                 ],
                 'PARAMETERS'=>[
                     '@fields'=>[
-                        'PARAMETER_ID'=>['#type'=>'int64'],
+                        'PARAMETER_ID'=>['#type'=>'int64','#isAutoValue'=>1],
                         'PARAMETER_GROUP_ID'=>['#type'=>'int64'],
                         'NAME'=>['#type'=>'string','#size'=>'100'],
                         'UNITS'>['#type'=>'string','#size'=>'50']
@@ -23,14 +22,10 @@ return [
                 ],
                 'PRODUCT_PARAMETERS'=>[
                     '@fields'=>[
-                        'PRODUCT_PARAMETER_ID'=>['#type'=>'int64'],
-                        'PARAMETER_ID'=>['#type'=>'int64'],
-                        'VALUE_STRING'=>['#type'=>'string','#size'=>'250'],
-                        'PRODUCT_ID'=>[
-                            '#type'=>'int64',
-                            '#refKind'=>'lookup',
-                            '#ref'=>'main:store/PRODUCTS'
-                        ],
+                        'PRODUCT_PARAMETER_ID'=>['#type'=>'int64','#isAutoValue'=>1],
+                        'PARAMETER_ID'=>['#type'=>'int64','#refKind'=>'lookup','#ref'=>'memdata:store/PARAMETERS'],
+                        'PRODUCT_ID'=>['#type'=>'int64','#refKind'=>'lookup','#ref'=>'main:store/PRODUCTS'],
+                        'VALUE_STRING'=>['#type'=>'string','#size'=>'250']
                     ],
                     '#keyField'=>'PRODUCT_PARAMETER_ID'
                 ]

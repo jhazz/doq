@@ -56,7 +56,7 @@ function htmlRenderer()
     }
     doq\Template::setDefaultTemplatesPath($GLOBALS['doq']['env']['#templatesPath']);
     list($template, $err)=\doq\Template::create();
-    $template->load('page1');
+    $template->load('page3');
     
     doq\data\Connections::init($GLOBALS['doq']['env']['@dataConnections']);
     list($viewProducts,$err)=doq\data\View::create('products');

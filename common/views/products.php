@@ -11,8 +11,14 @@ return [ // View "products"
     'PARAMETERS'=>[
       '#label'=>'Product parameters',
       '@linked'=>[
-        'PRODUCT_PARAMETER_ID'=>['#label'=>'ProdParameterID'],
+        //'PRODUCT_PARAMETER_ID'=>['#label'=>'ProdParameterID'],
         'PRODUCT_ID'=>['#label'=>'The owner PRODUCT'],
+        'PARAMETER'=>[
+          '#field'=>'PARAMETER_ID',
+          '@linked'=>[
+            'THE_PARAMETER_NAME'=>['#field'=>'NAME','#label'=>'Parameter name']
+          ]
+        ],
         'PARAMETER_VALUE'=>['#field'=>'VALUE_STRING','#label'=>'Parameter value']
       ],
     ],
@@ -44,18 +50,6 @@ return [ // View "products"
         'PRODUCT_TYPE_ID'=>['#field'=>'PRODUCT_TYPE_ID','#label'=>'Prod Type ID'],
         'TYPE_NAME'=>['#field'=>'NAME','#label'=>'Type of of product']
       ]
-    ],
-
-    '@orderBy'=>[
-        'SKU'
-    ],
-
-    '@search'=>[
-      'default'=>[
-        '@params'=>[
-          'bySKU'=>['#field'=>'SKU','#type'=>'filterByString','#filterMode'=>'like','#askLabel'=>'Укажите артикул или его часть'],
-          'byProductGroup'=>['#field'=>'PRODUCT_GROUP_ID','#type'=>'filterByOneOfComboBox','#askLabel'=>'Укажите группу товаров']
-        ]
-      ]
     ]
+
 ];

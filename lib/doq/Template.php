@@ -85,7 +85,8 @@ class Template
                 trigger_error(\doq\tr('doq', 'Template file "%s" is nod readable', $this->srcTemplateFilename), E_USER_ERROR);
                 return false;
             }
-            $this->templateSplitted=preg_split('/\{\%(.*?)\%\}/', $this->templateText, -1, PREG_SPLIT_DELIM_CAPTURE);
+            //$this->templateSplitted=preg_split('/\{\%(.*?)\%\}/', $this->templateText, -1, PREG_SPLIT_DELIM_CAPTURE);
+            $this->templateSplitted=preg_split('/\{\{(.*?)\}\}/', $this->templateText, -1, PREG_SPLIT_DELIM_CAPTURE);
             $this->rootBlock=array('tag'=>'root');
         }
 
