@@ -577,10 +577,29 @@ class View
 
     public function makeWriterDefs(array &$roles){
         $this->writerDefs=['@writePlan'=>[],'@aliasStructure'=>[]];
-        return $this->makeWriterDefsRecursive($this->viewCfg, $this->writerDefs['@writePlan'], $this->writerDefs['@aliasStructure'], $roles,'');
+        $r=$this->makeWriterDefsRecursive($this->viewCfg, $this->writerDefs['@writePlan'], $this->writerDefs['@aliasStructure'], $roles,'');
+        if($r===false) return;
+        $this->changeWPlanPathToWOrder($this->writerDefs['@writePlan'], $this->writerDefs['@aliasStructure']);
     }
 
-    private function makeWriterDefsRecursive(&$viewCfg, &$targetDatasets, &$targetAliases,  &$roles, $baseRule='', 
+    private function changeWPlanPathToWOrder (&$writePlan, &$targetAliases){
+        if(isset($targetAliases['#writePlanPath'])){
+            $writePlanPath=&$targetAliases['#writePlanPath'];
+            foreach($writePlan as $i=>&$WPlanEntry){
+                if(isset($WPlanEntry['#path'])){
+                    if($WPlanEntry['#path']==$writePlanPath){
+                        $targetAliases['#writePlanIndex']=$i;
+                        break;
+                    }
+                }
+            }
+        }
+        foreach($targetAliases as $alias=>&$aliasDefs){
+            $this->changeWPlanPathToWOrder ($writePlan, $aliasDefs);
+        }
+    }
+    
+    private function makeWriterDefsRecursive(&$viewCfg, &$writePlan, &$targetAliases,  &$roles, $baseRule='', 
             $datasourceName='', $schemaName='', $datasetName='', $path='')
     {
         if (isset($viewCfg['#dataset'])) {
@@ -644,7 +663,7 @@ class View
                 $refKind=$fieldOriginDef['#refKind'];
                 $linked=&$viewFieldDef['@linked'];
                 if($refKind=='aggregation'){
-                    $putAfter[]=[$fieldAlias,&$linked,$ref,count($targetDatasets),$keyField];
+                    $putAfter[]=[$fieldAlias,&$linked,$ref,count($writePlan),$keyField];
                     continue;
                 }
             }
@@ -663,17 +682,27 @@ class View
             // TODO: Remove it. Uses just for debugging purpose
             $upField['##aliasPath']=$path.'/'.$fieldAlias;
             
-            $aliasDefs=['#writePlanPos'=>count($targetDatasets),'#field'=>$fieldOrigin];
+            
+            
+            
+            
+            
+            // PROBLEM! WRONG POS
+            if($fieldAlias=='PRODUCTGROUP') { // Must be 1!
+                $a=1;
+            }
+            $aliasDefs=['#field'=>$fieldOrigin];
             $targetAliases[$fieldAlias]=&$aliasDefs;
             if($refKind==='lookup') {
                 #$ref=$upField['#ref']=$fieldOriginDef['#ref'];
                 list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource) = \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
-                self::makeWriterDefsRecursive($linked, $targetDatasets, $aliasDefs, $roles, '', $RdatasourceName, $RschemaName, $RdatasetName, $path.'/'.$fieldAlias);
+                self::makeWriterDefsRecursive($linked, $writePlan, $aliasDefs, $roles, '', $RdatasourceName, $RschemaName, $RdatasetName, $path.'/'.$fieldAlias);
             }
+            $aliasDefs['#writePlanPath']=$path;
             unset($aliasDefs);
         }
         
-        $targetDatasets[]=['#datasetPath'=>$datasetPath, '##aliasPath'=>$path, '#keyField'=>$keyField,'@fields'=>&$upFields ];
+        $writePlan[]=['#datasetPath'=>$datasetPath, '#path'=>$path, '#keyField'=>$keyField,'@fields'=>&$upFields ];
         \doq\Logger::debug('doq.View',print_r($upFields,true));
         unset($upFields);
 
@@ -684,10 +713,10 @@ class View
             // $publisherPlanPos=$item[3];
             // $publisherPlanKeyField=$item[4];
             $fieldOrigin=isset($viewFieldDef['#field']) ? $viewFieldDef['#field'] : $fieldAlias;
-            $aliasDefs=['#writePlanPos'=>count($targetDatasets),'#field'=>$fieldOrigin];
+            $aliasDefs=['#writePlanPos'=>count($writePlan),'#field'=>$fieldOrigin];
             $targetAliases[$fieldAlias]=&$aliasDefs;
             list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource) = \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
-            self::makeWriterDefsRecursive($viewFieldDef, $targetDatasets, $aliasDefs, $roles, '', 
+            self::makeWriterDefsRecursive($viewFieldDef, $writePlan, $aliasDefs, $roles, '', 
                 $RdatasourceName, $RschemaName, $RdatasetName, $path.'/'.$fieldAlias /*, $publisherPlanPos, $publisherPlanKeyField*/);
             
         }

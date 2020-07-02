@@ -12,7 +12,10 @@ list($viewProducts,$err)=doq\data\View::create('products');
 $roles=['store.editors'];
 $viewProducts->prepareWriter($viewProducts->viewModifyTime,true, $roles);
 
-?><table border=1 width='100%' ><tr><td width="50%"><pre>
+?><table border=1 width='100%' ><tr><td width="50%">
+
+<a href="#queryDefs">queryDefs</a> | <a href="#dataToArray">dataToArray</a>
+<pre>
 <?php
 
 $params=<<<END
@@ -24,10 +27,10 @@ END;
 $phpParams=json_decode($params,true);
 list($datanode, $rowCount, $err)=$viewProducts->read($phpParams);
 
-print "<h1>Dump of Datanode->queryDefs</h1>";
+print '<a name="queryDefs"></a><h1>Dump of Datanode->queryDefs</h1>';
 print json_encode($viewProducts->queryDefs,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 
-print "<hr><h1>Datanode->toArray()</h1>";
+print '<hr><a name="dataToArray"></a><h1>Datanode->toArray()</h1>';
 print json_encode($datanode->toArray(),JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 
 print "<hr><h1>data\\Context walker over Datanode using next(), extractAllFields()</h1>";
@@ -41,9 +44,14 @@ do{
 
 ?>
 </pre></td>
-<td width="50%"><pre>
+<td width="50%">
+<a href="#writeDefs">WriteDefs</a> | <a href="#updates">Updates</a> | <a href="#wscripts">Write Scripts</a>
+<pre>
 
 <?php
+
+print '<a name="writeDefs"></a><h1>$viewProducts->writeDefs</h1>';
+print json_encode($viewProducts->writerDefs,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 
 $updates=[[
     '#targetNode'=>'VIEW1',
@@ -53,7 +61,12 @@ $updates=[[
             '@columns'=>['+','SKU','TITLE','PRODUCTGROUP', 'SECONDGROUP','THE_PRODUCT_TYPE'], 
             '@values'=>[
                 // добавляется два товара. Оба товара состоят в новой первичной группе, и в новой вторичной
-                ['!1', 'ОМ.АРМ-1', 'ОРБИТА.АРМ-1 Машиниста', [1,'%1'],  [1,'%1'],  [0, 1]],
+                // [0] - null
+                // [1,X] - new index X
+                // [2,Y] - existing index Y
+                // [3,'Z'] - encoded existing index Z
+                
+                ['!1', 'ОМ.АРМ-1', 'ОРБИТА.АРМ-1 Машиниста', [1,'%1'],  [1,'%1'],  [2, 1]],
                 ['!2', 'ОМ.УЗЧ-100', 'ОРБИТА.УЗЧ Усилитель', [1,'%2'],  [1,'%2'],  [1, '*1']]
             ]
         ],[
@@ -75,10 +88,10 @@ $updates=[[
             '@values'=>['*1','Запасные части']
         ],[
             '#target'=>'PARAMETERS',
-            '@columns'=>['+','../PRODUCT_ID','PARAMETER_ID','PARAMETER_VALUE'],
+            '@columns'=>['+','PRODUCT_ID','PARAMETER_ID','PARAMETER_VALUE'],
             '@values'=>[
-                ['@1',[1,'!1'], [0 ,1],'88 камер'],
-                ['@2',[1,'!1'], [0 ,6],'макс.ширина 3']
+                ['@1',[1,'!1'], [2 ,1],'88 камер'],
+                ['@2',[1,'!1'], [2 ,6],'макс.ширина 3']
             ]
         ]
     ],
@@ -110,6 +123,11 @@ $updates=[[
     ]
 ]];
 
-print json_encode($viewProducts->writerDefs,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+print '<hr><a name="updates"></a><h1>Dump of $updates packet to execute</h1>';
+print json_encode($updates,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+
+print '<hr><a name="wscripts"></a><h1>Executing</h1>';
+
+
 ?>
 </pre></td></tr></table>
