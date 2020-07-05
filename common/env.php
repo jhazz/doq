@@ -2,6 +2,9 @@
 if(!isset($ROOT_PATH)){
     $ROOT_PATH=dirname(__FILE__, 2);
 }
+if(!isset($TMP_PATH)){
+    $TMP_PATH='/tmp';
+}
 
 return [
     '#rootPath'=>$ROOT_PATH,
@@ -30,7 +33,7 @@ return [
         '#logCookiePath'=>'/',
         '#clientTokenName'=>'DOQ_LOG_CLIENT',
         '#pageloadTokenName'=>'DOQ_LOG_PAGELOAD',
-        '#logsPath'=>'/tmp/doq'
+        '#logsPath'=>"{$TMP_PATH}/doq/logs"
     ],
     '@modules'=>[
         'auth'    =>['actions'=>['default'=>'auth_status.php']],
@@ -39,7 +42,8 @@ return [
     '@cache'=>[
         '@providers'=>[
              'SerialFileCache'=>[
-                '#cachePath'=>$ROOT_PATH.'/runtime/caches',
+                #'#cachePath'=>$ROOT_PATH.'/runtime/caches',
+                '#cachePath'=>"{$TMP_PATH}/doq/caches",
             ]
         ],
         '@targets'=>[

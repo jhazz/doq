@@ -79,6 +79,9 @@ class Html
     }
     
     private static function htmlHead(){
+        if(!isset(self::$isInited)){
+            self::init();
+        }
         self::$isHtmlHeadInited=true;
         print '<!DOCTYPE HTML><html>';
     }
@@ -89,10 +92,10 @@ class Html
         }
         if(!isset(self::$isHeadInited)){
             print "\n<head>\n";
-            print "<!-- \n script fname: {$_SERVER['SCRIPT_FILENAME']} \n env rootPath: {$GLOBALS['doq']['env']['#rootPath']} \n php self: {$_SERVER['PHP_SELF']}-->\n";
+            print "<!-- \n  script_filename: {$_SERVER['SCRIPT_FILENAME']} \n \$env [#rootPath]: {$GLOBALS['doq']['env']['#rootPath']} \n server[php_self]: {$_SERVER['PHP_SELF']}-->\n\n";
             
             $c=(strpos("\\", $_SERVER['SCRIPT_FILENAME']) !== false)?"\\":"/";
-            \doq\Logger::debug('Html','Script filename='.$_SERVER['SCRIPT_FILENAME']);
+            \doq\Logger::debug('Html','script_filename='.$_SERVER['SCRIPT_FILENAME']);
             $parts1=explode($c,$_SERVER['SCRIPT_FILENAME']);
             $cnt1=count($parts1);
 
@@ -120,10 +123,11 @@ class Html
             ?>
     <script src="<?=$rootRelativeURL?>www/doq/doq.js"></script>
     <script>
-    doq.cfg.jsModulesRoot="<?=$GLOBALS['doq']['#rootRelativeURL']?>www"
-    doq.cfg.APIRoot="<?=$GLOBALS['doq']['#rootRelativeURL']?>api"
-    doq.cfg.CSRF="<?=\doq\Logger::getCSRF()?>"
-    </script><?php
+        doq.cfg.jsModulesRoot="<?=$GLOBALS['doq']['#rootRelativeURL']?>www"
+        doq.cfg.APIRoot="<?=$GLOBALS['doq']['#rootRelativeURL']?>api"
+        doq.cfg.CSRF="<?=\doq\Logger::getCSRF()?>"
+    </script>
+<?php
             self::$isHeadInited=true;
         }
     }

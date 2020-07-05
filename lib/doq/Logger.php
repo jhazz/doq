@@ -444,14 +444,15 @@ abstract class Logger
     
     public static function placeConsole()
     {    
-        \doq\Html::head();
-        ?>
+        \doq\Html::head();?>
+    <!-- \doq\Logger::placeConsole() -->
     <script>
-    doq.cfg.clientToken="<?=\doq\Logger::getClientToken()?>"
-    doq.cfg.pageloadToken="<?=\doq\Logger::getPageloadToken()?>"
-    doq.cfg.pageToken="<?=\doq\Logger::getPageToken()?>"
-    doq.require('doq.console')
-    </script><?php
+        doq.cfg.clientToken="<?=\doq\Logger::getClientToken()?>"
+        doq.cfg.pageloadToken="<?=\doq\Logger::getPageloadToken()?>"
+        doq.cfg.pageToken="<?=\doq\Logger::getPageToken()?>"
+        doq.require('doq.console')
+    </script>
+<?php
     }
 }
 

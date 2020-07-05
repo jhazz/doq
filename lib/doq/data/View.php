@@ -22,6 +22,7 @@ class View
     /** @var  \doq\Cache used cache provider*/
     public $queryCache;
     public $writerCache;
+    public $writePlanData;
 
     private $isPreparedQuery;
     private $isPreparedWriter;
@@ -533,7 +534,7 @@ class View
         return true;
     }
 
-        public function prepareWriter(int $viewModifyTime, bool $forceRebuild=false, array &$roles=null)
+    public function prepareWriter(int $viewModifyTime, bool $forceRebuild=false, array &$roles=null)
     {
         if($roles===null) $roles=[];
         else sort($roles, SORT_STRING);
@@ -574,155 +575,6 @@ class View
         $this->isPreparedWriter=true;
     }
 
-
-    public function makeWriterDefs(array &$roles){
-        $this->writerDefs=['@writePlan'=>[],'@aliasStructure'=>[]];
-        $r=$this->makeWriterDefsRecursive($this->viewCfg, $this->writerDefs['@writePlan'], $this->writerDefs['@aliasStructure'], $roles,'');
-        if($r===false) return;
-        $this->changeWPlanPathToWOrder($this->writerDefs['@writePlan'], $this->writerDefs['@aliasStructure']);
-    }
-
-    private function changeWPlanPathToWOrder (&$writePlan, &$targetAliases){
-        if(isset($targetAliases['#writePlanPath'])){
-            $writePlanPath=&$targetAliases['#writePlanPath'];
-            foreach($writePlan as $i=>&$WPlanEntry){
-                if(isset($WPlanEntry['#path'])){
-                    if($WPlanEntry['#path']==$writePlanPath){
-                        $targetAliases['#writePlanIndex']=$i;
-                        break;
-                    }
-                }
-            }
-        }
-        foreach($targetAliases as $alias=>&$aliasDefs){
-            $this->changeWPlanPathToWOrder ($writePlan, $aliasDefs);
-        }
-    }
-    
-    private function makeWriterDefsRecursive(&$viewCfg, &$writePlan, &$targetAliases,  &$roles, $baseRule='', 
-            $datasourceName='', $schemaName='', $datasetName='', $path='')
-    {
-        if (isset($viewCfg['#dataset'])) {
-            list($datasourceName, $schemaName, $datasetName, $isOtherDatasource)
-                =\doq\data\Scripter::getDatasetPathElements($viewCfg['#dataset'],$datasourceName, $schemaName, $datasetName);
-        }
-        $datasetPath=$datasourceName.':'.$schemaName.'/'.$datasetName;
-        list($datasourceCfg, $datasetCfg, $mtime, $err)=\doq\data\Datasources::getDatasetCfg($datasourceName,$schemaName,$datasetName);
-        if ($err!==null) {
-            trigger_error($err, E_USER_ERROR);
-            return false;
-        }
-        $dataConnectionName=$datasourceCfg['@config']['#dataConnection'];
-
-        $datasetRule=$baseRule;
-        $upFields=[];
-        if(isset($datasetCfg['@permissions'])){
-            $datasetRule=self::concatPermissions($datasetRule, $datasetCfg['@permissions'], $roles);
-        }
-        $keyField=$datasetCfg['#keyField'];
-        
-        foreach ($datasetCfg['@fields'] as $fieldOrigin=>&$fieldOriginDef) {
-            $isAutoValue=(isset($fieldOriginDef['#isAutoValue']))?intval($fieldOriginDef['#isAutoValue']):0;
-            $isRequired=(isset($fieldOriginDef['#isRequired']))?intval($fieldOriginDef['#isRequired']):0;
-            $isKeyField=($fieldOrigin==$keyField)?1:0;
-            $fieldRule=$datasetRule;
-            if($isAutoValue || $isRequired || $isKeyField){
-                if(isset($fieldOriginDef['@permissions'])){
-                    $fieldRule=self::concatPermissions($fieldRule, $fieldOriginDef['@permissions'], $roles);
-                }
-
-                $upField=['#permissionRule'=>$fieldRule];
-                if($isAutoValue) { 
-                    $upField['#isAutoValue']=$isAutoValue;
-                }
-                if (isset($fieldOriginDef['#refKind'])) {
-                    $upField['#refKind']=$fieldOriginDef['#refKind'];
-                }
-                if($isKeyField) {
-                    $upField['#isKeyField']=1;
-                }
-                $upFields[$fieldOrigin]=$upField;
-            }
-        }
-
-        $putAfter=[];
-        foreach ($viewCfg as $fieldAlias=>&$viewFieldDef) {
-            $firstChar=$fieldAlias[0];
-            $ref=$refKind=null;
-            if (($firstChar=='#')||($firstChar=='@')) {
-                continue;
-            }
-
-            $fieldOrigin=isset($viewFieldDef['#field'])?$viewFieldDef['#field']:$fieldAlias;
-            if (isset($datasetCfg['@fields'][$fieldOrigin])) {
-                $fieldOriginDef=&$datasetCfg['@fields'][$fieldOrigin];
-            }
-            
-            if(isset($fieldOriginDef['#refKind']) && isset($viewFieldDef['@linked']) && isset($fieldOriginDef['#ref'])) {
-                $ref=$fieldOriginDef['#ref'];
-                $refKind=$fieldOriginDef['#refKind'];
-                $linked=&$viewFieldDef['@linked'];
-                if($refKind=='aggregation'){
-                    $putAfter[]=[$fieldAlias,&$linked,$ref,count($writePlan),$keyField];
-                    continue;
-                }
-            }
-            if(isset($upFields[$fieldOrigin])){
-                $upField=&$upFields[$fieldOrigin];
-                $upField['#alias']=$fieldAlias;
-            } else {
-                $upFields[$fieldOrigin]=['#alias'=>$fieldAlias];
-                $upField=&$upFields[$fieldOrigin];
-                $fieldRule=$datasetRule;
-                if(isset($fieldOriginDef['@permissions'])){
-                    $fieldRule=self::concatPermissions($fieldRule, $fieldOriginDef['@permissions'], $roles);
-                }
-                $upField['#permissionRule']=$fieldRule;
-            }
-            // TODO: Remove it. Uses just for debugging purpose
-            $upField['##aliasPath']=$path.'/'.$fieldAlias;
-            
-            
-            
-            
-            
-            
-            // PROBLEM! WRONG POS
-            if($fieldAlias=='PRODUCTGROUP') { // Must be 1!
-                $a=1;
-            }
-            $aliasDefs=['#field'=>$fieldOrigin];
-            $targetAliases[$fieldAlias]=&$aliasDefs;
-            if($refKind==='lookup') {
-                #$ref=$upField['#ref']=$fieldOriginDef['#ref'];
-                list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource) = \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
-                self::makeWriterDefsRecursive($linked, $writePlan, $aliasDefs, $roles, '', $RdatasourceName, $RschemaName, $RdatasetName, $path.'/'.$fieldAlias);
-            }
-            $aliasDefs['#writePlanPath']=$path;
-            unset($aliasDefs);
-        }
-        
-        $writePlan[]=['#datasetPath'=>$datasetPath, '#path'=>$path, '#keyField'=>$keyField,'@fields'=>&$upFields ];
-        \doq\Logger::debug('doq.View',print_r($upFields,true));
-        unset($upFields);
-
-        foreach($putAfter as $i=>&$item){
-            $fieldAlias=$item[0];
-            $viewFieldDef=&$item[1];
-            $ref=$item[2];
-            // $publisherPlanPos=$item[3];
-            // $publisherPlanKeyField=$item[4];
-            $fieldOrigin=isset($viewFieldDef['#field']) ? $viewFieldDef['#field'] : $fieldAlias;
-            $aliasDefs=['#writePlanPos'=>count($writePlan),'#field'=>$fieldOrigin];
-            $targetAliases[$fieldAlias]=&$aliasDefs;
-            list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource) = \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
-            self::makeWriterDefsRecursive($viewFieldDef, $writePlan, $aliasDefs, $roles, '', 
-                $RdatasourceName, $RschemaName, $RdatasetName, $path.'/'.$fieldAlias /*, $publisherPlanPos, $publisherPlanKeyField*/);
-            
-        }
-
-        return true;
-    }
     
     
     private function concatPermissionRule(string $currentRule, string $overrideRule){
@@ -761,5 +613,231 @@ class View
         }
         return $rule;
     }
+    
 
+    /**
+     * Create plan to writing data to the datasource. Must be called after prepareWriter($roles)
+     * @param array $deltas - the set of inserts, updates and deletes
+     * @return  [&$writePlanData, $err]
+     */
+    public function getWritePlanData(array &$deltas){
+        $writePlan=&$this->writerDefs['@writePlan'];
+        $writePlanData=array_fill(0,count($writePlan)-1,null);
+        
+        $inserts=&$deltas['@insert'];
+        foreach($inserts as $i=>&$insertElement){
+            $aliasPath=$insertElement['#path'];
+            $aliasFields=&$insertElement['@columns'];
+            $valueTuples=&$insertElement['@values'];
+            $aliasPathElements=explode('/', $aliasPath);
+            $aliasStructure=&$this->writerDefs['@aliasStructure'];
+            foreach($aliasPathElements as $pathElement) {
+                if($pathElement!==''){
+                    if(!isset($aliasStructure[$pathElement])){
+                        $err=\doq\tr('doq','Path "%s" is unavailable in the view alias names',$aliasPath);
+                        trigger_error($err, E_USER_ERROR);
+                        return [null, $err];
+                    }
+                    $aliasStructure=&$aliasStructure[$pathElement];
+                }
+            }
+            if(!isset($aliasStructure['#writePlanIndex'])){
+                $err=\doq\tr('doq','Alias structure path "%s" has no #writePlanIndex refering to writePlan ',$aliasPath);
+                trigger_error($err, E_USER_ERROR);
+                return [null, $err];
+            }
+            $writePlanIndex=$aliasStructure['#writePlanIndex'];
+            
+            $writePlanElement=&$writePlan[$writePlanIndex];
+            $writePlanData[$writePlanIndex]=['#datasetPath'=> $writePlanElement['#datasetPath'], '@newKeys'=>[],'@fields'=>[],'@values'=>[]];
+            $writePlanEntry=&$writePlanData[$writePlanIndex];
+            $writePlanValues=&$writePlanEntry['@values'];
+            $writePlanFields=&$writePlanEntry['@fields'];
+            $writePlanKeys  =&$writePlanEntry['@newKeys'];
+
+            foreach($aliasFields as $aliasFieldName){
+                if($aliasFieldName!='+'){
+                    if(!isset($aliasStructure[$aliasFieldName])){
+                        $fieldName='('.$aliasFieldName.' not found)';
+                        $err=\doq\tr('doq','@insert uses undefined field alias "%s" in the section "%s"',$aliasFieldName, $aliasPath);
+                        trigger_error($err, E_USER_ERROR);
+                    } else {
+                        $fieldName=$aliasStructure[$aliasFieldName]['#field'];
+                    }
+                    $writePlanFields[]=$fieldName;
+                }
+            }
+            
+            foreach($valueTuples as $rowNo=>&$valueTuple) {
+                $writePlanDataRow=[];
+                if(!is_array($valueTuple)){
+                    $err=\doq\tr('doq','@values array in the @insert section of "%s" must be an array of rows. Not only a array of values!',$aliasPath);
+                    trigger_error($err, E_USER_ERROR);
+                    return [null, $err];
+                }
+                foreach($valueTuple as $tupleColumnNo=>&$value) {
+                    $aliasFieldName=$aliasFields[$tupleColumnNo];
+                    if($aliasFieldName=='+'){
+                        $writePlanKeys[$value]=null;
+                        continue;
+                    }
+                    $writePlanDataRow[]=[$value];
+                }
+                $writePlanValues[]=&$writePlanDataRow;
+                unset($writePlanDataRow);
+            }
+        }
+        
+        return [&$writePlanData, null];
+    }
+
+    public function makeWriterDefs(array &$roles){
+        $this->writerDefs=['@writePlan'=>[],'@aliasStructure'=>[]];
+        $r=$this->makeWriterDefsRecursive($this->viewCfg, $this->writerDefs['@writePlan'], $this->writerDefs['@aliasStructure'], $roles,'');
+        if($r===false) return;
+        $this->convertWPlanPathToWOrder($this->writerDefs['@writePlan'], $this->writerDefs['@aliasStructure']);
+    }
+
+    private function convertWPlanPathToWOrder (&$writePlan, &$targetAliases){
+        if(isset($targetAliases['#writePlanPath'])){
+            $writePlanPath=&$targetAliases['#writePlanPath'];
+            foreach($writePlan as $i=>&$WPlanEntry){
+                if(isset($WPlanEntry['#path'])){
+                    if($WPlanEntry['#path']==$writePlanPath){
+                        $targetAliases['#writePlanIndex']=$i;
+                        break;
+                    }
+                }
+            }
+        }
+        foreach($targetAliases as $alias=>&$aliasDefs){
+            if($alias[0]!='#'){
+                $this->convertWPlanPathToWOrder ($writePlan, $aliasDefs);
+            }
+        }
+    }
+
+
+    private function makeWriterDefsRecursive(&$viewCfg, &$writePlan, &$targetAliases,  &$roles, $baseRule='', 
+            $datasourceName='', $schemaName='', $datasetName='', $path='')
+    {
+        if (isset($viewCfg['#dataset'])) {
+            list($datasourceName, $schemaName, $datasetName, $isOtherDatasource)
+                =\doq\data\Scripter::getDatasetPathElements($viewCfg['#dataset'],$datasourceName, $schemaName, $datasetName);
+        }
+        $datasetPath=$datasourceName.':'.$schemaName.'/'.$datasetName;
+        list($datasourceCfg, $datasetCfg, $mtime, $err)=\doq\data\Datasources::getDatasetCfg($datasourceName,$schemaName,$datasetName);
+        if ($err!==null) {
+            trigger_error($err, E_USER_ERROR);
+            return false;
+        }
+        $dataConnectionName=$datasourceCfg['@config']['#dataConnection'];
+
+        $datasetRule=$baseRule;
+        $targetAliases['#writePlanPath']=$path;
+        $targetAliases['#writePlanIndex']=-1;
+        $upFields=[];
+        if(isset($datasetCfg['@permissions'])){
+            $datasetRule=self::concatPermissions($datasetRule, $datasetCfg['@permissions'], $roles);
+        }
+        $keyField=$datasetCfg['#keyField'];
+        
+        foreach ($datasetCfg['@fields'] as $fieldOrigin=>&$fieldOriginDef) {
+            $isAutoValue=(isset($fieldOriginDef['#isAutoValue']))?intval($fieldOriginDef['#isAutoValue']):0;
+            $isRequired=(isset($fieldOriginDef['#isRequired']))?intval($fieldOriginDef['#isRequired']):0;
+            $isKeyField=($fieldOrigin==$keyField)?1:0;
+            $fieldRule=$datasetRule;
+            if($isAutoValue || $isRequired || $isKeyField){
+                if(isset($fieldOriginDef['@permissions'])){
+                    $fieldRule=self::concatPermissions($fieldRule, $fieldOriginDef['@permissions'], $roles);
+                }
+
+                $upField=['#permissionRule'=>$fieldRule];
+                if($isAutoValue) { 
+                    $upField['#isAutoValue']=$isAutoValue;
+                }
+                if (isset($fieldOriginDef['#refKind'])) {
+                    $upField['#refKind']=$fieldOriginDef['#refKind'];
+                }
+                if($isKeyField) {
+                    $upField['#isKeyField']=1;
+                }
+                $upFields[$fieldOrigin]=$upField;
+            }
+        }
+        
+        $putAfter=[];
+        foreach ($viewCfg as $fieldAlias=>&$viewFieldDef) {
+            $firstChar=$fieldAlias[0];
+            $ref=$refKind=null;
+            if (($firstChar=='#')||($firstChar=='@')) {
+                continue;
+            }
+
+            $fieldOrigin=isset($viewFieldDef['#field'])?$viewFieldDef['#field']:$fieldAlias;
+            if (isset($datasetCfg['@fields'][$fieldOrigin])) {
+                $fieldOriginDef=&$datasetCfg['@fields'][$fieldOrigin];
+            }
+            
+            if(isset($fieldOriginDef['#refKind']) && isset($viewFieldDef['@linked']) && isset($fieldOriginDef['#ref'])) {
+                $ref=$fieldOriginDef['#ref'];
+                $refKind=$fieldOriginDef['#refKind'];
+                $linked=&$viewFieldDef['@linked'];
+                if($refKind=='aggregation'){
+                    $putAfter[]=[$fieldAlias,&$linked,$ref,$keyField];
+                    continue;
+                }
+            }
+            if(isset($upFields[$fieldOrigin])){
+                $upField=&$upFields[$fieldOrigin];
+                $upField['#alias']=$fieldAlias;
+            } else {
+                $upFields[$fieldOrigin]=['#alias'=>$fieldAlias];
+                $upField=&$upFields[$fieldOrigin];
+                $fieldRule=$datasetRule;
+                if(isset($fieldOriginDef['@permissions'])){
+                    $fieldRule=self::concatPermissions($fieldRule, $fieldOriginDef['@permissions'], $roles);
+                }
+                $upField['#permissionRule']=$fieldRule;
+            }
+            // TODO! Remove it. Uses just for debugging purpose
+            $upField['##aliasPath']=$path.'/'.$fieldAlias;
+            $aliasDefs=['#field'=>$fieldOrigin];
+            $targetAliases[$fieldAlias]=&$aliasDefs;
+            if($refKind==='lookup') {
+                list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource) = \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
+                self::makeWriterDefsRecursive($linked, $writePlan, $aliasDefs, $roles, '', $RdatasourceName, $RschemaName, $RdatasetName, $path.'/'.$fieldAlias);
+            }
+            unset($aliasDefs);
+        }
+        
+        $writePlan[]=['#datasetPath'=>$datasetPath, '#path'=>$path, '#keyField'=>$keyField,'@fields'=>&$upFields ];
+        unset($upFields);
+        
+
+        foreach($putAfter as $i=>&$item){
+            $fieldAlias=$item[0];
+            $viewFieldDef=&$item[1];
+            $ref=$item[2];
+            $fieldOrigin=isset($viewFieldDef['#field']) ? $viewFieldDef['#field'] : $fieldAlias;
+            $aliasDefs=['#writePlanPath'=> $path.'/'.$fieldAlias,'#writePlanIndex'=>-1, '#field'=>$fieldOrigin, '##aggregateRefField'=>$item[3]];
+            $targetAliases[$fieldAlias]=&$aliasDefs;
+            list($RdatasourceName, $RschemaName, $RdatasetName, $isROtherDatasource) = \doq\data\Scripter::getDatasetPathElements($ref, $datasourceName, $schemaName, $datasetName);
+            self::makeWriterDefsRecursive($viewFieldDef, $writePlan, $aliasDefs, $roles, '', 
+                $RdatasourceName, $RschemaName, $RdatasetName, $path.'/'.$fieldAlias /*, $publisherPlanPos, $publisherPlanKeyField*/);
+            
+        }
+
+        return true;
+    }
+    
 }
+/*
+ * 0: PRODUCT_GROUP/LINKED_PARENT_GROUP: PRODUCT_GROUPS
+ * 1: PRODUCT_GROUP: PRODUCT_GROUPS
+ * 2: SECONDGROUP: PRODUCT_GROUPS
+ * 3: TYPES
+ * 4: PRODUCTS
+ * 5: PARAMETERS/PARAMETER: PARAMETERS
+ * 6: PARAMETERS: PRODUCT_PARAMETERS
+*/

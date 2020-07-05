@@ -2,6 +2,8 @@
 $ROOT_PATH=dirname(__FILE__,2);
 $APP_NAME=extractAppName();
 $APP_PATH=$ROOT_PATH.'/'.$APP_NAME;
+$TMP_PATH=sys_get_temp_dir();
+
 $GLOBALS['doq']=['env'=>array_merge (require_once($ROOT_PATH.'/common/env.php'),require_once('env.php'))];
 
 require_once($GLOBALS['doq']['env']['#libPath'].'/classloader.php');

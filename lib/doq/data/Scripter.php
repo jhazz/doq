@@ -17,11 +17,11 @@ class Scripter
     {
         
         switch ($providerType) {
-        case 'mysql':
-            $r=new \doq\data\mysql\Scripter();
-            return [true,$r];
-        default:
-            throw new \Exception('Unknown Data provider type');
+            case 'mysql':
+                $r=new \doq\data\mysql\Scripter();
+                return [true,$r];
+            default:
+                throw new \Exception('Unknown Data provider type');
         }
     }
 

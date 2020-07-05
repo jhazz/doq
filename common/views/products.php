@@ -11,7 +11,7 @@ return [ // View "products"
     'PARAMETERS'=>[
       '#label'=>'Product parameters',
       '@linked'=>[
-        //'PRODUCT_PARAMETER_ID'=>['#label'=>'ProdParameterID'],
+        'PRODUCT_PARAMETER_ID'=>['#label'=>'ProdParameterID'],
         'PRODUCT_ID'=>['#label'=>'The owner PRODUCT'],
         'PARAMETER'=>[
           '#field'=>'PARAMETER_ID',

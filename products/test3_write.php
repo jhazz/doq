@@ -9,8 +9,6 @@ doq\Html::body();
 
 
 list($viewProducts,$err)=doq\data\View::create('products');
-$roles=['store.editors'];
-$viewProducts->prepareWriter($viewProducts->viewModifyTime,true, $roles);
 
 ?><table border=1 width='100%' ><tr><td width="50%">
 
@@ -43,21 +41,21 @@ do{
 
 
 ?>
-</pre></td>
-<td width="50%">
-<a href="#writeDefs">WriteDefs</a> | <a href="#updates">Updates</a> | <a href="#wscripts">Write Scripts</a>
+</pre></td><td width="50%">
+<a href="#writeDefs">WriteDefs</a> | <a href="#updates">Updates</a> | <a href="#getWritePlanData">writePlanData</a>
 <pre>
 
 <?php
-
 print '<a name="writeDefs"></a><h1>$viewProducts->writeDefs</h1>';
+$roles=['store.editors'];
+$viewProducts->prepareWriter($viewProducts->viewModifyTime,true, $roles);
 print json_encode($viewProducts->writerDefs,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 
-$updates=[[
-    '#targetNode'=>'VIEW1',
+$updates=[
+'VIEW1'=>[
     '@insert'=>[
         [
-            '#target'=>'',
+            '#path'=>'',
             '@columns'=>['+','SKU','TITLE','PRODUCTGROUP', 'SECONDGROUP','THE_PRODUCT_TYPE'], 
             '@values'=>[
                 // добавляется два товара. Оба товара состоят в новой первичной группе, и в новой вторичной
@@ -70,45 +68,54 @@ $updates=[[
                 ['!2', 'ОМ.УЗЧ-100', 'ОРБИТА.УЗЧ Усилитель', [1,'%2'],  [1,'%2'],  [1, '*1']]
             ]
         ],[
-            '#target'=>'PRODUCTGROUP',
+            '#path'=>'PRODUCTGROUP',
             '@columns'=>['+','THE_PRODUCT_GROUP_NAME'], 
             '@values'=>[
                 ['%1', 'Оборудование метро'],
                 ['%2', 'Усилители']
             ]
         ],[
-            '#target'=>'SECONDGROUP',
+            '#path'=>'SECONDGROUP',
             '@columns'=>['+','PRODUCT_SECOND_GROUP_NAME'], 
             '@values'=>[
                 ['%1', 'Госзаказ'],
             ]
         ],[
-            '#target'=>'THE_PRODUCT_TYPE',
+            '#path'=>'THE_PRODUCT_TYPE',
             '@columns'=>['+','TYPE_NAME'],
-            '@values'=>['*1','Запасные части']
+            '@values'=>[
+                ['*1','Запасные части']
+            ]
+            
         ],[
-            '#target'=>'PARAMETERS',
-            '@columns'=>['+','PRODUCT_ID','PARAMETER_ID','PARAMETER_VALUE'],
+            '#path'=>'PARAMETERS/PARAMETER',
+            '@columns'=>['+','THE_PARAMETER_NAME'],
+            '@values'=>[
+                ['^1','Диаметр'],
+            ]
+        ],[
+            '#path'=>'PARAMETERS',
+            '@columns'=>['+','PRODUCT_ID','PARAMETER','PARAMETER_VALUE'],
             '@values'=>[
                 ['@1',[1,'!1'], [2 ,1],'88 камер'],
-                ['@2',[1,'!1'], [2 ,6],'макс.ширина 3']
+                ['@2',[1,'!1'], [1 ,'^1'],'макс.ширина 3']
             ]
         ]
     ],
     '@update'=>[
         [   
-            //'#target'=>'',
+            //'#path'=>'',
             //'@shorts'=>['SKU'=>'a','TITLE'=>'b','PRODUCTGROUP'=>'c', 'SECONDGROUP'=>'d','THE_PRODUCT_TYPE'=>'e'], 
             '@set'=>[
                 ['=' => '3','SKU'=>'ОР-Д3-4.1-АА', 'PRODUCTGROUP'=>[1,'%1']]
             ]
         ],[
-            '#target'=>'PRODUCTGROUP',
+            '#path'=>'PRODUCTGROUP',
             '@set'=>[
                 ['=' => '103','THE_PRODUCT_GROUP_NAME'=>'Навигационное оснащение' ]
             ]
         ],[
-            '#target'=>'PRODUCTGROUP/LINKED_PARENT_GROUP',
+            '#path'=>'PRODUCTGROUP/LINKED_PARENT_GROUP',
             '@set'=>['=' => '4','THE_PARENT_GROUP_NAME'=>'Видеонаблюдение' ]
         ]
     ],
@@ -117,7 +124,7 @@ $updates=[[
             '-'=>['6','26']
         ],
         [
-            '#target'=>'PRODUCTGROUP',
+            '#path'=>'PRODUCTGROUP',
             '-'=>['101']
         ]
     ]
@@ -126,8 +133,9 @@ $updates=[[
 print '<hr><a name="updates"></a><h1>Dump of $updates packet to execute</h1>';
 print json_encode($updates,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 
-print '<hr><a name="wscripts"></a><h1>Executing</h1>';
-
+print '<hr><a name="getWritePlanData"></a><h1>viewProducts->getWritePlanData</h1>';
+$writePlanData=$viewProducts->getWritePlanData($updates['VIEW1']);
+print json_encode($writePlanData,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 
 ?>
 </pre></td></tr></table>
