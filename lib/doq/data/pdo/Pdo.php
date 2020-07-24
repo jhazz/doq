@@ -1,6 +1,6 @@
 <?php
 namespace doq\data\pdo;
-
+/*
 THIS IS OLD DRAFT TEXT!!!
 
 
@@ -136,5 +136,5 @@ class Query{
 
 }
 
-
+*/
 ?>
