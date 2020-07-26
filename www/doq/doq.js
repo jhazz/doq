@@ -485,7 +485,22 @@ doq.cfg={
             xhr.send(json)
         else 
             xhr.send(stringify(json))
-        xhr.onload=onload
+        //xhr.onload=onload
+        
+        xhr.onload=function (progress){
+            if(progress.target.status!==200){
+                return onload({error:'Ошибка подключения '+progress.target.status, url:url},true)
+            }
+            if(progress.target.response===null) {
+                return onload({error:'Ошибка обработки ответа от сервера', url:url, json},true)
+            } 
+            if('error' in progress.target.response){
+                return onload(progress.target.response,true)
+            }
+            return onload(progress.target.response,false)
+            
+        };
+        
         return xhr
     }
     

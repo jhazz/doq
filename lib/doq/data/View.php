@@ -575,45 +575,6 @@ class View
         $this->isPreparedWriter=true;
     }
 
-    
-    
-    private function concatPermissionRule(string $currentRule, string $overrideRule){
-        $cnt=strlen($overrideRule);
-        $mode='';
-        for($i=0;$i<$cnt;$i++){
-            $c=$overrideRule[$i];
-            if(($c=='+')||($c=='-')) {
-                $mode=$c;
-                continue;
-            }
-            if(strpos('siud',$c)===false){
-                continue;
-            }
-            $p=strpos($currentRule,$c);
-            if( ($mode=='') || ($mode=='+')){
-                if ($p===false){
-                    $currentRule.=$c;
-                }
-            } else {
-                $currentRule=substr($currentRule, 0, $p) . substr($currentRule, $p + 1);
-            }
-        }
-        return $currentRule;
-    }
-
-    private function concatPermissions($rule, &$applyingPermissions, &$roles)
-    {
-        if(isset($applyingPermissions['*'])){
-            $rule=self::concatPermissionRule($rule, $applyingPermissions['*']);
-        }
-        foreach($applyingPermissions as $role=>&$appendingRule) {
-            if($role!='*') {
-                $rule=self::concatPermissionRule($rule, $appendingRule);
-            }
-        }
-        return $rule;
-    }
-    
 
     /**
      * Create plan to writing data to the datasource. Must be called after prepareWriter($roles)
@@ -831,6 +792,47 @@ class View
         return true;
     }
     
+        
+    
+    private function concatPermissionRule(string $currentRule, string $overrideRule){
+        $cnt=strlen($overrideRule);
+        $mode='';
+        for($i=0;$i<$cnt;$i++){
+            $c=$overrideRule[$i];
+            if(($c=='+')||($c=='-')) {
+                $mode=$c;
+                continue;
+            }
+            if(strpos('siud',$c)===false){
+                continue;
+            }
+            $p=strpos($currentRule,$c);
+            if( ($mode=='') || ($mode=='+')){
+                if ($p===false){
+                    $currentRule.=$c;
+                }
+            } else {
+                $currentRule=substr($currentRule, 0, $p) . substr($currentRule, $p + 1);
+            }
+        }
+        return $currentRule;
+    }
+
+    private function concatPermissions($rule, &$applyingPermissions, &$roles)
+    {
+        if(isset($applyingPermissions['*'])){
+            $rule=self::concatPermissionRule($rule, $applyingPermissions['*']);
+        }
+        foreach($applyingPermissions as $role=>&$appendingRule) {
+            if($role!='*') {
+                $rule=self::concatPermissionRule($rule, $appendingRule);
+            }
+        }
+        return $rule;
+    }
+    
+
+    
 }
 /*
  * 0: PRODUCT_GROUP/LINKED_PARENT_GROUP: PRODUCT_GROUPS
@@ -841,3 +843,4 @@ class View
  * 5: PARAMETERS/PARAMETER: PARAMETERS
  * 6: PARAMETERS: PRODUCT_PARAMETERS
 */
+
