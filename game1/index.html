@@ -1,0 +1,124 @@
+<html>
+  <head>
+    <title>Куку</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta charset="utf-8">
+    <script src="api.js"></script>
+    <script>
+var app={};
+
+(function(exports){
+    var snonce, cnonce=Math.random();
+    
+    function $(id){return document.querySelector(id)}
+    
+    function init(){
+        var form=$('#form_signin'),e;
+        e=form["login"];
+        e.select();
+        sendJSON('api.php',{action:'hello', cnonce:cnonce}, init_callback)
+    }
+    
+    function init_callback(data,error){
+        if(error){
+            console.log("Не могу подключиться к бэкенду",data)
+            return
+        }
+        console.log("Получил ответ на 'hello'")
+        console.log(data)
+        snonce=data['snonce']
+        if(!!snonce){
+            $("#div_signin").style.display='block'
+            //$("#div_signup").style.display='block'
+        }
+    }
+
+    function start1(){
+      var r=input_result.innerText
+      sendJSON('api.php',{action:'hod', result:r, vopros_no:vopros_no, cnonce:cnonce})
+    }
+    
+    function signup(){
+      
+    }
+    
+    function signupCheck(){
+        var loginoremail=$("#form_signup input[name=loginoremail]").value
+        sendJSON('api.php',{action:'signupCheck', login:loginoremail}, signupCheck_callback)
+    }
+    function signupCheck_callback(data,error){
+        if(error){
+            console.log("ERROR!",data)
+            $('#div_signup_pass').style.display='none'
+            return
+        }
+        if(data.found==false) {
+            $('#div_signup_pass').style.display='block'
+        }
+    }
+    function doSignup(){
+        $('#form_signup input[name=loginoremail]').setAttribute('disabled')
+        return false
+    }
+    function showSignup(){
+        $('#div_signin').style.display='none'
+        $('#div_signup').style.display='block'
+        $('#form_signup input[name=loginoremail]').focus()
+    }
+    function doSignin(){
+        return false
+    }
+    function isNewPasswordValid(){
+        var btn=$("#btn_signup"),p1=$("#form_signup input[name=newpass1]"), p2=$("#form_signup input[name=newpass2]")
+        if ((p1.value.length<4)||(p1.value!==p2.value)) 
+            btn.setAttribute("disabled",true)
+        else
+            btn.removeAttribute("disabled")
+    }
+    var i,f,funcs=[signupCheck,init,$,showSignup, doSignup, doSignin, isNewPasswordValid]
+    for(i in funcs) f=funcs[i],exports[f.name]=f
+})(app);
+    </script>
+  </head>
+  
+  <body onload="app.init()">
+  <div id="div_signin" style="display:block">
+    <form id="form_signin" onsubmit="return app.doSignin()" >
+      <div>Введите ваш логин или email</div>
+      <div><input type="text" name="login" placeholder="Ваш логин" autocomplete="username"></div>
+      <div><input type="password" name="password" placeholder="Ваш пароль" autocomplete="current-password" ></div>
+      <div><input type="submit" value="Войти"></div>
+      <a href='javascript:void(0)' onclick='app.showSignup()'>Зарегистрироваться</a> | Забыли пароль? 
+    </form>
+  
+  </div>
+  
+  <div id="div_signup" style="display:none">
+    Введите свой новый логин или email
+    <form id="form_signup" onsubmit="return app.doSignup()" autocomplete="off">
+      <input type="text" name="loginoremail"  autocomplete="username" onkeyup="app.signupCheck()" onchange="app.signupCheck()">
+      <div id="div_signup_pass" style="display:none">
+
+        Введите секретный пароль, который надо запомнить (не меньше 4 символов)<br> 
+        <input type="password" name="newpass1" autocomplete="new-password" onkeyup="app.isNewPasswordValid(event)">
+        <p>Введите свой секретный пароль еще раз<br> 
+        <input type="password" name="newpass2" autocomplete="new-password" onkeyup="app.isNewPasswordValid(event)">
+        </p>
+      </div>
+    <p><input type="submit" id="btn_signup" onclick="app.signup()" value="Зарегистрироваться" disabled></p>
+    </form>
+    
+  </div>
+  
+  <div id="div_signin" style="display:none">
+    Login:<input type="text" id="login">
+    Pass:<input type="password" id="pass">
+    <button onclick="signup()">Войти</button>
+  </div>
+  <div id="div_user_info" style="display:none">
+  </div>
+  
+  
+  
+  </body>
+</html>
