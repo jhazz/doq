@@ -13,7 +13,7 @@ class Api{
     
     static public function init(){
         $headers = getallheaders();
-            if (stripos($headers["Content-type"],"application/json")===false) {
+        if ((!isset($headers["Content-type"])) || (stripos($headers["Content-type"],"application/json")===false)) {
             exit;
         }
         set_exception_handler(
@@ -26,7 +26,7 @@ class Api{
             }
         );
 
-        self::$dbh = new PDO(Secrets::get('pdo'), Secrets::get('pdoLogin'), Secrets::get('pdoPass'));
+        self::$dbh = new PDO(Secrets::get('@pdo/dsn'), Secrets::get('@pdo/login'), Secrets::get('@pdo/pass'));
         self::$message='';
         
         $request=json_decode(file_get_contents("php://input"), true) ?: [];
@@ -88,7 +88,7 @@ class Api{
 
         if(!self::$sessionId){
             self::$dbh->beginTransaction();
-            $sth=self::$dbh->prepare("INSERT INTO sessions (ip_addr,browser_id) VALUES(?,?)");
+            $sth=self::$dbh->prepare('INSERT INTO sessions (ip_addr,browser_id) VALUES(?,?)');
             $r=$sth->execute([$_SERVER['REMOTE_ADDR'], self::$browserId]);
             if(!$r){
                 $x=$sth->errorInfo();
@@ -121,7 +121,7 @@ class Api{
         $saltSize=openssl_cipher_iv_length($method);
         if (function_exists('random_bytes')) {
             $salt = random_bytes($saltSize);
-        } else if (function_exists('random_bytes')) {
+        } else if (function_exists('openssl_random_pseudo_bytes')) {
             $salt = openssl_random_pseudo_bytes($saltSize);
         }
         $ciphertext = openssl_encrypt($message, $method, $key, OPENSSL_RAW_DATA, $salt);
@@ -136,7 +136,6 @@ class Api{
             return false;
         }
         $saltSize=openssl_cipher_iv_length($method);
-            
         $salt = substr($message, 0, $saltSize);
         $ciphertext = substr($message, $saltSize);
         $text= openssl_decrypt($ciphertext, $method, $key, OPENSSL_RAW_DATA, $salt);
@@ -144,13 +143,15 @@ class Api{
     }
     
     private static function makeServerNonce(int $size=0) {
-        if(!$size){
-            $size=\Secrets::get('snonce_size');
-        }
-        if (function_exists('random_bytes')) {
-            return random_bytes($size);
-        } else if (function_exists('random_bytes')) {
-            return openssl_random_pseudo_bytes($size);
+        try{
+            if(!$size) {$size=\Secrets::get('snonce_size');}
+        
+            $osnonce=base64_encode((function_exists('random_bytes')) ? random_bytes($size) : openssl_random_pseudo_bytes($size));
+            $t=self::$dbh->prepare('INSERT INTO snonces (session_id, snonce) VALUES (?,?)');
+            $t->execute([self::$sessionId, $osnonce]);
+            return $osnonce;
+        } catch (Exception $e) {
+            return null;
         }
     }
 
@@ -158,10 +159,8 @@ class Api{
         if(!self::$browserId){
             return ['error'=>'Авторизация не работает'];
         }
-        $snonceBase=self::makeServerNonce();
         
         return [
-            'snonce'=>self::encrypt($snonceBase, Secrets::get('snonce_salt')),
             'browserKey'=>self::$browserKey,
             'browserId'=>self::$browserId,
             'sessonKey'=>self::$sessionKey,
@@ -174,6 +173,8 @@ class Api{
     private static function isEmail($s){
         return preg_match('/^((([0-9A-Za-z]{1}[-0-9A-z\.]{1,}[0-9A-Za-z]{1})|([0-9А-Яа-я]{1}[-0-9А-я\.]{1,}[0-9А-Яа-я]{1}))@([-A-Za-z]{1,}\.){1,2}[-A-Za-z]{2,})$/u',$s);
     }
+    
+    
     private static function signupCheck($request){
         if(!isset($request['login'])){
             return ['error'=>'Нет логина в запросе'];
@@ -185,15 +186,17 @@ class Api{
         }
         
         $sha1Login=sha1(strtolower(trim($login)).\Secrets::get('login_db_salt'));
-
         $sth=self::$dbh->prepare('SELECT user_id FROM users WHERE email=? OR login=?');
         $sth->execute([$sha1Login, $sha1Login]);
         $r=$sth->fetch(PDO::FETCH_NUM);
         if($r===false){
-            return['found'=>false];
+            $osnonce=self::makeServerNonce();
+        }
+        
+        if(($r===false) && ($osnonce!==null)){
+            return['result'=>'ok', 'snonce'=>self::encrypt($osnonce, Secrets::get('snonce_salt'))];
         } else {
-            $snonce=self::getNonce();
-            return['found'=>true,'snonce'=>$snonce];
+            return['error'=>'Проблема с сервером авторизации'];
         }
     }
     
