@@ -84,7 +84,8 @@ doq.cfg={
     logToBrowser: 1,
     logMaxSize: 1000,
     logSourcePosition:1,
-    defaultRowsPerPage: 10
+    defaultRowsPerPage: 10,
+    jsModulesRoot:'..'
 };
 
 (function(_global){
@@ -494,7 +495,7 @@ doq.cfg={
             if(progress.target.response===null) {
                 return onload({error:'Ошибка обработки ответа от сервера', url:url, json},true)
             } 
-            if('error' in progress.target.response){
+            if((progress.target.responseType=='json') && ('error' in progress.target.response)){
                 return onload(progress.target.response,true)
             }
             return onload(progress.target.response,false)

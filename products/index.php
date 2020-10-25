@@ -155,8 +155,8 @@ function showJSONParams(){
     function sendRequestForText(){
         location.href='#requestTabs?do=showResponse'
         document.getElementById("response_area").innerText="Please wait";
-        var xhr=doq.sendJSON('?a=json_demo1_post',document.getElementById("request_area").innerText,function(){
-            document.getElementById("response_area").innerText=this.response;
+        var xhr=doq.sendJSON('?a=json_demo1_post',document.getElementById("request_area").innerText,function(response, error){
+            document.getElementById("response_area").innerText=response;
         },'text')
     }
     

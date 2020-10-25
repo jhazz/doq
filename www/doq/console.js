@@ -101,9 +101,8 @@ doq.module('doq.console', ['doq.router'], function(){
                 pageloadToken:debugScope.pageloadToken,
                 pageToken:debugScope.pageToken, 
                 rowNo:rowData.rowNo
-                }, function(e){
-            var response=e.target.response
-            if(!response) 
+                }, function(response,error){
+            if(error) 
                 return
             var placeEl=drawer.panel3.place.el, 
                 f=document.createDocumentFragment(), 
@@ -286,12 +285,11 @@ doq.module('doq.console', ['doq.router'], function(){
                 pageToken:debugScope.pageToken, 
                 clientToken:debugScope.clientToken, 
                 pageloadToken:debugScope.pageloadToken
-                }, function(e){
-            response=e.target.response
-            if(!response){
-                doq.log('doq.console', "Не прочитался лог из "+url+' по странице '+pageToken, doq.C.L_ERROR)
+                }, function(response,error){
+            if(error){
+                doq.log('doq.console', "Не прочитался лог из "+url+' по странице '+pageToken+' причина:'+response.error, doq.C.L_ERROR)
             } else if('entries' in response){
-                
+
                 renderTable(targetEl,{
                     id:'dataLog',
                     caption:'<b>Data log of: </b>'+response.url+'<br>Started at '+timeFormat(response.timestamp),
@@ -356,10 +354,9 @@ doq.module('doq.console', ['doq.router'], function(){
                 pageToken:debugScope.pageToken, 
                 clientToken:debugScope.clientToken, 
                 pageloadToken:debugScope.pageloadToken
-                }, function(e){
-            response=e.target.response
-            if(!response){
-                doq.log('doq.console', "Не прочитался лог из "+url+' по странице '+pageToken, doq.C.L_ERROR)
+                }, function(response,error){
+            if(error){
+                doq.log('doq.console', "Не прочитался лог из "+url+' по странице '+pageToken+' причина:'+response.error, doq.C.L_ERROR)
             } else if('entries' in response){
                     
                 renderTable(targetEl,{
@@ -408,8 +405,8 @@ doq.module('doq.console', ['doq.router'], function(){
             url= apiConsoleURL+'?action=clients'
             
         doq.log('doq.console', "Читаем список клиентов из "+url)
-        doq.sendJSON(url, {}, function(e){
-            response=e.target.response, de, i, n
+        doq.sendJSON(url, {}, function(response,error){
+            var de, i, n
             if(!response){
                 doq.log('doq.console', "Не прочитался список клиентов "+url)
             } else if('clients' in response){
@@ -445,10 +442,9 @@ doq.module('doq.console', ['doq.router'], function(){
         url= apiConsoleURL+'?action=pageloads'
         
         doq.log('doq.console', "Читаем список загрузок клиента "+clientToken+" из "+url)
-        doq.sendJSON(url, {clientToken:clientToken}, function(e){
-            response=e.target.response
-            if(!response){
-                doq.log('doq.console', "Не прочитался список загрузок из "+url, doq.C.L_ERROR)
+        doq.sendJSON(url, {clientToken:clientToken}, function(response,error) {
+            if(error){
+                doq.log('doq.console', "Не прочитался список загрузок из "+url + ' причина:' + response.error, doq.C.L_ERROR)
             } else if('pageloadTokens' in response){
                 renderTable(targetEl,{
                     id:'loadSelect',
@@ -491,10 +487,9 @@ doq.module('doq.console', ['doq.router'], function(){
         }
 
         doq.log('doq.console', "Читаем список страниц по загрузке "+pageloadToken+" из "+url)
-        doq.sendJSON(url, {clientToken:clientToken, pageloadToken:pageloadToken}, function(e){
-            response=e.target.response
-            if(!response){
-                doq.log('doq.console', "Не прочитался список страниц из "+url)
+        doq.sendJSON(url, {clientToken:clientToken, pageloadToken:pageloadToken}, function(response,error){
+            if(error){
+                doq.log('doq.console', "Не прочитался список страниц из "+url+' причина:'+response.error, doq.C.L_ERROR)
             } else if('pages' in response){
                 hidePanel3()
                 renderTable(targetEl,{

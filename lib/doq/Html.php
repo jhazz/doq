@@ -94,14 +94,14 @@ class Html
             print "\n<head>\n";
             print "<!-- \n  script_filename: {$_SERVER['SCRIPT_FILENAME']} \n \$env [#rootPath]: {$GLOBALS['doq']['env']['#rootPath']} \n server[php_self]: {$_SERVER['PHP_SELF']}-->\n\n";
             
-            $c=(strpos("\\", $_SERVER['SCRIPT_FILENAME']) !== false)?"\\":"/";
+            $c=(strpos($_SERVER['SCRIPT_FILENAME'],'\\') !== false)?'\\':'/';
             \doq\Logger::debug('Html','script_filename='.$_SERVER['SCRIPT_FILENAME']);
             $parts1=explode($c,$_SERVER['SCRIPT_FILENAME']);
             $cnt1=count($parts1);
 
             $root=$GLOBALS['doq']['env']['#rootPath'];
             \doq\Logger::debug('Html','Root path='.$root);
-            $c=(strpos("\\", $root) !== false)?"\\":"/";
+            $c=(strpos($root, '\\') !== false)?'\\':'/';
             $parts2=explode($c,$root);
             $cnt2=count($parts2);
 
@@ -116,7 +116,7 @@ class Html
                     $rootRelativeURL.='../';
                 }
             } else {
-                $err=\doq\tr('doq', 'Error deticting elements of the root path "%s"', $root);
+                $err=\doq\tr('doq', 'Error detecting elements of the root path "%s"', $root);
                 trigger_error($err, E_USER_ERROR);
             }
             $GLOBALS['doq']['#rootRelativeURL']=$rootRelativeURL;
