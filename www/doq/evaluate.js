@@ -6,7 +6,11 @@ doq.module('doq.evaluate',function evaluate(){
 
     console.log('Module evaluate: executed')
 
-
+    /**
+     * Transfrom expression atring to RPN elements and bindings to parameters
+     * @param {String} str evaluating string of any expression
+     * @return [ok, expressionRPN, bindParams]
+     */
     function parseExpression (str) {
         var C = mgui.C,
             symClasses = { '=': C.CC_OPERATOR, ',': C.CC_OPERATORCHAR, "'": C.CC_QUOTE, '"': C.CC_QUOTE, '-': C.CC_OPERATOR, '+': C.CC_OPERATOR, '*': C.CC_OPERATOR, '&': C.CC_OPERATOR, '{': C.CC_QUOTE, '(': C.CC_OPERATORCHAR, ')': C.CC_OPERATORCHAR, ' ': C.CC_SPACE, '\t': C.CC_SPACE, '\n': C.CC_SPACE, '\r': C.CC_SPACE },
@@ -299,6 +303,6 @@ doq.module('doq.evaluate',function evaluate(){
     }
 
     return {
-        functions:[Expression, parseExpression, expressionElementHandlers]
+        functions:[parseExpression, expressionElementHandlers]
     }
 })

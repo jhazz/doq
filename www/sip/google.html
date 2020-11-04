@@ -1,0 +1,50 @@
+<html>
+<meta http-equiv="content-type" content="text/html; charset=windows-1251" />
+<me ta charset="utf-8">
+    <meta name="google-signin-scope" 
+    content="https://www.googleapis.com/auth/spreadsheets">
+<meta name="google-signin-client_id" content="{YOUR CLIENT ID}">
+<script src="https://apis.google.com/js/platform.js" async defer></script>
+
+<title>Проверка таблицы</title>
+<body bgcolor="#aaa" onload="init()">
+<h1>Попробуй ссылки</h1>
+
+<ul>
+
+<li>
+  <a href="https://docs.google.com/spreadsheets/d/1KOxx4gmZjJYSVIF0Ea-2r_cwPxlJvDDbor21ipomw4I/edit?usp=sharing">Ссылка на саму таблицу</a>
+</li>
+
+<li>
+    <button id="btn1_loadData">Отправить запрос</button>
+</li>
+
+
+<script>
+
+function $(id){
+    return document.querySelector(id)
+}
+
+function init() {
+    $("#btn1_loadData").addEventListener("click",function(){
+        getJSON("h")
+    })
+}
+
+function getJSON (url, params, onload, responseType){
+    if (!responseType){
+        responseType='json'
+    }
+    var xhr = new XMLHttpRequest()
+    xhr.open('GET', url)
+    xhr.responseType = responseType
+    xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8')
+    if(typeof params=='object')
+        xhr.send(new URLSearchParams(params).toString())
+    else 
+        xhr.send(params)
+}
+
+</script>

@@ -471,6 +471,20 @@ doq.cfg={
         return true
     }
 
+    function getJSON(url, params, onload, responseType){
+        if (!responseType){
+            responseType='json'
+        }
+        var xhr = new XMLHttpRequest()
+        xhr.open('GET', url)
+        xhr.responseType = responseType
+        xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8')
+        if(typeof params=='object')
+            xhr.send(new URLSearchParams(params).toString())
+        else 
+            xhr.send(params)
+    }
+
     function sendJSON(url, json, onload, responseType, method){
         if (!responseType){
             responseType='json'

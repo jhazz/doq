@@ -1,31 +1,14 @@
 /* jshint asi:true, -W100, forin:false, sub:true */
 doq.module('doq.console', ['doq.router'], function(){
-    var buttonShown=false,
+    var apiConsoleURL = (doq.cfg.APIRoot==undefined) ?null :doq.cfg.APIRoot+'/doq/console.php',
+        hasApi=(apiConsoleURL!=null)
+        buttonShown=false,
         resizeTimeout,
-        drawer={height:400,visible:false,borderSize:3,el:null,appends:[],
-            panel1:{width:350, className:'doq-console-panel',
-                panel1menu:{
-                    render:renderTabMenu,
-                    items:[
-                        {label:'Clients',activate:putPanelContent, id:'clients',  params:{panel:'panel1', update:updateClientsSelector}},
-                        {label:'Loads',  activate:putPanelContent, id:'pageloads',params:{panel:'panel1', update:updatePageloadsSelector}},
-                        {label:'Pages',  activate:putPanelContent, id:'pages',    params:{panel:'panel1', update:updatePageSelector}},
-                    ]
-                },
-            }, 
-            panel2:{className:'doq-console-panel',
-                panel2menu:{
-                    render:renderTabMenu,
-                    items:[
-                        {label:'PHP logs', activate:putPanelContent, id:'phplogs',params:{panel:'panel2',update:updatePHPLogs}},
-                        {label:'Data queries', activate:putPanelContent, id:'queries', params:{panel:'panel2',update:updateDatalogs}},
-                        {label:'Environment', activate:putPanelContent, id:'env', onupdate:updatePageloadsSelector},
-                        {label:'JS logs', activate:putPanelContent, id:'jslogs', onupdate:updatePageSelector},
-                        {label:'Settings', activate:putPanelContent, id:'close', onupdate:updatePageSelector}
-                    ]
-                },
-            },
-            splitter1:{className:'doq-console-vsplitter', mousedown:splitter1mousedown, wire:{className:'doq-console-vsplitterw'}},
+        drawer={height:400,
+            visible:false,
+            borderSize:3,
+            el:null,
+            appends:[],
             splitter2:{className:'doq-console-vsplitter', mousedown:splitter1mousedown, wire:{className:'doq-console-vsplitterw'}},
             controls:{className:'doq-console-topbar',
                 //btnExpand:{className:'doq-console-drawerctrls',text:'[ ]'},
@@ -37,19 +20,70 @@ doq.module('doq.console', ['doq.router'], function(){
                 },
                 place:{className:'doq-console-scrollbox'}
             }
-
         },
         splitterBorder=1,
         splitterHandleSize=7,
         splitterHandleHalfSize=3,
         drag={mode:0},
-        apiConsoleURL=doq.cfg.APIRoot+'/doq/console.php',
         debugScope={
             clientToken:null,
             pageloadToken:null,
             pageToken:null
         }
 
+        if(hasApi){
+            Object.assign(drawer, {
+                panel1:{width:350, className:'doq-console-panel',
+                    panel1menu:{
+                        render:renderTabMenu,
+                        items:[
+                            {label:'Clients',activate:putPanelContent, id:'clients',  params:{panel:'panel1', update:updateClientsSelector}},
+                            {label:'Loads',  activate:putPanelContent, id:'pageloads',params:{panel:'panel1', update:updatePageloadsSelector}},
+                            {label:'Pages',  activate:putPanelContent, id:'pages',    params:{panel:'panel1', update:updatePageSelector}},
+                        ]
+                    },
+                }, 
+                panel2:{className:'doq-console-panel',
+                    panel2menu:{
+                        render:renderTabMenu,
+                        items:[
+                            {label:'PHP logs', activate:putPanelContent, id:'phplogs',params:{panel:'panel2',update:updatePHPLogs}},
+                            {label:'Data queries', activate:putPanelContent, id:'queries', params:{panel:'panel2',update:updateDatalogs}},
+                            {label:'Environment', activate:putPanelContent, id:'env', onupdate:updatePageloadsSelector},
+                            {label:'JS logs', activate:putPanelContent, id:'jslogs', onupdate:updatePageSelector},
+                            {label:'Settings', activate:putPanelContent, id:'close', onupdate:updatePageSelector}
+                        ]
+                    },
+                },
+                splitter1:{className:'doq-console-vsplitter', mousedown:splitter1mousedown, wire:{className:'doq-console-vsplitterw'}}
+            })
+        } else {
+            Object.assign(drawer, {
+                panel1:{width:350, className:'doq-console-panel',
+                    panel1menu:{
+                        render:renderTabMenu,
+                        items:[
+                            {label:'Clients',activate:putPanelContent, id:'clients',  params:{panel:'panel1', update:updateClientsSelector}},
+                            {label:'Loads',  activate:putPanelContent, id:'pageloads',params:{panel:'panel1', update:updatePageloadsSelector}},
+                            {label:'Pages',  activate:putPanelContent, id:'pages',    params:{panel:'panel1', update:updatePageSelector}},
+                        ]
+                    },
+                }, 
+                panel2:{className:'doq-console-panel',
+                    panel2menu:{
+                        render:renderTabMenu,
+                        items:[
+                            {label:'PHP logs', activate:putPanelContent, id:'phplogs',params:{panel:'panel2',update:updatePHPLogs}},
+                            {label:'Data queries', activate:putPanelContent, id:'queries', params:{panel:'panel2',update:updateDatalogs}},
+                            {label:'Environment', activate:putPanelContent, id:'env', onupdate:updatePageloadsSelector},
+                            {label:'JS logs', activate:putPanelContent, id:'jslogs', onupdate:updatePageSelector},
+                            {label:'Settings', activate:putPanelContent, id:'close', onupdate:updatePageSelector}
+                        ]
+                    },
+                },
+                splitter1:{className:'doq-console-vsplitter', mousedown:splitter1mousedown, wire:{className:'doq-console-vsplitterw'}}
+            })
+        }
 
 
 

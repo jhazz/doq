@@ -1,0 +1,16 @@
+{
+    "web": {
+        "client_id": "216924365251-k4mt0bjvep8fg8tak2sbv9n0bj343vgn.apps.googleusercontent.com",
+        "project_id": "helpful-kit-294408",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_secret": "4uVRAi-lTXLs-a3wuHpBnBWs",
+        "redirect_uris": [
+            "http://z-navi.ru/sip/cabinet.html"
+        ],
+        "javascript_origins": [
+            "http://z-navi.ru"
+        ]
+    }
+}
