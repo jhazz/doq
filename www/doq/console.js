@@ -1,7 +1,10 @@
 /* jshint asi:true, -W100, forin:false, sub:true */
 doq.module('doq.console', ['doq.router'], function(){
-    var apiConsoleURL = (doq.cfg.APIRoot==undefined) ?null :doq.cfg.APIRoot+'/doq/console.php',
-        hasApi=(apiConsoleURL!=null)
+    var LAYOUT_ONE_PANEL=1, LAYOUT_TWO_PANEL=2,
+        apiConsoleURL = (doq.cfg.APIRoot==undefined) ?null :doq.cfg.APIRoot+'/doq/console.php',
+        hasApi=(apiConsoleURL!=null),
+        modulePrefix='doq_console_',
+        layoutType=(hasApi)?LAYOUT_TWO_PANEL:LAYOUT_ONE_PANEL,
         buttonShown=false,
         resizeTimeout,
         drawer={height:400,
@@ -31,58 +34,48 @@ doq.module('doq.console', ['doq.router'], function(){
             pageToken:null
         }
 
-        if(hasApi){
-            Object.assign(drawer, {
-                panel1:{width:350, className:'doq-console-panel',
-                    panel1menu:{
-                        render:renderTabMenu,
-                        items:[
-                            {label:'Clients',activate:putPanelContent, id:'clients',  params:{panel:'panel1', update:updateClientsSelector}},
-                            {label:'Loads',  activate:putPanelContent, id:'pageloads',params:{panel:'panel1', update:updatePageloadsSelector}},
-                            {label:'Pages',  activate:putPanelContent, id:'pages',    params:{panel:'panel1', update:updatePageSelector}},
-                        ]
+        switch(layoutType){
+            case LAYOUT_TWO_PANEL:
+                Object.assign(drawer, {
+                    panel1:{width:350, className:'doq-console-panel',
+                        panel1menu:{
+                            render:renderTabMenu,
+                            items:[
+                                {label:'Clients',activate:putPanelContent, id:'clients',  params:{panel:'panel1', update:updateClientsSelector}},
+                                {label:'Loads',  activate:putPanelContent, id:'pageloads',params:{panel:'panel1', update:updatePageloadsSelector}},
+                                {label:'Pages',  activate:putPanelContent, id:'pages',    params:{panel:'panel1', update:updatePageSelector}},
+                            ]
+                        },
+                    }, 
+                    panel2:{className:'doq-console-panel',
+                        panel2menu:{
+                            render:renderTabMenu,
+                            items:[
+                                {label:'PHP logs', activate:putPanelContent, id:'phplogs',params:{panel:'panel2',update:updatePHPLogs}},
+                                {label:'Data queries', activate:putPanelContent, id:'queries', params:{panel:'panel2',update:updateDatalogs}},
+                                {label:'Environment', activate:putPanelContent, id:'env', onupdate:updatePageloadsSelector},
+                                {label:'JS logs', activate:putPanelContent, id:'jslogs', params:{panel:'panel2',update:updateJSLogs}},
+                                {label:'JS Models ', activate:putPanelContent, id:'jsmodelbrowser', params:{panel:'panel2',update:updateJSModelBrowser}},
+                            ]
+                        },
                     },
-                }, 
-                panel2:{className:'doq-console-panel',
-                    panel2menu:{
-                        render:renderTabMenu,
-                        items:[
-                            {label:'PHP logs', activate:putPanelContent, id:'phplogs',params:{panel:'panel2',update:updatePHPLogs}},
-                            {label:'Data queries', activate:putPanelContent, id:'queries', params:{panel:'panel2',update:updateDatalogs}},
-                            {label:'Environment', activate:putPanelContent, id:'env', onupdate:updatePageloadsSelector},
-                            {label:'JS logs', activate:putPanelContent, id:'jslogs', onupdate:updatePageSelector},
-                            {label:'Settings', activate:putPanelContent, id:'close', onupdate:updatePageSelector}
-                        ]
+                    splitter1:{className:'doq-console-vsplitter', mousedown:splitter1mousedown, wire:{className:'doq-console-vsplitterw'}}
+                })
+                break
+            case  LAYOUT_ONE_PANEL:
+                Object.assign(drawer, {
+                    panel2:{className:'doq-console-panel',
+                        panel2menu:{
+                            render:renderTabMenu,
+                            items:[
+                                {label:'JS logs', activate:putPanelContent, id:'jslogs', params:{panel:'panel2',update:updateJSLogs}},
+                                {label:'JS Models ', activate:putPanelContent, id:'jsmodelbrowser', params:{panel:'panel2',update:updateJSModelBrowser}},
+                            ]
+                        },
                     },
-                },
-                splitter1:{className:'doq-console-vsplitter', mousedown:splitter1mousedown, wire:{className:'doq-console-vsplitterw'}}
-            })
-        } else {
-            Object.assign(drawer, {
-                panel1:{width:350, className:'doq-console-panel',
-                    panel1menu:{
-                        render:renderTabMenu,
-                        items:[
-                            {label:'Clients',activate:putPanelContent, id:'clients',  params:{panel:'panel1', update:updateClientsSelector}},
-                            {label:'Loads',  activate:putPanelContent, id:'pageloads',params:{panel:'panel1', update:updatePageloadsSelector}},
-                            {label:'Pages',  activate:putPanelContent, id:'pages',    params:{panel:'panel1', update:updatePageSelector}},
-                        ]
-                    },
-                }, 
-                panel2:{className:'doq-console-panel',
-                    panel2menu:{
-                        render:renderTabMenu,
-                        items:[
-                            {label:'PHP logs', activate:putPanelContent, id:'phplogs',params:{panel:'panel2',update:updatePHPLogs}},
-                            {label:'Data queries', activate:putPanelContent, id:'queries', params:{panel:'panel2',update:updateDatalogs}},
-                            {label:'Environment', activate:putPanelContent, id:'env', onupdate:updatePageloadsSelector},
-                            {label:'JS logs', activate:putPanelContent, id:'jslogs', onupdate:updatePageSelector},
-                            {label:'Settings', activate:putPanelContent, id:'close', onupdate:updatePageSelector}
-                        ]
-                    },
-                },
-                splitter1:{className:'doq-console-vsplitter', mousedown:splitter1mousedown, wire:{className:'doq-console-vsplitterw'}}
-            })
+                    splitter1:{className:'doq-console-vsplitter', mousedown:splitter1mousedown, wire:{className:'doq-console-vsplitterw'}}
+                })
+                break
         }
 
 
@@ -90,26 +83,36 @@ doq.module('doq.console', ['doq.router'], function(){
     function arrange(){
         if (!drawer.visible) return
 
-        var p1=drawer.panel1, p1s=p1.el.style,
+        var p1, p1s, h1, p1w,
             p2=drawer.panel2, p2s=p2.el.style,
-            p1w=p1.width,
             docHeight=document.body.clientHeight, 
             docWidth=document.body.clientWidth
             dw=docWidth-drawer.borderSize*2,
             dh=drawer.height-drawer.borderSize*2,
-            h1=p1.panel1menu.el.offsetHeight
+            h1=p2.panel2menu.el.offsetHeight
         
         if(drawer.el.offsetHeight!=drawer.height){
            drawer.el.style.height=drawer.height+'px'
         }
-        p1s.width=p1w+'px'
-        p2s.width=(dw-p1w-splitterBorder)+'px'
+
         if(p2.currentChild)
             p2.currentChild.style.width='100%'
-        p2s.transform='translateX('+(p1w+splitterBorder)+'px)'
-        drawer.splitter1.el.style.height=p2.el.style.height=p1.el.style.height=dh+'px'
-        drawer.splitter1.el.style.transform='translateX('+(p1w - splitterHandleHalfSize)+'px)'
-        p1s.height = p2s.height=dh+'px'
+
+        if(layoutType==LAYOUT_TWO_PANEL){
+            p1=drawer.panel1
+            p1s=p1.el.style
+            p1s.height = p2s.height=dh+'px'
+            p1w=p1.width
+            p1s.width=p1w+'px'
+            p2s.width=(dw-p1w-splitterBorder)+'px'
+            p2s.transform='translateX('+(p1w+splitterBorder)+'px)'
+            drawer.splitter1.el.style.height=p2.el.style.height=p1.el.style.height=dh+'px'
+            drawer.splitter1.el.style.transform='translateX('+(p1w - splitterHandleHalfSize)+'px)'
+        } else {
+            p1w=0
+            p2s.transform=''
+            p2s.width=(dw-splitterBorder)+'px'
+        }
         
         if(drawer.panel3.visible){
             var p3=drawer.panel3, p3w=p3.width, p3s=p3.el.style
@@ -127,7 +130,7 @@ doq.module('doq.console', ['doq.router'], function(){
     
     
     function detailViewDatalog(el,rowData){
-        var url= apiConsoleURL+'?action=datalogentry'
+        var t, url= apiConsoleURL+'?action=datalogentry'
         //var url=apiConsoleURL+'?action=datalogentry_light'
         
         doq.sendJSON(url, {
@@ -154,14 +157,14 @@ doq.module('doq.console', ['doq.router'], function(){
                     ])
                     break;
                 case 'queryDefs': 
-                    var t=document.createElement('table')
+                    t=document.createElement('table')
                     t.className='doq-console-table'
                     c.appendChild(t)
                     //renderDoqRecords(t,response.queryDefs['@dataset']['@fields'], '@dataset')
                     t.innerHTML=response.html
                     break;
                 case 'indexDump':
-                    var t=document.createElement('table')
+                    t=document.createElement('table')
                     t.className='doq-console-table'
                     c.appendChild(t)
                     renderDoqIndex(t,response)
@@ -433,6 +436,27 @@ doq.module('doq.console', ['doq.router'], function(){
         return d.getMonth()+'.'+d.getDate()+'.'+d.getFullYear()+' '+ d.getHours()+':'+d.getMinutes()+':'+d.getSeconds()
     }
     
+    function updateJSLogs(panel, targetEl){
+        if(!hasApi){
+            renderTable(targetEl,{
+                id:'loadSelect',
+                caption:'All clients',
+                rows:doq.getLog(0,100),
+                columns:[
+                    {header:'Time', size:'100', field:0},
+                    {header:'Category', size:'80', field:1},
+                    {header:'Message', size:'300', field:2},
+                    {header:'Type', size:'20', field:3},
+                ],
+            })
+        }
+        
+        panel.updating=false
+
+    }
+    function updateJSModelBrowser(panel, targetEl){
+    }
+
     function updateClientsSelector(panel, targetEl){ //this - menuitem
         var response, i,de,arr,n, 
             clientToken=(debugScope.clientToken==null)? doq.cfg.clientToken: debugScope.clientToken,
@@ -590,13 +614,14 @@ doq.module('doq.console', ['doq.router'], function(){
             if (!!item.activate) 
                 menuItem.activate = item.activate
             if (!!item.params) 
-                menuItem.params=item.params
+                menuItem.params=item.params;
             
             void(function(amenu, aitemId){
                 label.addEventListener('click',function(){
                     amenu.select.call(amenu, aitemId)
                 })
-            })(this, menuItem.id)
+            })(this, menuItem.id);
+            
             this.el.appendChild(label)
             this.items[menuItem.id]=menuItem 
         }
@@ -788,7 +813,7 @@ doq.module('doq.console', ['doq.router'], function(){
     
     function put(parent,childId){
         var ctrl=parent[childId], handlers=['mousedown','click'],i,j
-        ctrl.id=childId
+        ctrl.id=modulePrefix+childId
         if((!!ctrl.el) && (!!ctrl.destroy))
             ctrl.destroy.call(ctrl)
         
@@ -796,7 +821,7 @@ doq.module('doq.console', ['doq.router'], function(){
             ctrl.render.call(ctrl)
         } else {
             ctrl.el=document.createElement('div')
-            ctrl.el.id=childId
+            ctrl.el.id=modulePrefix+childId
             ctrl.el.className=ctrl.className
             if(!!ctrl.text)
                 ctrl.el.innerText=ctrl.text
@@ -828,13 +853,16 @@ doq.module('doq.console', ['doq.router'], function(){
             resizeTimeout=window.setTimeout(arrange,66)
         })
         drawer.el=document.createElement('div')
-        drawer.el.id='doq-console-desk'
-        put(drawer,'panel1')
-        put(drawer.panel1,'panel1menu')
+        drawer.el.id=modulePrefix+'desk'
+        drawer.el.className='doq-console-desk'
+        if(layoutType == LAYOUT_TWO_PANEL){
+            put(drawer,'panel1')
+            put(drawer.panel1,'panel1menu')
+            put(drawer,'splitter1')
+            put(drawer.splitter1,'wire')
+        }
         put(drawer,'panel2')
         put(drawer.panel2,'panel2menu')
-        put(drawer,'splitter1')
-        put(drawer.splitter1,'wire')
         var c=put(drawer,'controls')
         //put(c,'btnExpand')
         put(c,'btnClose')
@@ -842,37 +870,42 @@ doq.module('doq.console', ['doq.router'], function(){
         document.body.appendChild(drawer.el)
         drawer.visible=true
         arrange()
-        drawer.panel1.panel1menu.select('pages')
+        if(layoutType == LAYOUT_TWO_PANEL){
+            drawer.panel1.panel1menu.select('pages')
+        } else {
+            drawer.panel2.panel2menu.select('jslogs')
+        }
+        
     }
 
     
     //@this menuItem
     function putPanelContent(){
-        var panel=drawer[this.params.panel], child
+        var panel=drawer[this.params.panel], childEl
         if(panel.updating)
             return
         panel.updating=true
-        child=document.createElement('div')
-        child.id=this.id
+        childEl=document.createElement('div')
+        childEl.id=modulePrefix+this.id
         if(this.params.update){
-            this.params.update.call(this, panel, child)
+            this.params.update.call(this, panel, childEl)
         }
         if(!!panel.currentChild)
-            panel.el.replaceChild(child, panel.currentChild)
+            panel.el.replaceChild(childEl, panel.currentChild)
         else 
-            panel.el.appendChild(child)
-        panel.currentChild=child
+            panel.el.appendChild(childEl)
+        panel.currentChild=childEl
         return true
     }
 
     function showPanel3(viewerFunction, rowData){
         if(!drawer.splitter2.el){
-            put(drawer,'panel3')
-            put(drawer.panel3,'bar')
-            put(drawer.panel3.bar,'btnClose')
-            put(drawer.panel3,'place')
-            put(drawer,'splitter2')
-            put(drawer.splitter2,'wire')
+            put(drawer,'doq-console-panel3')
+            put(drawer.panel3,'doq-console-bar')
+            put(drawer.panel3.bar,'doq-console-btnClose')
+            put(drawer.panel3,'doq-console-place')
+            put(drawer,'doq-console-splitter2')
+            put(drawer.splitter2,'doq-console-wire')
             appendControls()
         } else {
             drawer.splitter2.el.style.display=drawer.panel3.el.style.display='block'
@@ -934,7 +967,7 @@ doq.module('doq.console', ['doq.router'], function(){
             '@console-splitter-handleSize':splitterHandleSize+'px',
             '@console-splitter-handleHalfSize':splitterHandleHalfSize+'px'
             },
-            '#doq-console-desk':'font-family:@console-text-font; font-size:@console-text-size; position:fixed; bottom:0px; left:0px; background:@console-bgcolor; border-radius:3px; width:100%; padding:3px; overflow:hidden; box-sizing:border-box;',
+            '.doq-console-desk':'font-family:@console-text-font; font-size:@console-text-size; position:fixed; bottom:0px; left:0px; background:@console-bgcolor; border-radius:3px; width:100%; padding:3px; overflow:hidden; box-sizing:border-box;',
             '.doq-console-scrollbox':'overflow:auto;',
             '.doq-console-panel':'position:absolute;background:@console-bgcolor; padding:1px;box-sizing:border-box; overflow:auto; user-select:none',
             '.doq-console-vsplitter':'width:@console-splitter-handleSize; position:absolute; cursor:col-resize; user-select:none',

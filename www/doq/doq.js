@@ -98,10 +98,11 @@ doq.cfg={
         taskDoneCallbacks=[],
         moduleLoaders={},
         oldErrorHandler,
-        logTargetIndex,
+        logEndIndex=0,
+        logStartIndex=0,
         logArray=[],
         stringify=JSON.stringify
-        
+    
     if(_global==undefined) {
         _global=window
     }
@@ -443,14 +444,23 @@ doq.cfg={
         }
         
         logEntry=[(new Date()).getTime(), category, msg, type, url]
-        if(logTargetIndex===undefined)
-            logArray.push(logEntry)
-        else
-            logArray[logTargetIndex++]=logEntry
-        
-        if(logArray.length>doq.cfg.logMaxSize)
-            logTargetIndex=0
-        
+
+        if(logArray.length<doq.cfg.logMaxSize){
+            logEndIndex=logArray.push(logEntry)
+        } else {
+            logArray[logEndIndex++]=logEntry
+            if(logEndIndex>=doq.cfg.logMaxSize){
+                logEndIndex=0
+            } 
+            if(logStartIndex<logEndIndex){
+                logStartIndex=logEndIndex+1
+                if(logStartIndex>=doq.cfg.logMaxSize){
+                    logStartIndex=0
+                }
+            }
+            
+        }
+
         if(doq.cfg.logToBrowser){
             s=category+ ': '+msg
             if(url!==undefined)
@@ -462,7 +472,26 @@ doq.cfg={
                 else console.log(s)
         }
     }
-    
+    function getLog(offset,size){
+        var i,j,res=[],restSize
+        if(!size) size=100
+        if(!offset) offset=0
+        restSize=size
+        if(logEndIndex<logArray.length) {
+            i=logEndIndex+offset
+            if(i>=logArray.length){
+                i-=logArray.length
+            }
+        } else {
+            i=offset
+        }
+        for(j=0;j<restSize;j++){
+            res.push(logArray[i])
+            i=(i<doq.cfg.logMaxSize) ?i+1 :0
+            if(i==logTargetIndex) break
+        }
+        return res
+    }
 
     function globalErrorHandler(errorMsg, url, lineNumber, col, eobj){
         log('doq.globalError',errorMsg, doq.C.L_ERROR, url,lineNumber, col)
@@ -667,7 +696,7 @@ doq.cfg={
         doLaterOnce(pubPath + '#' + pubAttr + '!' + eventType, doq, emit, [pubPath, pubAttr, eventType, params])
     }
 
-    var i,f,fs=[module, require, log, error, emit, postEmit, doLaterOnce, taskRunner, bind, sendJSON, stringify]
+    var i,f,fs=[module, require, log, getLog, error, emit, postEmit, doLaterOnce, taskRunner, bind, sendJSON, stringify]
     for(i in fs) 
         f=fs[i],doq[f.name]=f
         
