@@ -53,7 +53,6 @@ doq.module('doq.console', ['doq.router'], function(){
                             items:[
                                 {label:'PHP logs', activate:putPanelContent, id:'phplogs',params:{panel:'panel2',update:updatePHPLogs}},
                                 {label:'Data queries', activate:putPanelContent, id:'queries', params:{panel:'panel2',update:updateDatalogs}},
-                                {label:'Environment', activate:putPanelContent, id:'env', onupdate:updatePageloadsSelector},
                                 {label:'JS logs', activate:putPanelContent, id:'jslogs', params:{panel:'panel2',update:updateJSLogs}},
                                 {label:'JS Models ', activate:putPanelContent, id:'jsmodelbrowser', params:{panel:'panel2',update:updateJSModelBrowser}},
                             ]
@@ -437,7 +436,9 @@ doq.module('doq.console', ['doq.router'], function(){
     }
     
     function updateJSLogs(panel, targetEl){
-        if(!hasApi){
+        // if(hasApi){
+
+        // }
             renderTable(targetEl,{
                 id:'loadSelect',
                 caption:'All clients',
@@ -449,12 +450,13 @@ doq.module('doq.console', ['doq.router'], function(){
                     {header:'Type', size:'20', field:3},
                 ],
             })
-        }
+        
         
         panel.updating=false
 
     }
     function updateJSModelBrowser(panel, targetEl){
+        panel.updating=false
     }
 
     function updateClientsSelector(panel, targetEl){ //this - menuitem
@@ -631,7 +633,7 @@ doq.module('doq.console', ['doq.router'], function(){
 
 
     function renderTable (targetEl,params){
-        var i, j, cnt, cell, item, inner ,w, table, s, st, addCl,col, rowData,
+        var i, j, cnt, cell, item, inner ,w, s, st, addCl,col, rowData,
             scrollbox=document.createElement('div'),
             table={
                 el:document.createElement('table'),

@@ -82,7 +82,7 @@ doq.C.TYPE_MAP = {
 doq.cfg={
     logTypeFilter: doq.C.L_ERROR | doq.C.L_DEBUG | doq.C.L_INFO,
     logToBrowser: 1,
-    logMaxSize: 1000,
+    logPoolSize: 100,
     logSourcePosition:1,
     defaultRowsPerPage: 10,
     jsModulesRoot:'..'
@@ -100,9 +100,12 @@ doq.cfg={
         oldErrorHandler,
         logEndIndex=0,
         logStartIndex=0,
-        logArray=[],
+        logPool=[],
+        logNo=0,
+        onlog,
         stringify=JSON.stringify
-    
+    doq.ll=logPool
+
     if(_global==undefined) {
         _global=window
     }
@@ -413,16 +416,17 @@ doq.cfg={
     function error(data, url, lineNumber, col){
         log('Error',data,doq.C.L_ERROR, url, lineNumber, col)
     }
+    
     function log(category, data, type, url, lineNumber, col){
         var logEntry, msg,s,stack,last
-        if(type==undefined)
-            type=doq.C.L_DEBUG
-        
+        if (type==undefined) type=doq.C.L_DEBUG
         if(!(doq.cfg.logTypeFilter & type))
             return
         
-        if(data===undefined)
-            data=category, category='(No category)'
+        if(data===undefined){
+            data=category
+            category='(No category)'
+        }
         
         msg=(typeof (data)=='object')?stringify(data):''+data
         
@@ -443,22 +447,22 @@ doq.cfg={
                 url+=':'+col
         }
         
-        logEntry=[(new Date()).getTime(), category, msg, type, url]
+        logEntry=[(new Date()).getTime(), category, '[#'+logNo+'] '+msg, type, url]
+        logNo++
 
-        if(logArray.length<doq.cfg.logMaxSize){
-            logEndIndex=logArray.push(logEntry)
+        if(logPool.length<doq.cfg.logPoolSize){
+            logEndIndex=logPool.push(logEntry)
         } else {
-            logArray[logEndIndex++]=logEntry
-            if(logEndIndex>=doq.cfg.logMaxSize){
+            if(logEndIndex>=doq.cfg.logPoolSize){
                 logEndIndex=0
             } 
+            logPool[logEndIndex++]=logEntry
             if(logStartIndex<logEndIndex){
-                logStartIndex=logEndIndex+1
-                if(logStartIndex>=doq.cfg.logMaxSize){
+                logStartIndex=logEndIndex
+                if(logStartIndex>=doq.cfg.logPoolSize){
                     logStartIndex=0
                 }
             }
-            
         }
 
         if(doq.cfg.logToBrowser){
@@ -471,24 +475,28 @@ doq.cfg={
                 console.info(s)
                 else console.log(s)
         }
+        if(onlog!=undefined){
+            onlog(logPool, doq.cfg.logPoolSize, )
+        }
     }
     function getLog(offset,size){
         var i,j,res=[],restSize
         if(!size) size=100
         if(!offset) offset=0
         restSize=size
-        if(logEndIndex<logArray.length) {
-            i=logEndIndex+offset
-            if(i>=logArray.length){
-                i-=logArray.length
+        
+        if(logEndIndex<logPool.length) {
+            i=logStartIndex+offset
+            if(i>=logPool.length){
+                i-=logPool.length
             }
         } else {
             i=offset
         }
         for(j=0;j<restSize;j++){
-            res.push(logArray[i])
-            i=(i<doq.cfg.logMaxSize) ?i+1 :0
-            if(i==logTargetIndex) break
+            res.push(logPool[i])
+            i=(i<(doq.cfg.logPoolSize-1)) ?i+1 :0
+            if(i==logEndIndex) break
         }
         return res
     }
