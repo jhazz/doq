@@ -3,7 +3,7 @@ if(!isset($ROOT_PATH)){
     $ROOT_PATH=dirname(__FILE__, 2);
 }
 if(!isset($TMP_PATH)){
-    $TMP_PATH='/tmp';
+    $TMP_PATH=sys_get_temp_dir();
 }
 
 return [

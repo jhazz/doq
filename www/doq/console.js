@@ -12,7 +12,7 @@ doq.module('doq.console', ['doq.router'], function(){
             borderSize:3,
             el:null,
             appends:[],
-            splitter2:{className:'doq-console-vsplitter', mousedown:splitter1mousedown, wire:{className:'doq-console-vsplitterw'}},
+            splitter2:{className:'doq-console-vsplitter', mousedown:splitterMouseDown, wire:{className:'doq-console-vsplitterw'}},
             controls:{className:'doq-console-topbar',
                 //btnExpand:{className:'doq-console-drawerctrls',text:'[ ]'},
                 btnClose: {click:hide, className:'doq-console-drawerctrls',text:'X'}
@@ -58,7 +58,7 @@ doq.module('doq.console', ['doq.router'], function(){
                             ]
                         },
                     },
-                    splitter1:{className:'doq-console-vsplitter', mousedown:splitter1mousedown, wire:{className:'doq-console-vsplitterw'}}
+                    splitter1:{className:'doq-console-vsplitter', mousedown:splitterMouseDown, wire:{className:'doq-console-vsplitterw'}}
                 })
                 break
             case  LAYOUT_ONE_PANEL:
@@ -72,7 +72,7 @@ doq.module('doq.console', ['doq.router'], function(){
                             ]
                         },
                     },
-                    splitter1:{className:'doq-console-vsplitter', mousedown:splitter1mousedown, wire:{className:'doq-console-vsplitterw'}}
+                    splitter1:{className:'doq-console-vsplitter', mousedown:splitterMouseDown, wire:{className:'doq-console-vsplitterw'}}
                 })
                 break
         }
@@ -379,6 +379,7 @@ doq.module('doq.console', ['doq.router'], function(){
         
     }
     
+    
     function updatePHPLogs(panel, targetEl){ //this - menuitem
         var response,
             url= apiConsoleURL+'?action=phplogs',
@@ -444,18 +445,66 @@ doq.module('doq.console', ['doq.router'], function(){
                 caption:'All clients',
                 rows:doq.getLog(0,100),
                 columns:[
-                    {header:'Time', size:'100', field:0},
-                    {header:'Category', size:'80', field:1},
-                    {header:'Message', size:'300', field:2},
-                    {header:'Type', size:'20', field:3},
+                    {header:'Seq#', size:'10', field:0},
+                    {header:'Time(+ms)', size:'30', field:1},
+                    {header:'Category', size:'80', field:3},
+                    {header:'Message', size:'300', field:4},
+                    {header:'Type', size:'20', field:5},
                 ],
+                onclick:function(rowData){
+                    showPanel3(detailJSlog, rowData)
+                }
             })
-        
-        
         panel.updating=false
-
     }
+
+    function detailJSlog(el, rowData){
+        var placeEl=drawer.panel3.place.el, 
+            f=document.createDocumentFragment(), 
+            c=document.createElement('div'),fc
+        placeEl.style.height='90%'
+        c.className='doq-console-form'
+        renderParams(c, rowData, [
+            {label:'Seq#',id:0}, 
+            {label:'Time',id:1}, 
+            {label:'Category', id:3},
+            {label:'Message',id:4}, 
+            {label:'Type',id:5}, 
+            {label:'URL',id:6}, 
+            ])
+        f.appendChild(c)
+        fc=placeEl.firstChild
+        if(!fc)
+            placeEl.appendChild(f)
+        else
+            placeEl.replaceChild(f,fc)
+    }
+
+
+
     function updateJSModelBrowser(panel, targetEl){
+        var scrollbox=document.createElement('div'),
+            tabEl=document.createElement('table'),
+            p=document.createElement('p'),
+            cell, thead, row
+        
+        scrollbox.className='doq-console-scrollbox'
+        p.className='doq-console-p'
+        p.innerHTML='This is a model'
+        targetEl.appendChild(p)
+        tabEl.className='doq-console-table'
+        thead = tabEl.createTHead(),
+        row = thead.insertRow()
+        cell = document.createElement('th')
+        cell.innerText='Path'
+        row.appendChild(cell)
+        cell = document.createElement('th')
+        cell.innerText='Data'
+        row.appendChild(cell)
+
+
+        scrollbox.appendChild(tabEl)
+        targetEl.appendChild(scrollbox)
         panel.updating=false
     }
 
@@ -654,7 +703,7 @@ doq.module('doq.console', ['doq.router'], function(){
         
         cnt=params.columns.length
         for (i=0;i<cnt;i++) {
-            cell = document.createElement('th');
+            cell = document.createElement('th')
             w=params.columns[i].size
             inner=document.createElement('div')
             st=inner.style
@@ -663,7 +712,7 @@ doq.module('doq.console', ['doq.router'], function(){
             st.whiteSpace='nowrap'
             inner.innerText=params.columns[i].header
             cell.appendChild(inner)
-            row.appendChild(cell);
+            row.appendChild(cell)
         }
         
         cnt=params.rows.length
@@ -735,22 +784,22 @@ doq.module('doq.console', ['doq.router'], function(){
         
     }
 
-    function splitter1mousedown(e){
-        document.body.addEventListener('mousemove',splitter1mousemove)
-        document.body.addEventListener('mouseup',splitter1mouseup)
-        document.body.addEventListener('mouseleave',splitter1mouseup)
+    function splitterMouseDown(e){
+        document.body.addEventListener('mousemove',splitterMouseMove)
+        document.body.addEventListener('mouseup',splitterMouseUp)
+        document.body.addEventListener('mouseleave',splitterMouseUp)
         drag.startPageX=e.pageX
         drag.id=e.target.id
         drag.target=e.target
-        if(drag.id=='splitter1'){
+        if(drag.id=='doq_console_splitter1'){
             drag.startObjX=drawer.panel1.width
             drag.mode=10
-        } else if(drag.id=='splitter2'){
+        } else if(drag.id=='doq_console_splitter2'){
             drag.startObjX=drawer.panel3.width
             drag.mode=11
         }
         
-        function splitter1mousemove(e){
+        function splitterMouseMove(e){
             var newPageX=e.pageX, 
                 maxWidth=document.body.clientWidth
                 
@@ -775,14 +824,13 @@ doq.module('doq.console', ['doq.router'], function(){
                 if(drawer.panel3.width>(maxWidth-100)) 
                     drawer.panel3.width=maxWidth-100
                 arrange()
-                
             }
         }
         
-        function splitter1mouseup(e){
+        function splitterMouseUp(e){
             drag.mode=0
-            document.body.removeEventListener('mousemove',splitter1mousemove)
-            document.body.removeEventListener('mouseup',splitter1mouseup)
+            document.body.removeEventListener('mousemove',splitterMouseMove)
+            document.body.removeEventListener('mouseup',splitterMouseUp)
         }
 
     }
@@ -902,12 +950,12 @@ doq.module('doq.console', ['doq.router'], function(){
 
     function showPanel3(viewerFunction, rowData){
         if(!drawer.splitter2.el){
-            put(drawer,'doq-console-panel3')
-            put(drawer.panel3,'doq-console-bar')
-            put(drawer.panel3.bar,'doq-console-btnClose')
-            put(drawer.panel3,'doq-console-place')
-            put(drawer,'doq-console-splitter2')
-            put(drawer.splitter2,'doq-console-wire')
+            put(drawer,'panel3')
+            put(drawer.panel3,'bar')
+            put(drawer.panel3.bar,'btnClose')
+            put(drawer.panel3,'place')
+            put(drawer,'splitter2')
+            put(drawer.splitter2,'wire')
             appendControls()
         } else {
             drawer.splitter2.el.style.display=drawer.panel3.el.style.display='block'

@@ -103,7 +103,9 @@ doq.cfg={
         logPool=[],
         logNo=0,
         onlog,
-        stringify=JSON.stringify
+        stringify=JSON.stringify,
+        startExecutionTime=(new Date()).getTime()
+
     doq.ll=logPool
 
     if(_global==undefined) {
@@ -447,7 +449,10 @@ doq.cfg={
                 url+=':'+col
         }
         
-        logEntry=[(new Date()).getTime(), category, '[#'+logNo+'] '+msg, type, url]
+        var currentTime=(new Date()).getTime(), 
+            currentTimeOffset=currentTime-startExecutionTime
+
+        logEntry=[logNo, currentTimeOffset, currentTime, category, '[#'+logNo+'] '+msg, type, url]
         logNo++
 
         if(logPool.length<doq.cfg.logPoolSize){
@@ -709,6 +714,5 @@ doq.cfg={
         f=fs[i],doq[f.name]=f
         
     initErrorHadnler()
-    
 })(window)
 
