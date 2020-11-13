@@ -632,9 +632,8 @@ doq.module('doq.data', ['doq.evaluate'], function () {
     }
 
     function copyObject(obj) {
-        var i, r = {},
-            n = Object.getOwnPropertyNames(obj),
-            nn
+        var i, r = {}, nn,
+            n = Object.getOwnPropertyNames(obj)
         for (i in n)
             nn = n[i], r[nn] = obj[nn]
         return r
@@ -660,13 +659,13 @@ doq.module('doq.data', ['doq.evaluate'], function () {
             if (!!schemaClassName) {
                 if (typeof schemaClassName === 'object')
                     schemaClassName = schemaClassName['data']
-                if (schemaClassName in mgui.classes)
-                    schemaClass = mgui.classes[schemaClassName]
+                if (schemaClassName in doq.classes)
+                    schemaClass = doq.classes[schemaClassName]
                 if ('schema' in schemaClass)
                     _buildNodeBySchema(datanode, schemaClass['schema'])
             }
-            if ((!!nodeClassName) && (nodeClassName in mgui.classes)) {
-                nodeClass = mgui.classes[nodeClassName]
+            if ((!!nodeClassName) && (nodeClassName in doq.classes)) {
+                nodeClass = doq.classes[nodeClassName]
             }
             for (tAttrName in schema) {
                 if (tAttrName.indexOf('#') === 0) {
@@ -674,13 +673,13 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                     // название атрибута без # в начале
                     tcAttrName = tAttrName.substr(1)
                     if ((!!nodeClass) && ('handlers' in nodeClass) && (tcAttrName in nodeClass['handlers'])) {
-                        handlers = mgui.copyObject(nodeClass['handlers'][tcAttrName])
+                        handlers = doq.copyObject(nodeClass['handlers'][tcAttrName])
                     }
                     if (typeof tAttrDefs === 'object') {
                         tBindType = tAttrDefs['bind']
                         if (tBindType !== undefined)
                             tBindType = (tBindType in doq.C.TYPE_MAP) ? doq.C.TYPE_MAP[tBindType] : doq.C.BT_AUTO
-                        mgui.setAttribute(digScopeStack, tcAttrName, {
+                        doq.setAttribute(digScopeStack, tcAttrName, {
                             'data': tAttrDefs['data'],
                             'nullable': tAttrDefs['nullable'],
                             'bindType': tBindType,
@@ -691,7 +690,7 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                     } else {
                         tBindType = doq.C.BT_AUTO
                         tAttrData = tAttrDefs
-                        mgui.setAttribute(digScopeStack, tcAttrName, {
+                        setAttribute(digScopeStack, tcAttrName, {
                             'data': tAttrData,
                             'type': typeof tAttrData,
                             'contextScopeStack': contextScopeStack,
@@ -730,11 +729,11 @@ doq.module('doq.data', ['doq.evaluate'], function () {
             schemaNode = scope.schemaNode
             path = scope.path
         } else {
-            datanode = mgui.model
+            datanode = doq.model
             if (datanode === undefined) {
-                datanode = mgui.model = new mgui.Datanode('/')
+                datanode = doq.model = new Datanode('/')
             }
-            schemaNode = mgui.schema // может быть undefined
+            schemaNode = doq.schema // может быть undefined
             path = '/'
         }
 
@@ -796,7 +795,7 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                         return [false, "Узел '" + s + "' отсутствует в пространстве данных '" + path + "'"]
                     // Узел отсутствует, но если указан флаг createIfNE, то создаем этот узел
                     // с шаблонами класса из схемы, передавая datanode в качестве родительского
-                    datanode = datanode['@'][s] = new mgui.Datanode(path, datanode)
+                    datanode = datanode['@'][s] = new Datanode(path, datanode)
                     if (!!contextScopeStack) {
                         datanode.contextPath = contextScopeStack.top.path
                         datanode.contextDatanode = contextScopeStack.top.datanode
@@ -811,8 +810,8 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                         var cn = schemaNode['#nodeClass']
                         if (!!cn) {
                             if (typeof cn === 'object') cn = cn['data']
-                            if (cn in mgui.classes) {
-                                nodeClass = mgui.classes[cn]
+                            if (cn in doq.classes) {
+                                nodeClass = doq.classes[cn]
                                 datanode['nodeClassName'] = cn
                                 if ((nodeClass !== undefined) && ('methods' in nodeClass)) {
                                     datanode.methods = nodeClass['methods']
@@ -867,13 +866,13 @@ doq.module('doq.data', ['doq.evaluate'], function () {
             if (!!schemaClassName) {
                 if (typeof schemaClassName === 'object')
                     schemaClassName = schemaClassName['data']
-                if (schemaClassName in mgui.classes)
-                    schemaClass = mgui.classes[schemaClassName]
+                if (schemaClassName in doq.classes)
+                    schemaClass = doq.classes[schemaClassName]
                 if ('schema' in schemaClass)
                     _buildNodeBySchema(datanode, schemaClass['schema'])
             }
-            if ((!!nodeClassName) && (nodeClassName in mgui.classes)) {
-                nodeClass = mgui.classes[nodeClassName]
+            if ((!!nodeClassName) && (nodeClassName in doq.classes)) {
+                nodeClass = doq.classes[nodeClassName]
             }
             for (tAttrName in schema) {
                 if (tAttrName.indexOf('#') === 0) {
@@ -881,13 +880,14 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                     // название атрибута без # в начале
                     tcAttrName = tAttrName.substr(1)
                     if ((!!nodeClass) && ('handlers' in nodeClass) && (tcAttrName in nodeClass['handlers'])) {
-                        handlers = mgui.copyObject(nodeClass['handlers'][tcAttrName])
+                        handlers = copyObject(nodeClass['handlers'][tcAttrName])
                     }
                     if (typeof tAttrDefs === 'object') {
                         tBindType = tAttrDefs['bind']
-                        if (tBindType !== undefined)
+                        if (tBindType !== undefined) {
                             tBindType = (tBindType in doq.C.TYPE_MAP) ? doq.C.TYPE_MAP[tBindType] : doq.C.BT_AUTO
-                        mgui.setAttribute(digScopeStack, tcAttrName, {
+                        }
+                        setAttribute(digScopeStack, tcAttrName, {
                             'data': tAttrDefs['data'],
                             'nullable': tAttrDefs['nullable'],
                             'bindType': tBindType,
@@ -898,7 +898,7 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                     } else {
                         tBindType = doq.C.BT_AUTO
                         tAttrData = tAttrDefs
-                        mgui.setAttribute(digScopeStack, tcAttrName, {
+                        setAttribute(digScopeStack, tcAttrName, {
                             'data': tAttrData,
                             'type': typeof tAttrData,
                             'contextScopeStack': contextScopeStack,
@@ -925,11 +925,11 @@ doq.module('doq.data', ['doq.evaluate'], function () {
             schemaNode = scope.schemaNode
             path = scope.path
         } else {
-            datanode = mgui.model
+            datanode = doq.model
             if (datanode === undefined) {
-                datanode = mgui.model = new mgui.Datanode('/')
+                datanode = doq.model = new Datanode('/')
             }
-            schemaNode = mgui.schema // может быть undefined
+            schemaNode = doq.schema // может быть undefined
             path = '/'
         }
 
@@ -991,7 +991,7 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                         return [false, "Узел '" + s + "' отсутствует в пространстве данных '" + path + "'"]
                     // Узел отсутствует, но если указан флаг createIfNE, то создаем этот узел
                     // с шаблонами класса из схемы, передавая datanode в качестве родительского
-                    datanode = datanode['@'][s] = new mgui.Datanode(path, datanode)
+                    datanode = datanode['@'][s] = new Datanode(path, datanode)
                     if (!!contextScopeStack) {
                         datanode.contextPath = contextScopeStack.top.path
                         datanode.contextDatanode = contextScopeStack.top.datanode
@@ -1006,8 +1006,8 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                         var cn = schemaNode['#nodeClass']
                         if (!!cn) {
                             if (typeof cn === 'object') cn = cn['data']
-                            if (cn in mgui.classes) {
-                                nodeClass = mgui.classes[cn]
+                            if (cn in doq.classes) {
+                                nodeClass = doq.classes[cn]
                                 datanode['nodeClassName'] = cn
                                 if ((nodeClass !== undefined) && ('methods' in nodeClass)) {
                                     datanode.methods = nodeClass['methods']
@@ -1041,92 +1041,6 @@ doq.module('doq.data', ['doq.evaluate'], function () {
         else scopeStack.top = undefined
     }
 
-    function unbindByPub (pubPath, referencingSub, ignoreBindery) {
-        var pubPathNode = pubPath,
-            pubPathAttr = 'value',
-            binding, r, i, j, k, e, n1, n2, allAttrs = true,
-            m, node = mgui.bindery.byPub,
-            chain = [],
-            pe, ce, nodeName
-        if (pubPath.indexOf('#') >= 0) r = pubPath.split('#'), pubPathNode = r[0], pubPathAttr = r[1], allAttrs = false
-        pe = pubPathNode.split('/')
-        pe.push('@')
-        for (i in pe) {
-            e = pe[i]
-            if (e === '') continue
-            chain.push([e, node])
-            if (e in node) node = node[e]
-            else return [false, "Элемент " + e + ' не найден в связке подписчиков по пути ' + pubPath]
-        }
-        for (k in node) { // перебираем pubPathAttr
-            if ((k == '#') || ((!allAttrs) && (k != pubPathAttr))) continue
-            n1 = node[k]
-            for (m in n1)
-                if (m != '#') { // перебираем msgType
-                    n2 = n1[m]
-                    for (j in n2)
-                        if (j != '#') { // перебирем subPath, удаляем только связанные с referensingSub
-                            if ((referencingSub == undefined) || (referencingSub == j)) {
-                                if (!ignoreBindery) {
-                                    binding = n2[j]['&']
-                                    mgui.unbindBySub(binding.subPath, true)
-                                }
-                                delete n2[j]
-                                n2['#']--
-                            }
-                        }
-                    if (!n2['#']) delete n1[m], n1['#']--
-                }
-            if (!n1['#']) delete node[k], node['#']--
-        }
-        for (j = chain.length - 1; j >= 0; j--) {
-            ce = chain[j]
-            node = ce[1]
-            nodeName = ce[0]
-            if (node[nodeName]['#'] != 0) break
-            delete node[nodeName]
-            node['#']--
-        }
-    }
-
-    function unbindBySub (subPath, ignoreBindery) {
-        var subPathNode = subPath,
-            subPathAttr = 'value',
-            binding, r, i, j, k, e, n1, allAttrs = true,
-            node = mgui.bindery.bySub,
-            chain = [],
-            pe, ce, nodeName
-        if (subPath.indexOf('#') >= 0) r = subPath.split('#'), subPathNode = r[0], subPathAttr = r[1], allAttrs = false
-        pe = subPathNode.split('/')
-        pe.push('@')
-        for (i in pe) {
-            e = pe[i]
-            if (e === '') continue
-            chain.push([e, node])
-            if (e in node) node = node[e]
-            else return [false, "Элемент " + e + ' не найден в связке подписчиков по пути ' + subPath]
-        }
-        for (k in node) {
-            if ((k == '#') || ((!allAttrs) && (k != subPathAttr))) continue
-            n1 = node[k]
-            if (!ignoreBindery)
-                for (j in n1)
-                    if (j != '#') {
-                        binding = n1[j]['&']
-                        mgui.unbindByPub(binding.pubPath, binding.subPath, true)
-                    }
-            delete node[k]
-            node['#']--
-        }
-        for (j = chain.length - 1; j >= 0; j--) {
-            ce = chain[j]
-            node = ce[1]
-            nodeName = ce[0]
-            if (node[nodeName]['#'] != 0) break
-            delete node[nodeName]
-            node['#']--
-        }
-    }
 
 
     /** @param srcType - тип из которого делается преобразование
@@ -1406,9 +1320,9 @@ doq.module('doq.data', ['doq.evaluate'], function () {
             el = pageNode.htmlElement
         if (!el)
             el = pageNode.htmlElement = mgui.guiContainer
-        page = mgui.pages[pageId]
+        page = doq.pages[pageId]
         if (!!page) {
-            r = mgui.openPath(pageId, 1, vmScopeStack, 1, 1, mScopeStack, page)
+            r = openPath(pageId, 1, vmScopeStack, 1, 1, mScopeStack, page)
             if (!r[0])
                 doq.error(r[1])
         }
@@ -1417,8 +1331,8 @@ doq.module('doq.data', ['doq.evaluate'], function () {
 
 
     return {
-        functions: [Datanode, forEachChild, copyObject, setAttribute, 
-            openContext, openPath, closePath, unbindByPub, unbindBySub, showPage],
+        functions: [Datanode, forEachChild, copyObject, setAttribute, getDatanode,
+            openContext, openPath, closePath, showPage],
         exports: { CONST_1: CONST_1 },
         css: {
             uses: ['a', 'li', '#panel'],

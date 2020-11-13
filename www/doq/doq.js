@@ -2,6 +2,7 @@
 doq={
     css:{activeTheme:'light', themes:{"light":{vars:{'@inputColor':'cyan'}}}, selectors:{}, usage:{}, vars:{}},
     datasources: {},
+    pages:{},
     model: undefined,
     schema: {},
     C:{
@@ -609,17 +610,103 @@ doq.cfg={
         return binding
     }
     
+    function unbindByPub (pubPath, referencingSub, ignoreBindery) {
+        var pubPathNode = pubPath,
+            pubPathAttr = 'value',
+            binding, r, i, j, k, e, n1, n2, allAttrs = true,
+            m, node = bindery.byPub,
+            chain = [],
+            pe, ce, nodeName
+        if (pubPath.indexOf('#') >= 0) r = pubPath.split('#'), pubPathNode = r[0], pubPathAttr = r[1], allAttrs = false
+        pe = pubPathNode.split('/')
+        pe.push('@')
+        for (i in pe) {
+            e = pe[i]
+            if (e === '') continue
+            chain.push([e, node])
+            if (e in node) node = node[e]
+            else return [false, "Элемент " + e + ' не найден в связке подписчиков по пути ' + pubPath]
+        }
+        for (k in node) { // перебираем pubPathAttr
+            if ((k == '#') || ((!allAttrs) && (k != pubPathAttr))) continue
+            n1 = node[k]
+            for (m in n1)
+                if (m != '#') { // перебираем msgType
+                    n2 = n1[m]
+                    for (j in n2)
+                        if (j != '#') { // перебирем subPath, удаляем только связанные с referensingSub
+                            if ((referencingSub == undefined) || (referencingSub == j)) {
+                                if (!ignoreBindery) {
+                                    binding = n2[j]['&']
+                                    unbindBySub(binding.subPath, true)
+                                }
+                                delete n2[j]
+                                n2['#']--
+                            }
+                        }
+                    if (!n2['#']) delete n1[m], n1['#']--
+                }
+            if (!n1['#']) delete node[k], node['#']--
+        }
+        for (j = chain.length - 1; j >= 0; j--) {
+            ce = chain[j]
+            node = ce[1]
+            nodeName = ce[0]
+            if (node[nodeName]['#'] != 0) break
+            delete node[nodeName]
+            node['#']--
+        }
+    }
+
+    function unbindBySub (subPath, ignoreBindery) {
+        var subPathNode = subPath,
+            subPathAttr = 'value',
+            binding, r, i, j, k, e, n1, allAttrs = true,
+            node = bindery.bySub,
+            chain = [],
+            pe, ce, nodeName
+        if (subPath.indexOf('#') >= 0) r = subPath.split('#'), subPathNode = r[0], subPathAttr = r[1], allAttrs = false
+        pe = subPathNode.split('/')
+        pe.push('@')
+        for (i in pe) {
+            e = pe[i]
+            if (e === '') continue
+            chain.push([e, node])
+            if (e in node) node = node[e]
+            else return [false, "Элемент " + e + ' не найден в связке подписчиков по пути ' + subPath]
+        }
+        for (k in node) {
+            if ((k == '#') || ((!allAttrs) && (k != subPathAttr))) continue
+            n1 = node[k]
+            if (!ignoreBindery)
+                for (j in n1)
+                    if (j != '#') {
+                        binding = n1[j]['&']
+                        unbindByPub(binding.pubPath, binding.subPath, true)
+                    }
+            delete node[k]
+            node['#']--
+        }
+        for (j = chain.length - 1; j >= 0; j--) {
+            ce = chain[j]
+            node = ce[1]
+            nodeName = ce[0]
+            if (node[nodeName]['#'] != 0) break
+            delete node[nodeName]
+            node['#']--
+        }
+    }
 
 
-/**
- * Sends event from publisher to subscriber
- * @param {string} pubPath publisher path
- * @param {string} pubAttr publisher attribute
- * @param {EventType} eventType one of event types like EV_CHANGE/EV_UPDATE/EV_PULL
- * @param {object} params passing parameters to subscriber
- * */
+    /**
+     * Sends event from publisher to subscriber
+     * @param {string} pubPath publisher path
+     * @param {string} pubAttr publisher attribute
+     * @param {EventType} eventType one of event types like EV_CHANGE/EV_UPDATE/EV_PULL
+     * @param {object} params passing parameters to subscriber
+     * */
     function emit(pubPath, pubAttr, eventType, params) {
-        var e, pe, r, i, subPath, subscribers, result, binding, node = bindery.byPub, s, pp
+        var e, pe, r, i, subPath, subscribers, result, binding, node = byPub, s, pp
         if (!pubAttr)
             pubAttr = "(Unknown attribute '" + pubPath + "' as emitter)"
         pe = pubPath.split('/')
@@ -709,7 +796,8 @@ doq.cfg={
         doLaterOnce(pubPath + '#' + pubAttr + '!' + eventType, doq, emit, [pubPath, pubAttr, eventType, params])
     }
 
-    var i,f,fs=[module, require, log, getLog, error, emit, postEmit, doLaterOnce, taskRunner, bind, sendJSON, stringify]
+    var i,f,fs=[module, require, log, stringify, getLog, error, emit, postEmit, doLaterOnce, taskRunner, sendJSON, 
+        bind, unbindByPub, unbindBySub]
     for(i in fs) 
         f=fs[i],doq[f.name]=f
         
