@@ -481,8 +481,9 @@ doq.cfg={
                 console.info(s)
                 else console.log(s)
         }
+        
         if(onlog!=undefined){
-            onlog(logPool, doq.cfg.logPoolSize, )
+            onlog(logPool, doq.cfg.logPoolSize)
         }
     }
     function getLog(offset,size){

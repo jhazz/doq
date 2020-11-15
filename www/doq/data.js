@@ -1,7 +1,7 @@
 /* jshint asi:true, -W100, forin:false, sub:true */
 doq.module('doq.data', ['doq.evaluate'], function () {
     var CONST_1 = '123'
-
+    var classes={}
 
     /**
      * Возвращает существующий узел данных
@@ -655,7 +655,7 @@ doq.module('doq.data', ['doq.evaluate'], function () {
             if (!('#' in datanode))
                 datanode['#'] = {}
 
-            schemaClassName = schema['#nodeClass']
+            schemaClassName = schema['#сlass']
             if (!!schemaClassName) {
                 if (typeof schemaClassName === 'object')
                     schemaClassName = schemaClassName['data']
@@ -842,10 +842,10 @@ doq.module('doq.data', ['doq.evaluate'], function () {
      * Открывает узел видимости данных по адресу newPath, а если узла нет, то при createIfNE создает сам узел и промежуточные
      * @param {string} newPath новый путь
      * @param {boolean} создать узел, если отсутствует
-     * @param {Array} текущий стек пространства имен, включая ссылку на текущую схему
+     * @param {Array} текущий стек пространства имен, включая ссылку на текущую схему (обычно это viewmodel)
      * @param {boolean} выход с ошибкой, если узел уже есть
      * @param {boolean} создавать только в соответствии со схемой
-     * @param {array} - контекст данных стек пространства имен модели с которой связываются формулы внутри узла
+     * @param {array} - контекст данных стек пространства имен модели с которой связываются формулы внутри узла (обычно это model)
      * @param {object} - новая схема
      * @returns ScopeStack||Array[false,errorText]
      **/
@@ -862,7 +862,7 @@ doq.module('doq.data', ['doq.evaluate'], function () {
             if (!('#' in datanode))
                 datanode['#'] = {}
 
-            schemaClassName = schema['#nodeClass']
+            schemaClassName = schema['#class']
             if (!!schemaClassName) {
                 if (typeof schemaClassName === 'object')
                     schemaClassName = schemaClassName['data']
@@ -1311,29 +1311,10 @@ doq.module('doq.data', ['doq.evaluate'], function () {
     }
 
 
-
-    function showPage (pageId) {
-        var page, r,
-            vmScopeStack = openPath('/vmodel/pager', true),
-            mScopeStack = openPath('/', true),
-            pageNode = vmScopeStack.top.datanode,
-            el = pageNode.htmlElement
-        if (!el)
-            el = pageNode.htmlElement = mgui.guiContainer
-        page = doq.pages[pageId]
-        if (!!page) {
-            r = openPath(pageId, 1, vmScopeStack, 1, 1, mScopeStack, page)
-            if (!r[0])
-                doq.error(r[1])
-        }
-    }
-
-
-
     return {
         functions: [Datanode, forEachChild, copyObject, setAttribute, getDatanode,
-            openContext, openPath, closePath, showPage],
-        exports: { CONST_1: CONST_1 },
+            openContext, openPath, closePath],
+        exports: {classes:classes},
         css: {
             uses: ['a', 'li', '#panel'],
             vars: {

@@ -15,10 +15,31 @@
 
             doq.postEmit('doq/modules/logger','loaded',doq.C.EV_UPDATE)
 */
-            doq.require('doq.data',function(){console.log('Ok data is ready')})
             doq.require('doq.console',function(){console.log('Ok console is ready')})
-            
-
+            doq.require('doq.ui',function(){
+                var form1={
+                    '#class':'Box',
+                    'area1':{
+                        '#class':'Area',
+                        '#editable':'true',
+                        '#css':'smallTextArea',
+                        '#width':420,
+                        '#text':'{/env/clock#localTime}'
+                    },
+                    
+                    'area2':{
+                        '#class':'Area',
+                        '#css':'smallTextArea',
+                        '#text':'{={/env/clock#localTime}+" -- "+{/env/clock#localTime}}'
+                    }
+                }
+                doq.ui.render('form1',form1, null, null, document.getElementById('mainContainer'))
+            })
         </script>
     </head>
+    <body>
+<div id='mainContainer'>mainContainer</div>
+
+    </body>
+
 </html>

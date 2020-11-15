@@ -55,7 +55,7 @@ function removeRouteHandler (routeHashElement){
 }
 
 function init(){
-    console.log('router.init')
+    doq.log('router.init')
     window.addEventListener("load", onLoad)
     window.addEventListener("hashchange", onHashChange)
 }

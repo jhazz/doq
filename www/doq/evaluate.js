@@ -1,6 +1,6 @@
 /* jshint asi:true, -W100, forin:false, sub:true */
 
-doq.module('doq.evaluate',function evaluate(){
+doq.module('doq.evaluate',function(){
     var expressionFunctions = {}
     var expressionElementHandlers = {}
 
