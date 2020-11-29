@@ -303,6 +303,6 @@ doq.module('doq.evaluate',function(){
     }
 
     return {
-        functions:[parseExpression, expressionElementHandlers]
+        exports:[parseExpression, expressionElementHandlers]
     }
 })

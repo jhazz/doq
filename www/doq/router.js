@@ -62,7 +62,7 @@ function init(){
 
 
 return {
-    functions:[onHashChange, addRouteHandler, removeRouteHandler, init],
+    exports:[onHashChange, addRouteHandler, removeRouteHandler, init],
 }
 })
 

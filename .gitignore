@@ -9,3 +9,4 @@ runtime/
 *.phprj
 .codelite/
 .kdev4
+log.txt

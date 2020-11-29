@@ -1,11 +1,11 @@
 /* jshint asi:true, -W100, forin:false, sub:true */
-doq={
-    css:{activeTheme:'light', themes:{"light":{vars:{'@inputColor':'cyan'}}}, selectors:{}, usage:{}, vars:{}},
+doq = {
+    css: { activeTheme: 'light', themes: { "light": { vars: { '@inputColor': 'cyan' } } }, selectors: {}, usage: {}, vars: {} },
     datasources: {},
-    pages:{},
+    //pages:{},
     model: undefined,
     schema: {},
-    C:{
+    C: {
         EV_CHANGE: 'change',
         EV_UPDATE: 'update',
         EV_PULL: 'pull',
@@ -62,11 +62,11 @@ doq={
         E_OPENFUNC: 'OFN',
         E_OPENEVAL: 'OEV',
         E_CALLFUNC: 'FN',
-        L_ERROR:1,
-        L_INFO:2,
-        L_DEBUG:4,
+        L_ERROR: 1,
+        L_INFO: 2,
+        L_DEBUG: 4,
         LOG_TO_BROWSER: true,
-        LOG_TYPE_FILTER:7,
+        LOG_TYPE_FILTER: 7,
     }
 }
 
@@ -80,48 +80,65 @@ doq.C.TYPE_MAP = {
     'bindInOut': doq.C.BT_BIND_INOUT
 }
 
-doq.cfg={
+doq.cfg = {
     logTypeFilter: doq.C.L_ERROR | doq.C.L_DEBUG | doq.C.L_INFO,
     logToBrowser: 1,
     logPoolSize: 100,
-    logSourcePosition:1,
+    logSourcePosition: 1,
     defaultRowsPerPage: 10,
-    jsModulesRoot:'..'
+    jsModulesRoot: '..'
 };
 
-(function(_global){
-    var lang= { DATE_SEPARATOR: '.' },
-        bindery ={ byPub: { '#': 0 }, bySub: { '#': 0 } },
-        nextUID=1,
-        taskList={},
-        taskListSize=0,
-        taskQueueInterval=0,
-        taskDoneCallbacks=[],
-        moduleLoaders={},
+(function (_global) {
+    var 
+        bindery = { byPub: { '#': 0 }, bySub: { '#': 0 } },
+        taskList = {},
+        taskListSize = 0,
+        taskQueueInterval = 0,
+        taskDoneCallbacks = [],
+        moduleLoaders = {},
         oldErrorHandler,
-        logEndIndex=0,
-        logStartIndex=0,
-        logPool=[],
-        logNo=0,
+        logEndIndex = 0,
+        logStartIndex = 0,
+        logPool = [],
+        logNo = 0,
         onlog,
-        stringify=JSON.stringify,
-        startExecutionTime=(new Date()).getTime()
+        stringify = JSON.stringify,
+        startExecutionTime = (new Date()).getTime(),
+        reExtractPath = /^([a-zA-Z0-9_\/]*)((#(\w*))?)/,
+        lang = {
+            base: {
+                THOUSANDS_SEPARATOR: ',',
+                DECIMAL_SEPARATOR: '.',
+                DATE_SEPARATOR: '.',
+                TIME_SEPARATOR: ':',
+                DATE_FORMAT_SHORT: 'd/m/y',
+                DATE_FORMAT_LONG: 'd/M/Y',
+                SHORT_MONTHS: ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"],
+                ERROR_BAD_NUMBER: 'Некорректное число',
+                ERROR_UNKNOWN_DATE_SRCTYPE: 'Неподдерживаемый тип данных из которого требуется получить дату',
+                ERROR_UNKNOWN_NUMBER_SRCTYPE: 'Неподдерживаемый тип данных из которого требуется получить число',
+                ERROR_BAD_DATE: 'Некорректная дата',
+                ERROR_BAD_DATE_NUM: 'В дате указываются только цифры',
+                ERROR_NOT_DATE: 'Значение не является датой'
+            }
+        }
 
-    doq.ll=logPool
+    doq.ll = logPool
 
-    if(_global==undefined) {
-        _global=window
+    if (_global == undefined) {
+        _global = window
     }
 
-    function initErrorHadnler(){
-        oldErrorHandler=window.onerror
-        window.onerror=globalErrorHandler
+    function initErrorHadnler() {
+        oldErrorHandler = window.onerror
+        window.onerror = globalErrorHandler
     }
 
     function require(moduleName, onAfterInit) {
         if (moduleName in moduleLoaders) {
-            loader=moduleLoaders[moduleName]
-            if(loader.inited){
+            loader = moduleLoaders[moduleName]
+            if (loader.inited) {
                 onAfterInit()
                 return moduleLoaders[moduleName]
             } else {
@@ -129,59 +146,57 @@ doq.cfg={
             }
         }
 
-        var modulePath=moduleName.replace(/\./g, '/'),
-            jsPath=doq.cfg.jsModulesRoot+'/'+modulePath+'.js',
+        var modulePath = moduleName.replace(/\./g, '/'),
+            jsPath = doq.cfg.jsModulesRoot + '/' + modulePath + '.js',
             jsElement = document.createElement("script"),
             loader
 
         jsElement.type = 'text/javascript';
-        jsElement.onerror=function(e){
+        jsElement.onerror = function (e) {
             loader.loading = 0
-            loader.error=e
+            loader.error = e
             this.onreadystatechange = this.onload = undefined
-            var errStr='Unable to load module '+moduleName+' from "'+jsPath+'".  Modules are halted by the lost module: ['+ getDependentModulesList(moduleName).join(',')+'].'
+            var errStr = 'Unable to load module ' + moduleName + ' from "' + jsPath + '".  Modules are halted by the lost module: [' + getDependentModulesList(moduleName).join(',') + '].'
             throw errStr
         }
-        jsElement.onload = jsElement.onreadystatechange = function() {
-            if (loader.loading){
+        jsElement.onload = jsElement.onreadystatechange = function () {
+            if (loader.loading) {
                 if (!this.readyState || this.readyState == "loaded" || this.readyState == "complete") {
                     this.onreadystatechange = this.onload = undefined
                     loader.loading = 0
                     loader.loaded = 1
-                    log('doq.require', 'Module file "'+modulePath+'" is loaded',doq.C.L_DEBUG)
+                    log('doq.require', 'Module file "' + modulePath + '" is loaded', doq.C.L_DEBUG)
                 } else {
-                    log('doq.require', 'Module file "'+modulePath+'" readyState= '+this.readyState, doq.C.L_DEBUG)
+                    log('doq.require', 'Module file "' + modulePath + '" readyState= ' + this.readyState, doq.C.L_DEBUG)
                 }
             }
         };
         document.getElementsByTagName("head")[0].appendChild(jsElement)
-
         jsElement.src = jsPath
-        
-        loader = moduleLoaders[moduleName] = {
-            moduleName: moduleName,
-            modulePath: modulePath,
-            jsElement: jsElement,
-            jsPath: jsPath,
-            loading: 1,
-            loaded: 0,
-            inited: 0
-            
-        }
-        if(onAfterInit!==undefined)
-            loader.onAfterInit=[onAfterInit]
-            
+        loader = moduleLoaders[moduleName] = new ModuleLoader(moduleName, modulePath, jsElement, jsPath, onAfterInit)
         return loader
     }
 
-    function getDependentModulesList(moduleName){
-        var res=[],i,j,ml,r
-        for (i in moduleLoaders){
-            ml=moduleLoaders[i]
-            if((!ml.inited) && (!!ml.requires)){
-                for (j in ml.requires){
-                    r=ml.requires[j]
-                    if(r==moduleName){
+    function ModuleLoader(moduleName, modulePath, jsElement, jsPath, onAfterInit) {
+        this.moduleName= moduleName
+        this.modulePath= modulePath
+        this.jsElement= jsElement
+        this.jsPath= jsPath
+        this.loading=1
+        this.loaded=0
+        this.inited=0
+        if (onAfterInit !== undefined)
+            this.onAfterInit = [onAfterInit]
+    }
+
+    function getDependentModulesList(moduleName) {
+        var res = [], i, j, ml, r
+        for (i in moduleLoaders) {
+            ml = moduleLoaders[i]
+            if ((!ml.inited) && (!!ml.requires)) {
+                for (j in ml.requires) {
+                    r = ml.requires[j]
+                    if (r == moduleName) {
                         res.push(ml.moduleName)
                         break
                     }
@@ -190,34 +205,34 @@ doq.cfg={
         }
         return res
     }
-    
-    function module(moduleName, requires, moduleFunction){
+
+    function module(moduleName, requires, moduleFunction) {
         var i, ml, deep, useMeIndex, hasInit
-        loader=moduleLoaders[moduleName]
-        if(!loader){
-            log('doq', 'Initing module '+moduleName+' is absent in loaders')
+        loader = moduleLoaders[moduleName]
+        if (!loader) {
+            log('doq', 'Initing module ' + moduleName + ' has not been registered in loaders registry')
             return
         }
-        if(typeof(requires)=='function'){
+        if (typeof (requires) == 'function') {
             // no requires
             loader.moduleFunction = moduleFunction = requires
-            requires=null
+            requires = null
         } else {
             // module has requires, need to check that they are has been inited
             loader.requires = requires
             loader.moduleFunction = moduleFunction
         }
         _regLoadedModule(loader)
-        if ((!requires) || ((!!requires) && _checkRequires(requires))){
+        if ((!requires) || ((!!requires) && _checkRequires(requires))) {
             _initModule(loader)
-            for (deep=0;deep<10;deep++){
-                hasInit=false
-                for (i in moduleLoaders){
-                    ml=moduleLoaders[i]
-                    if ((!ml.inited)&&(!!ml.requires)){
-                        if (_checkRequires(ml.requires)){
+            for (deep = 0; deep < 10; deep++) {
+                hasInit = false
+                for (i in moduleLoaders) {
+                    ml = moduleLoaders[i]
+                    if ((!ml.inited) && (!!ml.requires)) {
+                        if (_checkRequires(ml.requires)) {
                             _initModule(ml)
-                            hasInit=true
+                            hasInit = true
                         }
                     }
                 }
@@ -225,348 +240,348 @@ doq.cfg={
             }
         }
 
-        function _checkRequires(arequires){
-            var i, iModuleName, im, isReady=true
-            for (i in arequires){
-                iModuleName=arequires[i]
-                if(!(iModuleName in moduleLoaders)){
+        function _checkRequires(arequires) {
+            var i, iModuleName, im, isReady = true
+            for (i in arequires) {
+                iModuleName = arequires[i]
+                if (!(iModuleName in moduleLoaders)) {
                     require(iModuleName)
-                    isReady=false
+                    isReady = false
                 } else {
-                    im=moduleLoaders[iModuleName]
-                    if(!im.inited)
-                        isReady=false
+                    im = moduleLoaders[iModuleName]
+                    if (!im.inited)
+                        isReady = false
                 }
             }
             return isReady
         }
 
-        function _regLoadedModule(aloader){
-            var i,e,t,targetNS=_global,moduleNames,n
-            try{
-                defs=aloader.moduleFunction()
-            } catch(e) {
+        function _regLoadedModule(aloader) {
+            var i, j, e, t, targetNS = _global, moduleNames, n
+            try {
+                defs = aloader.moduleFunction()
+            } catch (e) {
                 console.error(e)
                 return
             }
-            if (aloader.moduleName){
-                moduleNames=aloader.moduleName.split('.')
-                targetNS=_global
-                for(i in moduleNames){
-                    n=moduleNames[i]
-                    if(n in targetNS)
-                        targetNS=targetNS[n]
+            if (aloader.moduleName) {
+                moduleNames = aloader.moduleName.split('.')
+                targetNS = _global
+                for (i in moduleNames) {
+                    n = moduleNames[i]
+                    if (n in targetNS)
+                        targetNS = targetNS[n]
                     else {
-                        targetNS=(targetNS[n]={})
+                        targetNS = (targetNS[n] = {})
                     }
-                        
+
                 }
                 //targetNS=_global[aloader.moduleName]={}
             }
-            aloader.targetNS=targetNS
-            if(!!defs.functions){
-                for (i in defs.functions){
-                    e=defs.functions[i]
-                    targetNS[e.name]=e
+            aloader.targetNS = targetNS
+
+            if (!!defs.exports) {
+                for (i in defs.exports) {
+                    e = defs.exports[i]
+                    if(typeof (e)==='function'){
+                        targetNS[e.name] = e
+                    } else {
+                        for(j in e) {
+                            targetNS[j]=e[j]
+                        }
+                    }
                 }
             }
-            if(!!defs.exports){
-                for (i in defs.exports){
-                    e=defs.exports[i]
-                    targetNS[i]=e
-                }
-            }
-            if(!!defs.css)
+            if (!!defs.css)
                 registerCSSSelector(aloader.moduleName, defs.css)
         }
-        
-        
-        function _initModule(aloader){
+
+
+        function _initModule(aloader) {
             var i
-            if (aloader.targetNS.init!==undefined){
+            if (aloader.targetNS.init !== undefined) {
                 aloader.targetNS.init.call(aloader)
             }
-            aloader.inited=1
+            aloader.inited = 1
             applyCSSByOwnerId(aloader.moduleName)
-            if(aloader.onAfterInit!==undefined){
-                for(i in aloader.onAfterInit){
+            if (aloader.onAfterInit !== undefined) {
+                for (i in aloader.onAfterInit) {
                     aloader.onAfterInit[i].call(aloader)
                 }
             }
         }
     }
 
-    function applyCSSByOwnerId(ownerId,doOverwrite){
-        var i,applyingStyleText,ss,sset,sels, rule, l, v, ruleSelector, 
-            targetSheet,overlaps={},activeTheme,val, varEntry
-            
+    function applyCSSByOwnerId(ownerId, doOverwrite) {
+        var i, applyingStyleText, ss, sset, sels, rule, l, v, ruleSelector,
+            targetSheet, overlaps = {}, activeTheme, val, varEntry
+
         //log('doq.css','-----apply css defined by "'+ownerId+'" ------')
-        if((!!doq.css.activeTheme)&&(doq.css.activeTheme in doq.css.themes))
-            activeTheme=doq.css.themes[doq.css.activeTheme]
-            
-        if(document.styleSheets){
-            for(i in document.styleSheets) {
-                ss=document.styleSheets[i]
-                if((ss.disabled)||(!ss.cssRules))
+        if ((!!doq.css.activeTheme) && (doq.css.activeTheme in doq.css.themes))
+            activeTheme = doq.css.themes[doq.css.activeTheme]
+
+        if (document.styleSheets) {
+            for (i in document.styleSheets) {
+                ss = document.styleSheets[i]
+                if ((ss.disabled) || (!ss.cssRules))
                     continue
-                if(!ss.href){
-                    targetSheet=ss
+                if (!ss.href) {
+                    targetSheet = ss
                 }
-                l=ss.cssRules.length
-                for(j=0;j<l;j++){
-                    rule=ss.cssRules[j]
-                    ruleSelector=rule.selectorText
-                    if(ruleSelector in doq.css.selectors){
-                        overlaps[ruleSelector]=rule
+                l = ss.cssRules.length
+                for (j = 0; j < l; j++) {
+                    rule = ss.cssRules[j]
+                    ruleSelector = rule.selectorText
+                    if (ruleSelector in doq.css.selectors) {
+                        overlaps[ruleSelector] = rule
                     }
                 }
             }
         }
-        
-        if(!targetSheet){
-            targetSheet=document.createElement('style')
+
+        if (!targetSheet) {
+            targetSheet = document.createElement('style')
             targetSheet.type = 'text/css'
             document.getElementsByTagName('head')[0].appendChild(targetSheet)
         }
-        sels=doq.css.selectors
-        for(ss in sels) {
-            v=sels[ss]
-            if(ownerId in v){
-                if(ss in overlaps) {
-                    if(!doOverwrite){
+        sels = doq.css.selectors
+        for (ss in sels) {
+            v = sels[ss]
+            if (ownerId in v) {
+                if (ss in overlaps) {
+                    if (!doOverwrite) {
                         continue
                     }
                 }
-                applyingStyleText=v[ownerId].replace(/@[A-Za-z\-_]+/g,function(varName){
+                applyingStyleText = v[ownerId].replace(/@[A-Za-z\-_]+/g, function (varName) {
                     var val
-                    if(varName in doq.css.vars){
-                        varEntry=doq.css.vars[varName]
-                        if('value' in varEntry){
-                            val=varEntry.value
+                    if (varName in doq.css.vars) {
+                        varEntry = doq.css.vars[varName]
+                        if ('value' in varEntry) {
+                            val = varEntry.value
                         }
-                        
+
                     }
-                    if(val==undefined){
-                        if((!!activeTheme)&&(varName in activeTheme.vars)){
-                            val=activeTheme.vars[varName]
+                    if (val == undefined) {
+                        if ((!!activeTheme) && (varName in activeTheme.vars)) {
+                            val = activeTheme.vars[varName]
                         } else {
-                            if((varEntry!=undefined) && ('default' in varEntry)){
-                                val=varEntry.default
+                            if ((varEntry != undefined) && ('default' in varEntry)) {
+                                val = varEntry.default
                             } else {
-                                error('"'+ownerId+'" has CSS variable "'+varName+'" that is not defined')
-                                return '/*BAD VARIABLE:'+varName+'!*/'
+                                error('"' + ownerId + '" has CSS variable "' + varName + '" that is not defined')
+                                return '/*BAD VARIABLE:' + varName + '!*/'
                             }
                         }
                     }
-                    return val 
+                    return val
                 })
                 targetSheet.addRule(ss, applyingStyleText)
             }
         }
     }
-    
-    function registerCSSSelector(ownerId, defs, prefix){
-        var k,v,t,n,s,se,i,u, doqVars=doq.css.vars,
-            doqSelectors=doq.css.selectors, doqUsage=doq.css.usage
-        for(k in defs){
-            t=typeof(v=defs[k])
-            if(t=='string'){
-                if(k=='_'){
-                    if(prefix in doqSelectors)
-                        doqSelectors[prefix][ownerId]=v
-                    else 
-                        doqSelectors[prefix]={}
-                        doqSelectors[prefix][ownerId]=v
+
+    function registerCSSSelector(ownerId, defs, prefix) {
+        var k, v, t, n, s, se, i, u, doqVars = doq.css.vars,
+            doqSelectors = doq.css.selectors, doqUsage = doq.css.usage
+        for (k in defs) {
+            t = typeof (v = defs[k])
+            if (t == 'string') {
+                if (k == '_') {
+                    if (prefix in doqSelectors)
+                        doqSelectors[prefix][ownerId] = v
+                    else
+                        doqSelectors[prefix] = {}
+                    doqSelectors[prefix][ownerId] = v
                 } else {
-                    s=(prefix==undefined)? k : prefix+=' '+k
-                    if(!(s in doqSelectors)){
-                        doqSelectors[s]={}
+                    s = (prefix == undefined) ? k : prefix += ' ' + k
+                    if (!(s in doqSelectors)) {
+                        doqSelectors[s] = {}
                     }
-                    doqSelectors[s][ownerId]=v
+                    doqSelectors[s][ownerId] = v
                 }
-            } else if (t=='object'){
-                if(k=='@media'){
+            } else if (t == 'object') {
+                if (k == '@media') {
                     error("Cannot work with media conditions")
-                } else if(k=='uses'){
-                    for(i in v){
-                        u=v[i]
-                        if(u in doqUsage)
+                } else if (k == 'uses') {
+                    for (i in v) {
+                        u = v[i]
+                        if (u in doqUsage)
                             docUsage[u].push(ownerId)
                         else
-                            doqUsage[u]=[ownerId]
+                            doqUsage[u] = [ownerId]
                     }
-                } else if (k=='vars'){
-                    for(i in v){ // i-var name starting from @. u=v[i]-var value
-                        if(i.charAt(0)!='@'){
-                            error('Bad variable in css vars '+i+' '+' defined by '+ownerId)
+                } else if (k == 'vars') {
+                    for (i in v) { // i-var name starting from @. u=v[i]-var value
+                        if (i.charAt(0) != '@') {
+                            error('Bad variable in css vars ' + i + ' ' + ' defined by ' + ownerId)
                             continue
                         }
-                        u=v[i]
-                        if(i in doqVars){
+                        u = v[i]
+                        if (i in doqVars) {
                             doqVars[i].declaredBy.push(ownerId)
-                        } else{
-                            doqVars[i]={declaredBy:[ownerId], default:u}
+                        } else {
+                            doqVars[i] = { declaredBy: [ownerId], default: u }
                         }
                     }
                 } else {
-                    registerCSSSelector(ownerId, v,(prefix==undefined)? k :prefix+=' '+k)
+                    registerCSSSelector(ownerId, v, (prefix == undefined) ? k : prefix += ' ' + k)
                 }
             }
         }
     }
-    
 
-    function error(data, url, lineNumber, col){
-        log('Error',data,doq.C.L_ERROR, url, lineNumber, col)
+
+    function error(data, url, lineNumber, col) {
+        log('Error', data, doq.C.L_ERROR, url, lineNumber, col)
     }
-    
-    function log(category, data, type, url, lineNumber, col){
-        var logEntry, msg,s,stack,last
-        if (type==undefined) type=doq.C.L_DEBUG
-        if(!(doq.cfg.logTypeFilter & type))
+
+    function log(category, data, type, url, lineNumber, col) {
+        var logEntry, msg, s, stack, last
+        if (type == undefined) type = doq.C.L_DEBUG
+        if (!(doq.cfg.logTypeFilter & type))
             return
-        
-        if(data===undefined){
-            data=category
-            category='(No category)'
+
+        if (data === undefined) {
+            data = category
+            category = '(No category)'
         }
-        
-        msg=(typeof (data)=='object')?stringify(data):''+data
-        
-        if (url===undefined){
-            if(doq.cfg.logSourcePosition){
-                stack=(function(){try { throw Error() } catch(err) {return err;}})().stack.split('\n')
-                if(stack.length && stack.length>1){
-                    last=stack.pop()
-                    if(!last)
-                        last=stack.pop()
-                    url=last.trim()
+
+        msg = (typeof (data) == 'object') ? stringify(data) : '' + data
+
+        if (url === undefined) {
+            if (doq.cfg.logSourcePosition) {
+                stack = (function () { try { throw Error() } catch (err) { return err; } })().stack.split('\n')
+                if (stack.length && stack.length > 1) {
+                    last = stack.pop()
+                    if (!last)
+                        last = stack.pop()
+                    url = last.trim()
                 }
             }
         } else {
-            if(lineNumber!==undefined)
-                url+=':'+lineNumber
-            if(col!==undefined)
-                url+=':'+col
+            if (lineNumber !== undefined)
+                url += ':' + lineNumber
+            if (col !== undefined)
+                url += ':' + col
         }
-        
-        var currentTime=(new Date()).getTime(), 
-            currentTimeOffset=currentTime-startExecutionTime
 
-        logEntry=[logNo, currentTimeOffset, currentTime, category, '[#'+logNo+'] '+msg, type, url]
+        var currentTime = (new Date()).getTime(),
+            currentTimeOffset = currentTime - startExecutionTime
+
+        logEntry = [logNo, currentTimeOffset, currentTime, category, '[#' + logNo + '] ' + msg, type, url]
         logNo++
 
-        if(logPool.length<doq.cfg.logPoolSize){
-            logEndIndex=logPool.push(logEntry)
+        if (logPool.length < doq.cfg.logPoolSize) {
+            logEndIndex = logPool.push(logEntry)
         } else {
-            if(logEndIndex>=doq.cfg.logPoolSize){
-                logEndIndex=0
-            } 
-            logPool[logEndIndex++]=logEntry
-            if(logStartIndex<logEndIndex){
-                logStartIndex=logEndIndex
-                if(logStartIndex>=doq.cfg.logPoolSize){
-                    logStartIndex=0
+            if (logEndIndex >= doq.cfg.logPoolSize) {
+                logEndIndex = 0
+            }
+            logPool[logEndIndex++] = logEntry
+            if (logStartIndex < logEndIndex) {
+                logStartIndex = logEndIndex
+                if (logStartIndex >= doq.cfg.logPoolSize) {
+                    logStartIndex = 0
                 }
             }
         }
 
-        if(doq.cfg.logToBrowser){
-            s=category+ ': '+msg
-            if(url!==undefined)
-                s+=' ' +url
-            if(type==doq.C.L_ERROR)
+        if (doq.cfg.logToBrowser) {
+            s = category + ': ' + msg
+            if (url !== undefined)
+                s += ' ' + url
+            if (type == doq.C.L_ERROR)
                 console.error(s)
-            else if (type==doq.C.L_INFO)
+            else if (type == doq.C.L_INFO)
                 console.info(s)
-                else console.log(s)
+            else console.log(s)
         }
-        
-        if(onlog!=undefined){
+
+        if (onlog != undefined) {
             onlog(logPool, doq.cfg.logPoolSize)
         }
     }
-    function getLog(offset,size){
-        var i,j,res=[],restSize
-        if(!size) size=100
-        if(!offset) offset=0
-        restSize=size
-        
-        if(logEndIndex<logPool.length) {
-            i=logStartIndex+offset
-            if(i>=logPool.length){
-                i-=logPool.length
+    function getLog(offset, size) {
+        var i, j, res = [], restSize
+        if (!size) size = 100
+        if (!offset) offset = 0
+        restSize = size
+
+        if (logEndIndex < logPool.length) {
+            i = logStartIndex + offset
+            if (i >= logPool.length) {
+                i -= logPool.length
             }
         } else {
-            i=offset
+            i = offset
         }
-        for(j=0;j<restSize;j++){
+        for (j = 0; j < restSize; j++) {
             res.push(logPool[i])
-            i=(i<(doq.cfg.logPoolSize-1)) ?i+1 :0
-            if(i==logEndIndex) break
+            i = (i < (doq.cfg.logPoolSize - 1)) ? i + 1 : 0
+            if (i == logEndIndex) break
         }
         return res
     }
 
-    function globalErrorHandler(errorMsg, url, lineNumber, col, eobj){
-        log('doq.globalError',errorMsg, doq.C.L_ERROR, url,lineNumber, col)
-        if(!!oldErrorHandler)
+    function globalErrorHandler(errorMsg, url, lineNumber, col, eobj) {
+        log('doq.globalError', errorMsg, doq.C.L_ERROR, url, lineNumber, col)
+        if (!!oldErrorHandler)
             oldErrorHandler(errorMsg, url, lineNumber, col, eobj)
         return true
     }
 
-    function getJSON(url, params, onload, responseType){
-        if (!responseType){
-            responseType='json'
+    function getJSON(url, params, onload, responseType) {
+        if (!responseType) {
+            responseType = 'json'
         }
         var xhr = new XMLHttpRequest()
         xhr.open('GET', url)
         xhr.responseType = responseType
         xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8')
-        if(typeof params=='object')
+        if (typeof params == 'object')
             xhr.send(new URLSearchParams(params).toString())
-        else 
+        else
             xhr.send(params)
     }
 
-    function sendJSON(url, json, onload, responseType, method){
-        if (!responseType){
-            responseType='json'
+    function sendJSON(url, json, onload, responseType, method) {
+        if (!responseType) {
+            responseType = 'json'
         }
         var xhr = new XMLHttpRequest()
-        if(!method) {
-            method='POST'
+        if (!method) {
+            method = 'POST'
         }
         xhr.open(method, url)
         xhr.responseType = responseType
         xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8')
-        if(typeof json=='string')
+        if (typeof json == 'string')
             xhr.send(json)
-        else 
+        else
             xhr.send(stringify(json))
         //xhr.onload=onload
-        
-        xhr.onload=function (progress){
-            if(progress.target.status!==200){
-                return onload({error:'Ошибка подключения '+progress.target.status, url:url},true)
+
+        xhr.onload = function (progress) {
+            if (progress.target.status !== 200) {
+                return onload({ error: 'Ошибка подключения ' + progress.target.status, url: url }, true)
             }
-            if(progress.target.response===null) {
-                return onload({error:'Ошибка обработки ответа от сервера', url:url, json},true)
-            } 
-            if((progress.target.responseType=='json') && ('error' in progress.target.response)){
-                return onload(progress.target.response,true)
+            if (progress.target.response === null) {
+                return onload({ error: 'Ошибка обработки ответа от сервера', url: url, json: json }, true)
             }
-            return onload(progress.target.response,false)
-            
+            if ((progress.target.responseType == 'json') && ('error' in progress.target.response)) {
+                return onload(progress.target.response, true)
+            }
+            return onload(progress.target.response, false)
         };
-        
+
         return xhr
     }
-    
+
     function bind(publisherNode, publisherAttr, eventType, subscriberNode, subscriberAttr, callback) {
         var binding, r, pe,
-            pubPath=publisherNode+'#'+publisherAttr,
-            subPath=subscriberNode+'#'+subscriberAttr
+            pubPath = publisherNode + '#' + publisherAttr,
+            subPath = subscriberNode + '#' + subscriberAttr
 
         function _digPath(pathElements, aNode, binding) {
             var prevNode = aNode, e, i
@@ -585,7 +600,7 @@ doq.cfg={
             return aNode
         }
 
-        binding={
+        binding = {
             pubPath: pubPath,
             subPath: subPath,
             eventType: eventType,
@@ -610,8 +625,8 @@ doq.cfg={
         _digPath(pe, bindery.byPub, binding)
         return binding
     }
-    
-    function unbindByPub (pubPath, referencingSub, ignoreBindery) {
+
+    function unbindByPub(pubPath, referencingSub, ignoreBindery) {
         var pubPathNode = pubPath,
             pubPathAttr = 'value',
             binding, r, i, j, k, e, n1, n2, allAttrs = true,
@@ -659,7 +674,7 @@ doq.cfg={
         }
     }
 
-    function unbindBySub (subPath, ignoreBindery) {
+    function unbindBySub(subPath, ignoreBindery) {
         var subPathNode = subPath,
             subPathAttr = 'value',
             binding, r, i, j, k, e, n1, allAttrs = true,
@@ -698,6 +713,71 @@ doq.cfg={
         }
     }
 
+    /**
+     * Связь между публикатором и подписчиком sub[node:attr] => pub[node:attr]
+     */
+    function Binding(pubPath, subPath, subPathAttr, pubPathAttr, pubPathNode, subPathNode, msgType, callback) {
+        this.pubPath = pubPath
+        this.subPath = subPath
+        this.subPathAttr = subPathAttr
+        this.pubPathAttr = pubPathAttr
+        this.pubPathNode = pubPathNode
+        this.subPathNode = subPathNode
+        this.msgType = msgType
+        this.callback = callback
+    }
+
+    /**
+     * Подписка на сообщения от pub(публикатора) типа (msgType) и идентификатором подписчика (subpath)
+     * @param {string} pubPath Путь к публикующему атрибуту
+     * @param {any} msgType Тип сообщения на который формируется подписка
+     * @param {string} subPath Путь к атрибуту подписчика
+     * @param {function} callback Вызываемая функция
+     * @returns {Binding}
+     */
+    function subscribe(pubPath, msgType, subPath, callback) {
+        var binding, r, pe,
+            pubExtraction = reExtractPath.exec(pubPath), //  pubExtraction[3] - название перед ':'. Пока не и
+            pubPathNode = pubExtraction[1],
+            pubPathAttr = pubExtraction[4],
+            subExtraction = reExtractPath.exec(subPath),
+            subPathNode = subExtraction[1],
+            subPathAttr = subExtraction[4]
+
+        function _digPath(pathElements, aNode, binding) {
+            var prevNode = aNode,
+                e, i
+            for (i in pathElements) {
+                e = pathElements[i]
+                if (e === '') continue
+                if (e in aNode) aNode = aNode[e]
+                else {
+                    if (prevNode !== undefined) prevNode['#']++
+                    aNode = (aNode[e] = { '#': 0 })
+                }
+                prevNode = aNode
+            }
+            aNode['#'] = 1
+            aNode['&'] = binding
+            return aNode
+        }
+
+        binding = new Binding(pubPath, subPath, subPathAttr, pubPathAttr, pubPathNode, subPathNode, msgType, callback)
+        pe = subPathNode.split('/')
+        pe.push('@')
+        pe.push(subPathAttr)
+        pe.push(msgType)
+        _digPath(pe, bindery.bySub, binding)
+
+        pe = pubPathNode.split('/')
+        pe.push('@')
+        pe.push(pubPathAttr)
+        pe.push(msgType)
+        pe.push(subPath)
+        _digPath(pe, bindery.byPub, binding)
+        return binding
+    }
+
 
     /**
      * Sends event from publisher to subscriber
@@ -707,7 +787,7 @@ doq.cfg={
      * @param {object} params passing parameters to subscriber
      * */
     function emit(pubPath, pubAttr, eventType, params) {
-        var e, pe, r, i, subPath, subscribers, result, binding, node = byPub, s, pp
+        var e, pe, r, i, subPath, subscribers, result, binding, node = bindery.byPub, s, pp
         if (!pubAttr)
             pubAttr = "(Unknown attribute '" + pubPath + "' as emitter)"
         pe = pubPath.split('/')
@@ -736,7 +816,7 @@ doq.cfg={
             if (subPath != '#') {
                 if ((!!params) && (!!params.caller) && (subPath == params.caller))
                     continue
-                    binding = subscribers[subPath]['&']
+                binding = subscribers[subPath]['&']
                 r = binding.callback(params)
                 if (r === false)
                     result = r
@@ -772,7 +852,7 @@ doq.cfg={
             taskListSize = 0
             for (m in taskListIterate)
                 queue.push(taskListIterate[m])
-            queue.sort(function(a, b) { return a[0] - b[0] })
+            queue.sort(function (a, b) { return a[0] - b[0] })
             while (!!(m = queue.shift())) {
                 if (typeof m[2] == 'function')
                     m[2].apply(m[1], m[3])
@@ -783,7 +863,7 @@ doq.cfg={
                     }
             }
             if (!taskListSize) break
-                log('doq.taskRunner', '-----loop ' + loopTime + '------')
+            log('doq.taskRunner', '-----loop ' + loopTime + '------')
         }
         log('doq.taskRunner', '-----tasks over ----')
         if (!!taskDoneCallbacks) {
@@ -797,11 +877,20 @@ doq.cfg={
         doLaterOnce(pubPath + '#' + pubAttr + '!' + eventType, doq, emit, [pubPath, pubAttr, eventType, params])
     }
 
-    var i,f,fs=[module, require, log, stringify, getLog, error, emit, postEmit, doLaterOnce, taskRunner, sendJSON, 
-        bind, unbindByPub, unbindBySub]
-    for(i in fs) 
-        f=fs[i],doq[f.name]=f
+    var i, j, f, fs = [module, require, log, stringify, getLog, error, emit, postEmit, doLaterOnce, taskRunner, sendJSON,
+        bind, unbindByPub, unbindBySub, subscribe, {lang:lang}]
+    for (i in fs){
+        f = fs[i]
+        if(typeof(f)==='function'){
+            doq[f.name] = f
+        } else {
+            for (j in f){
+                doq[j]=f[j]
+            }
+        }
         
+
+    }
     initErrorHadnler()
 })(window)
 

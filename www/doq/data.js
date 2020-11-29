@@ -2,6 +2,7 @@
 doq.module('doq.data', ['doq.evaluate'], function () {
     var CONST_1 = '123'
     var classes={}
+    doq.log('Module doq.data: executed!')
 
     /**
      * Возвращает существующий узел данных
@@ -659,13 +660,13 @@ doq.module('doq.data', ['doq.evaluate'], function () {
             if (!!schemaClassName) {
                 if (typeof schemaClassName === 'object')
                     schemaClassName = schemaClassName['data']
-                if (schemaClassName in doq.classes)
-                    schemaClass = doq.classes[schemaClassName]
+                if (schemaClassName in doq.data.classes)
+                    schemaClass = doq.data.classes[schemaClassName]
                 if ('schema' in schemaClass)
                     _buildNodeBySchema(datanode, schemaClass['schema'])
             }
-            if ((!!nodeClassName) && (nodeClassName in doq.classes)) {
-                nodeClass = doq.classes[nodeClassName]
+            if ((!!nodeClassName) && (nodeClassName in doq.data.classes)) {
+                nodeClass = doq.data.classes[nodeClassName]
             }
             for (tAttrName in schema) {
                 if (tAttrName.indexOf('#') === 0) {
@@ -810,8 +811,8 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                         var cn = schemaNode['#nodeClass']
                         if (!!cn) {
                             if (typeof cn === 'object') cn = cn['data']
-                            if (cn in doq.classes) {
-                                nodeClass = doq.classes[cn]
+                            if (cn in doq.data.classes) {
+                                nodeClass = doq.data.classes[cn]
                                 datanode['nodeClassName'] = cn
                                 if ((nodeClass !== undefined) && ('methods' in nodeClass)) {
                                     datanode.methods = nodeClass['methods']
@@ -866,13 +867,13 @@ doq.module('doq.data', ['doq.evaluate'], function () {
             if (!!schemaClassName) {
                 if (typeof schemaClassName === 'object')
                     schemaClassName = schemaClassName['data']
-                if (schemaClassName in doq.classes)
-                    schemaClass = doq.classes[schemaClassName]
+                if (schemaClassName in doq.data.classes)
+                    schemaClass = doq.data.classes[schemaClassName]
                 if ('schema' in schemaClass)
                     _buildNodeBySchema(datanode, schemaClass['schema'])
             }
-            if ((!!nodeClassName) && (nodeClassName in doq.classes)) {
-                nodeClass = doq.classes[nodeClassName]
+            if ((!!nodeClassName) && (nodeClassName in doq.data.classes)) {
+                nodeClass = doq.data.classes[nodeClassName]
             }
             for (tAttrName in schema) {
                 if (tAttrName.indexOf('#') === 0) {
@@ -1006,8 +1007,8 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                         var cn = schemaNode['#nodeClass']
                         if (!!cn) {
                             if (typeof cn === 'object') cn = cn['data']
-                            if (cn in doq.classes) {
-                                nodeClass = doq.classes[cn]
+                            if (cn in doq.data.classes) {
+                                nodeClass = doq.data.classes[cn]
                                 datanode['nodeClassName'] = cn
                                 if ((nodeClass !== undefined) && ('methods' in nodeClass)) {
                                     datanode.methods = nodeClass['methods']
@@ -1060,8 +1061,8 @@ doq.module('doq.data', ['doq.evaluate'], function () {
             separator, scale = 0,
             thousandsSeparator, decimalSeparator
 
-        thousandsSeparator = mgui.lang.base['THOUSANDS_SEPARATOR']
-        decimalSeparator = mgui.lang.base['DECIMAL_SEPARATOR']
+        thousandsSeparator = doq.lang.base['THOUSANDS_SEPARATOR']
+        decimalSeparator = doq.lang.base['DECIMAL_SEPARATOR']
         if (stringFormat !== undefined) {
             if ('nullable' in stringFormat)
                 isNullable = Boolean(stringFormat['nullable'])
@@ -1312,9 +1313,9 @@ doq.module('doq.data', ['doq.evaluate'], function () {
 
 
     return {
-        functions: [Datanode, forEachChild, copyObject, setAttribute, getDatanode,
-            openContext, openPath, closePath],
-        exports: {classes:classes},
+        exports: [Datanode, forEachChild, copyObject, setAttribute, 
+                getDatanode, openContext, openPath, closePath,
+                {classes:classes}],
         css: {
             uses: ['a', 'li', '#panel'],
             vars: {

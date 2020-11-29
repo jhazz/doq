@@ -997,7 +997,7 @@ doq.module('doq.console', ['doq.router'], function(){
     }
     
     return {
-        functions:[init, hide, show, showButton],
+        exports:[init, hide, show, showButton],
         css:{
             vars:{
             '@console-border-color':'#ddddee',
