@@ -124,7 +124,7 @@ doq.cfg = {
             }
         }
 
-    doq.ll = logPool
+    doq.expLog = logPool // debug
 
     if (_global == undefined) {
         _global = window

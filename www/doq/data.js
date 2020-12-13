@@ -51,6 +51,7 @@ doq.module('doq.data', ['doq.evaluate'], function () {
     Datanode.prototype.doLater = function (methodName, params) {
         var self = this
         if ((!!self.path) && (methodName in self.methods))
+        debugger
             doq.doLaterOnce(self.path + '!' + methodName, self, self.methods[methodName], params)
     }
 
@@ -796,6 +797,7 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                         return [false, "Узел '" + s + "' отсутствует в пространстве данных '" + path + "'"]
                     // Узел отсутствует, но если указан флаг createIfNE, то создаем этот узел
                     // с шаблонами класса из схемы, передавая datanode в качестве родительского
+                    debugger
                     datanode = datanode['@'][s] = new Datanode(path, datanode)
                     if (!!contextScopeStack) {
                         datanode.contextPath = contextScopeStack.top.path
@@ -808,6 +810,7 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                     })
 
                     if (schemaNode !== undefined) {
+                        debugger
                         var cn = schemaNode['#nodeClass']
                         if (!!cn) {
                             if (typeof cn === 'object') cn = cn['data']
@@ -817,6 +820,7 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                                 if ((nodeClass !== undefined) && ('methods' in nodeClass)) {
                                     datanode.methods = nodeClass['methods']
                                     if ('create' in datanode.methods) {
+                                        debugger
                                         datanode.methods['create'].call(datanode, digScopeStack, contextScopeStack)
                                     }
                                 }
@@ -1013,6 +1017,7 @@ doq.module('doq.data', ['doq.evaluate'], function () {
                                 if ((nodeClass !== undefined) && ('methods' in nodeClass)) {
                                     datanode.methods = nodeClass['methods']
                                     if ('create' in datanode.methods) {
+                                        debugger;
                                         datanode.methods['create'].call(datanode, digScopeStack, contextScopeStack)
                                     }
                                 }

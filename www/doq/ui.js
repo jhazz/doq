@@ -31,6 +31,7 @@ doq.module('doq.ui', ['doq.data'], function () {
             handlers: {},
             methods: {
                 create: function (vmScopeStack, mScopeStack) {
+                    doq.log('EXECUTE: doq.ui.Box.create()', '#80ff80')
                     var self = this,
                         schemaElId,
                         schema = vmScopeStack.top.schemaNode
@@ -49,7 +50,7 @@ doq.module('doq.ui', ['doq.data'], function () {
                 },
                 update: function () {
                     var self = this
-                    doq.log('EXECUTE: Box.update()', '#80ff80')
+                    doq.log('EXECUTE: doq.ui.Box.update()', '#80ff80')
                     // Здесь надо будет сделать обработку разных категорий обновления,
                     // например, блокировка дочерних элементов, если страница заблокирована
 
@@ -103,7 +104,7 @@ doq.module('doq.ui', ['doq.data'], function () {
 
             methods: {
                 'create': function (vmScopeStack, mScopeStack) {
-                    doq.log('EXECUTE: area.make()', '#80ff80')
+                    doq.log('EXECUTE: doq.ui.Area.create()', '#80ff80')
                     var self = this
                     self.htmlElement = document.createElement("div")
                     self.infoElement = document.createElement("div")
@@ -246,7 +247,7 @@ doq.module('doq.ui', ['doq.data'], function () {
                             doq.lang.base['THOUSANDS_SEPARATOR'] + "]+", 'g'),
                         badInt = new RegExp("[^0-9]+", 'g')
 
-                    doq.log('EXECUTE METHOD: doq.area("' + self.path + '").refresh()', '#80ff80')
+                    doq.log('EXECUTE METHOD: doq.Area("' + self.path + '").update()', '#80ff80')
                     if (self.checkoutCategory('editmode')) {
                         if (this.getAttributeAsString('editable') === 'true') {
                             if (!self.editMode) {
