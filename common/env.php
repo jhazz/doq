@@ -10,9 +10,6 @@ return [
     '#rootPath'=>$ROOT_PATH,
     '#libPath'=>$ROOT_PATH.'/lib',
     '#commonPath'=>$ROOT_PATH.'/common',
-    //'#schemaPath'=>$ROOT_PATH.'/common/datasources',# deprecated
-    
-    
     '#templatesPath'=>$ROOT_PATH.'/frontend/templates',
     '#wwwURL'=>'../../www',
     '#cookiePath'=>'/',
@@ -89,8 +86,6 @@ return [
                         'host'=>'127.0.0.1',
                         'port'=>'3306',
                         'dbase'=>'test',
-                        'login'=>'vlad',
-                        'password'=>'raptor14'
                     ]
                 ],
                 'DEVELOPMENT'=>[
@@ -100,8 +95,6 @@ return [
                         'host'=>'127.0.0.1',
                         'port'=>'3306',
                         'dbase'=>'test',
-                        'login'=>'root',
-                        'password'=>''
                     ]
                 ],
                 '*'=>[
@@ -110,8 +103,6 @@ return [
                         'host'=>'127.0.0.1',
                         'port'=>'3306',
                         'dbase'=>'dbnavi',
-                        'login'=>'my1',
-                        'password'=>'LEULMM8KEiKwbfhX'
                     ]
                 ]
             ]
@@ -122,8 +113,6 @@ return [
                 'host'=>'95.191.130.173',
                 'port'=>'8036',
                 'dbase'=>'test',
-                'login'=>'tester',
-                'password'=>'lua2Gee'
             ]
 
         ],
