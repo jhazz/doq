@@ -1,19 +1,18 @@
 # doq
 ## PHP Documented Objects Queries
 
-### English
+### Description
 DQO allows you to declare entities attribute relations (aggregation, composition) via JSON-like configuration. 
 Doq Scripter (for now only MySQL) builds SQL queries and store this to Cache. Data could be stored in different databases. Doq carefully aggregates data from separated databases throw corresponding data provider. After aggregation the collected data is provided as Dataset.
 
 
-### Русский
+### Описание
 
 Doq позволяет составлять описание взаимосвязей между атрибутами сущностей (агрегация, композиция) в виде JSON подобной конфигурации. 
 Doq Scripter (на данный момент только для MySQL провайдера) построит SQL запрос для таблицы соответствующего провайдера. Doq последовательно собирает связанные между собой данные у разных провайдеров, объединяет их и предоставляет в виде универсального объекта Dataset, допускающего вложенные узлы данных Datanode (иерархические запросы).
 
-![diagram](doq_diagram.png)
-
 Example of a data schema configuration
+Пример описания схемы данных
 
 ### Schema
 ```php
@@ -131,7 +130,14 @@ Example of a data schema configuration
 
 
 ### Result
-Result is a linked Dataset that contains next queries:
+Result is a linked Dataset that contains queries execution plan.
+If subqueries belongs to the same connection doq uses JOIN syntax.
+If subqueries belongs to different connections doq keep them in the plan depends on parent queries.
+
+Результат обработки связей - последовательный план выполнения запросов к разным соединениям провайдеров.
+Если несколько подзапросов относятся к одному соединению, то производится автоматический JOIN.
+Если подзапросы относятся к разным соединениям, то сначала выполняется базовый запрос, лишь затем - зависимые запросы.
+
 ```sql
 -- 1
 SELECT ta1.PRODUCT_ID, ta1.SKU, ta1.TITLE, ta1.PRODUCT_GROUP_ID, ta2.NAME, ta2.TITLE, ta2.PARENT_ID, ta3.NAME,
@@ -151,4 +157,7 @@ product_types AS ta1 WHERE (ta1.PRODUCT_TYPE_ID IN (1,2));
 
 ```
 
+## Doq classes diagram
+
+![diagram](doq_diagram.png)
 
