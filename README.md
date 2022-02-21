@@ -2,7 +2,7 @@
 ## PHP Documented Objects Queries
 
 ### Description
-DQO allows you to declare entities attribute relations (aggregation, composition) via JSON-like configuration. 
+DOQ allows you to declare entities attribute relations (aggregation, composition) via JSON-like configuration. 
 Doq Scripter (for now only MySQL) builds SQL queries and store this to Cache. Data could be stored in different databases. Doq carefully aggregates data from separated databases throw corresponding data provider. After aggregation the collected data is provided as Dataset.
 
 
